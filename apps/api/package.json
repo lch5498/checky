@@ -4,7 +4,6 @@
   "version": "0.1.0",
   "type": "module",
   "dependencies": {
-    "@family-housekeeping/contracts": "*",
     "@supabase/supabase-js": "^2.87.0",
     "next": "^16.0.0",
     "react": "^19.0.0",
