@@ -296,6 +296,126 @@ class ApiClient {
     return ParkingRecord.fromJson(json['record'] as Map<String, Object?>);
   }
 
+  Future<ScheduleDashboard> getScheduleDashboard(
+    String sessionToken, {
+    required String familyId,
+    required DateTime rangeStart,
+    required DateTime rangeEnd,
+  }) async {
+    final path = Uri(
+      path: '/api/mobile/families/$familyId/schedules',
+      queryParameters: {
+        'rangeStart': rangeStart.toUtc().toIso8601String(),
+        'rangeEnd': rangeEnd.toUtc().toIso8601String(),
+      },
+    ).toString();
+    final json = await _requestJson('GET', path, bearerToken: sessionToken);
+
+    return ScheduleDashboard.fromJson(json);
+  }
+
+  Future<AppSchedule> createSchedule(
+    String sessionToken, {
+    required String familyId,
+    required String familyMemberId,
+    required String title,
+    String? content,
+    required DateTime startsAt,
+    required DateTime endsAt,
+    DateTime? vehicleBoardingAt,
+    DateTime? vehicleDropoffAt,
+  }) async {
+    final json = await _requestJson(
+      'POST',
+      '/api/mobile/families/$familyId/schedules',
+      bearerToken: sessionToken,
+      body: _scheduleBody(
+        familyMemberId: familyMemberId,
+        title: title,
+        content: content,
+        startsAt: startsAt,
+        endsAt: endsAt,
+        vehicleBoardingAt: vehicleBoardingAt,
+        vehicleDropoffAt: vehicleDropoffAt,
+      ),
+    );
+
+    return AppSchedule.fromJson(json['schedule'] as Map<String, Object?>);
+  }
+
+  Future<AppSchedule> updateSchedule(
+    String sessionToken, {
+    required String familyId,
+    required String scheduleId,
+    required String familyMemberId,
+    required String title,
+    String? content,
+    required DateTime startsAt,
+    required DateTime endsAt,
+    DateTime? vehicleBoardingAt,
+    DateTime? vehicleDropoffAt,
+  }) async {
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/schedules/$scheduleId',
+      bearerToken: sessionToken,
+      body: _scheduleBody(
+        familyMemberId: familyMemberId,
+        title: title,
+        content: content,
+        startsAt: startsAt,
+        endsAt: endsAt,
+        vehicleBoardingAt: vehicleBoardingAt,
+        vehicleDropoffAt: vehicleDropoffAt,
+      ),
+    );
+
+    return AppSchedule.fromJson(json['schedule'] as Map<String, Object?>);
+  }
+
+  Future<void> deleteSchedule(
+    String sessionToken, {
+    required String familyId,
+    required String scheduleId,
+  }) async {
+    await _requestJson(
+      'DELETE',
+      '/api/mobile/families/$familyId/schedules/$scheduleId',
+      bearerToken: sessionToken,
+    );
+  }
+
+  Map<String, Object?> _scheduleBody({
+    required String familyMemberId,
+    required String title,
+    String? content,
+    required DateTime startsAt,
+    required DateTime endsAt,
+    DateTime? vehicleBoardingAt,
+    DateTime? vehicleDropoffAt,
+  }) {
+    final body = <String, Object?>{
+      'familyMemberId': familyMemberId,
+      'title': title,
+      'startsAt': startsAt.toUtc().toIso8601String(),
+      'endsAt': endsAt.toUtc().toIso8601String(),
+    };
+
+    if (content != null) {
+      body['content'] = content;
+    }
+
+    if (vehicleBoardingAt != null) {
+      body['vehicleBoardingAt'] = vehicleBoardingAt.toUtc().toIso8601String();
+    }
+
+    if (vehicleDropoffAt != null) {
+      body['vehicleDropoffAt'] = vehicleDropoffAt.toUtc().toIso8601String();
+    }
+
+    return body;
+  }
+
   Future<Map<String, Object?>> _requestJson(
     String method,
     String path, {
@@ -666,6 +786,94 @@ class ParkingRecord {
       parkedAt: json['parked_at'] as String,
     );
   }
+}
+
+class ScheduleDashboard {
+  const ScheduleDashboard({
+    required this.canManage,
+    required this.members,
+    required this.schedules,
+  });
+
+  final bool canManage;
+  final List<FamilyMember> members;
+  final List<AppSchedule> schedules;
+
+  factory ScheduleDashboard.fromJson(Map<String, Object?> json) {
+    final members = json['members'] as List<Object?>;
+    final schedules = json['schedules'] as List<Object?>;
+
+    return ScheduleDashboard(
+      canManage: json['canManage'] as bool,
+      members: members
+          .map(
+            (member) => FamilyMember.fromJson(member as Map<String, Object?>),
+          )
+          .toList(),
+      schedules: schedules
+          .map(
+            (schedule) =>
+                AppSchedule.fromJson(schedule as Map<String, Object?>),
+          )
+          .toList(),
+    );
+  }
+}
+
+class AppSchedule {
+  const AppSchedule({
+    required this.id,
+    required this.familyId,
+    required this.familyMemberId,
+    required this.title,
+    required this.content,
+    required this.startsAt,
+    required this.endsAt,
+    required this.vehicleBoardingAt,
+    required this.vehicleDropoffAt,
+    required this.memberNickname,
+  });
+
+  final String id;
+  final String familyId;
+  final String? familyMemberId;
+  final String title;
+  final String? content;
+  final DateTime startsAt;
+  final DateTime endsAt;
+  final DateTime? vehicleBoardingAt;
+  final DateTime? vehicleDropoffAt;
+  final String memberNickname;
+
+  factory AppSchedule.fromJson(Map<String, Object?> json) {
+    final familyMember = json['family_member'] as Map<String, Object?>?;
+    final user = familyMember?['user'] as Map<String, Object?>?;
+
+    return AppSchedule(
+      id: json['id'] as String,
+      familyId: json['family_id'] as String,
+      familyMemberId: json['family_member_id'] as String?,
+      title: json['title'] as String,
+      content: json['content'] as String?,
+      startsAt: DateTime.parse(json['starts_at'] as String).toLocal(),
+      endsAt: DateTime.parse(json['ends_at'] as String).toLocal(),
+      vehicleBoardingAt: _parseOptionalLocalDateTime(
+        json['vehicle_boarding_at'] as String?,
+      ),
+      vehicleDropoffAt: _parseOptionalLocalDateTime(
+        json['vehicle_dropoff_at'] as String?,
+      ),
+      memberNickname: user?['nickname'] as String? ?? '담당자 없음',
+    );
+  }
+}
+
+DateTime? _parseOptionalLocalDateTime(String? value) {
+  if (value == null) {
+    return null;
+  }
+
+  return DateTime.parse(value).toLocal();
 }
 
 class ApiException implements Exception {

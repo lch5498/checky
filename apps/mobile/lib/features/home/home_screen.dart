@@ -369,7 +369,10 @@ class _HomeBody extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).push(
                 CupertinoPageRoute<void>(
-                  builder: (_) => ScheduleScreen(family: selectedFamily),
+                  builder: (_) => ScheduleScreen(
+                    family: selectedFamily,
+                    sessionToken: sessionToken,
+                  ),
                 ),
               );
             },

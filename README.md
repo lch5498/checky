@@ -54,6 +54,14 @@ harness/
 - 최초 가입 시 닉네임 입력 및 프로필 닉네임 수정 구현
 - 가족 생성, 수정, 삭제, 구성원 조회, 구성원 초대/수락, 구성원 삭제 구현
 - iOS 공유 시트로 가족 초대 링크 공유 구현
+- 주차 관리 schema/API/Flutter 화면 구현
+- 차량 등록, 수정, 삭제 구현
+- 주차 위치 즐겨찾기 등록, 수정, 삭제 구현
+- 차량별 현재 주차 위치 등록 구현
+- 학원 일정 관리 schema/API/Flutter 화면 구현
+- 가족 구성원별 일정 등록, 수정, 삭제, 상세 조회 구현
+- 일정 일간/주간/월간 캘린더 화면 구현
+- 일간/주간 캘린더는 시간축 기반으로 표시하고 일정이 있는 시간대로 자동 이동
 - Flutter 앱을 iOS Simulator와 실제 iPhone 네이티브 환경에서 실행 확인
 - 앱 UI는 Flutter Cupertino 위젯 중심으로 정리
 
@@ -287,6 +295,8 @@ Supabase 프로젝트를 만든 뒤 migration 파일을 적용합니다.
 ```text
 supabase/migrations/202605180001_add_users_and_authentications.sql
 supabase/migrations/202605230001_add_families.sql
+supabase/migrations/202605230002_add_parking_management.sql
+supabase/migrations/202605230003_add_schedule_management.sql
 ```
 
 가장 간단한 방법은 Supabase Dashboard에서 SQL Editor를 열고 migration SQL을 실행하는 것입니다.
@@ -306,6 +316,10 @@ supabase db push
 - `families`
 - `family_members`
 - `family_invitations`
+- `vehicles`
+- `parking_location_presets`
+- `parking_records`
+- `schedules`
 
 Row Level Security는 켜져 있습니다. 현재 Vercel API는 서버에서 Supabase secret key를 사용하므로 모바일 앱이 DB에 직접 접근하지 않습니다.
 
@@ -316,6 +330,8 @@ Row Level Security는 켜져 있습니다. 현재 Vercel API는 서버에서 Sup
 - `member`: 구성원. 가족과 구성원 조회만 가능
 
 가족 초대는 대표 또는 공동대표가 난수 초대 토큰을 만들고, 앱에서 초대 링크를 복사하거나 iOS 공유 시트로 카카오톡/문자 등에 전달하는 방식입니다. 초대받은 사용자는 가족 관리 화면의 `초대 링크 수락`에서 링크나 코드를 입력해 연결합니다. 초대 링크는 기본 7일 동안 유효합니다.
+
+주차와 일정 데이터도 모두 `family_id`를 기준으로 저장합니다. 일정은 `family_member_id`를 함께 저장해 가족 구성원 중 누구의 일정인지 지정합니다.
 
 ## 백엔드 API 실행
 
@@ -534,6 +550,112 @@ DELETE /api/mobile/families/<familyId>/members/<memberId>
 
 대표와 공동대표만 쓰기 API를 호출할 수 있습니다. 구성원은 조회만 가능합니다. 본인은 구성원 목록에서 삭제할 수 없으며, 서버도 `cannot_remove_self`로 거절합니다. 마지막 대표를 삭제하는 요청도 `cannot_remove_last_owner`로 거절합니다.
 
+## 주차 관리 API
+
+모든 주차 관리 API는 `authorization: Bearer <house keeping session token>` 헤더가 필요합니다.
+
+주차 대시보드 조회:
+
+```http
+GET /api/mobile/families/<familyId>/parking
+```
+
+응답에는 차량 목록, 주차 위치 즐겨찾기, 차량별 최신 주차 위치, 쓰기 가능 여부가 포함됩니다.
+
+차량 등록:
+
+```http
+POST /api/mobile/families/<familyId>/parking/vehicles
+content-type: application/json
+
+{
+  "nickname": "패밀리카",
+  "plateNumber": "12가3456"
+}
+```
+
+차량 수정/삭제:
+
+```http
+PATCH /api/mobile/families/<familyId>/parking/vehicles/<vehicleId>
+DELETE /api/mobile/families/<familyId>/parking/vehicles/<vehicleId>
+```
+
+주차 위치 즐겨찾기 등록:
+
+```http
+POST /api/mobile/families/<familyId>/parking/presets
+content-type: application/json
+
+{
+  "name": "지하1층"
+}
+```
+
+주차 위치 즐겨찾기 수정/삭제:
+
+```http
+PATCH /api/mobile/families/<familyId>/parking/presets/<presetId>
+DELETE /api/mobile/families/<familyId>/parking/presets/<presetId>
+```
+
+차량 주차 위치 등록:
+
+```http
+POST /api/mobile/families/<familyId>/parking/records
+content-type: application/json
+
+{
+  "vehicleId": "<vehicleId>",
+  "presetId": "<presetId>",
+  "locationText": "지하1층"
+}
+```
+
+`presetId` 없이 `locationText`만 보내 직접 입력 위치를 저장할 수 있습니다. 대표와 공동대표만 쓰기 API를 호출할 수 있고, 구성원은 조회만 가능합니다.
+
+## 일정 관리 API
+
+모든 일정 관리 API는 `authorization: Bearer <house keeping session token>` 헤더가 필요합니다.
+
+일정 대시보드 조회:
+
+```http
+GET /api/mobile/families/<familyId>/schedules?rangeStart=<ISO8601>&rangeEnd=<ISO8601>
+```
+
+응답에는 가족 구성원 목록, 조회 범위 안의 일정 목록, 쓰기 가능 여부가 포함됩니다.
+
+일정 등록:
+
+```http
+POST /api/mobile/families/<familyId>/schedules
+content-type: application/json
+
+{
+  "familyMemberId": "<familyMemberId>",
+  "title": "수학학원",
+  "content": "교재 챙기기",
+  "startsAt": "2026-05-23T06:00:00.000Z",
+  "endsAt": "2026-05-23T07:00:00.000Z",
+  "vehicleBoardingAt": "2026-05-23T05:30:00.000Z",
+  "vehicleDropoffAt": "2026-05-23T07:20:00.000Z"
+}
+```
+
+`content`, `vehicleBoardingAt`, `vehicleDropoffAt`은 선택 입력입니다.
+
+일정 수정/삭제:
+
+```http
+PATCH /api/mobile/families/<familyId>/schedules/<scheduleId>
+DELETE /api/mobile/families/<familyId>/schedules/<scheduleId>
+```
+
+대표와 공동대표만 등록, 수정, 삭제할 수 있고, 구성원은 조회만 가능합니다.
+
+Flutter 일정 화면은 Cupertino 위젯 기반입니다. 기본은 주간 뷰이며, 일/주/월 전환을 제공합니다. 캘린더는 `일 월 화 수 목 금 토` 순서로 표시합니다. 일간/주간 뷰는 시간축 기반이며, 해당 날짜 또는 오늘 일정이 있으면 가장 이른 일정 시간대로 자동 이동하고 일정이 없으면 8시 근처로 이동합니다. 캘린더의 날짜 또는 시간 칸을 누르면 해당 날짜와 시간으로 일정 등록 화면을 엽니다. 일정 칩을 누르면 상세 화면에서 제목, 내용, 구성원, From, To, 차량승차시각, 하차시각을 확인하고 수정 또는 삭제할 수 있습니다.
+
 ## 검증 명령어
 
 TypeScript 타입체크:
@@ -642,9 +764,9 @@ curl https://api-one-ruby-46.vercel.app/api/health
 
 ## 다음 개발 순서
 
-1. Supabase에 가족 관리 migration 적용
-2. Vercel Production 환경변수와 API 재배포
-3. 실제 iPhone에서 가입, 프로필 수정, 가족 생성, 초대 공유, 초대 수락 회귀 테스트
+1. Supabase에 주차 관리와 일정 관리 migration 적용
+2. Vercel Production API 재배포
+3. 실제 iPhone에서 가입, 가족 생성, 주차 관리, 일정 등록/수정/삭제 회귀 테스트
 4. 앱에 session token 저장소 추가
-5. 학원 일정 schema/API/화면 구현
-6. 주차 관리 schema/API/화면 구현
+5. 일정 반복 규칙, 알림, 구성원별 필터 같은 고급 기능 검토
+6. 주차 기록 히스토리와 차량별 기록 조회 기능 검토
