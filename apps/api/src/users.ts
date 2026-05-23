@@ -1,7 +1,7 @@
 import type { KakaoUser } from './kakao';
 import { getSupabaseAdmin } from './supabase';
 
-type AppUser = {
+export type AppUser = {
   id: string;
   nickname: string;
   last_login_at: string | null;
@@ -11,10 +11,25 @@ type AppUser = {
 
 const KAKAO_PROVIDER = 'kakao';
 
-export async function findOrCreateUserFromKakao(kakaoUser: KakaoUser) {
+type KakaoLoginResult =
+  | {
+      requiresProfile: true;
+      provider: typeof KAKAO_PROVIDER;
+      providerId: string;
+    }
+  | {
+      requiresProfile: false;
+      isNewUser: boolean;
+      user: AppUser;
+    };
+
+export async function findOrCreateUserFromKakao(
+  kakaoUser: KakaoUser,
+  options: { nickname?: string } = {},
+): Promise<KakaoLoginResult> {
   const supabase = getSupabaseAdmin();
   const providerId = String(kakaoUser.id);
-  const nickname = getNickname(kakaoUser);
+  const nickname = normalizeNickname(options.nickname);
   const now = new Date().toISOString();
 
   const { data: authentication, error: authenticationError } = await supabase
@@ -32,7 +47,6 @@ export async function findOrCreateUserFromKakao(kakaoUser: KakaoUser) {
     const { data: user, error: userError } = await supabase
       .from('users')
       .update({
-        nickname,
         last_login_at: now,
       })
       .eq('id', authentication.user_id)
@@ -43,7 +57,19 @@ export async function findOrCreateUserFromKakao(kakaoUser: KakaoUser) {
       throw userError;
     }
 
-    return user as AppUser;
+    return {
+      requiresProfile: false,
+      isNewUser: false,
+      user: user as AppUser,
+    };
+  }
+
+  if (!nickname) {
+    return {
+      requiresProfile: true,
+      provider: KAKAO_PROVIDER,
+      providerId,
+    };
   }
 
   const { data: user, error: createUserError } = await supabase
@@ -71,7 +97,11 @@ export async function findOrCreateUserFromKakao(kakaoUser: KakaoUser) {
     throw createAuthenticationError;
   }
 
-  return user as AppUser;
+  return {
+    requiresProfile: false,
+    isNewUser: true,
+    user: user as AppUser,
+  };
 }
 
 export async function getUserById(userId: string) {
@@ -89,10 +119,30 @@ export async function getUserById(userId: string) {
   return data as AppUser | null;
 }
 
-function getNickname(kakaoUser: KakaoUser) {
-  return (
-    kakaoUser.kakao_account?.profile?.nickname ??
-    kakaoUser.properties?.nickname ??
-    `kakao-${kakaoUser.id}`
-  );
+export async function updateUserNickname(userId: string, nickname: string) {
+  const supabase = getSupabaseAdmin();
+  const normalizedNickname = normalizeNickname(nickname);
+
+  if (!normalizedNickname) {
+    throw new Error('nickname_required');
+  }
+
+  const { data, error } = await supabase
+    .from('users')
+    .update({ nickname: normalizedNickname })
+    .eq('id', userId)
+    .select('*')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as AppUser;
+}
+
+function normalizeNickname(nickname: string | undefined) {
+  const normalized = nickname?.trim();
+
+  return normalized && normalized.length > 0 ? normalized : null;
 }

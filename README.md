@@ -41,15 +41,19 @@ harness/
 
 ## 현재 완료된 상태
 
-2026년 5월 22일 기준으로 아래 흐름까지 확인했습니다.
+2026년 5월 23일 기준으로 아래 흐름까지 확인했습니다.
 
 - GitHub `main` 브랜치 push 완료
 - Next.js API 서버 Vercel Production 배포 완료
 - Vercel Production API health check 확인 완료
 - Supabase `users`, `authentications` 로그인 schema 준비
+- Supabase `families`, `family_members`, `family_invitations` 가족 관리 schema 준비
 - 카카오 웹 로그인 테스트 완료
 - Flutter 카카오 SDK 로그인 테스트 완료
 - Flutter 앱에서 카카오 access token을 Next.js API로 전달하는 모바일 로그인 흐름 구현
+- 최초 가입 시 닉네임 입력 및 프로필 닉네임 수정 구현
+- 가족 생성, 수정, 삭제, 구성원 조회, 구성원 초대/수락, 구성원 삭제 구현
+- iOS 공유 시트로 가족 초대 링크 공유 구현
 - Flutter 앱을 iOS Simulator와 실제 iPhone 네이티브 환경에서 실행 확인
 - 앱 UI는 Flutter Cupertino 위젯 중심으로 정리
 
@@ -245,6 +249,7 @@ KAKAO_REST_API_KEY=
 KAKAO_CLIENT_SECRET=
 KAKAO_REDIRECT_URI=http://localhost:3000/api/auth/kakao/callback
 SESSION_SECRET=
+MOBILE_INVITE_BASE_URL=
 ```
 
 중요한 규칙:
@@ -256,6 +261,7 @@ SESSION_SECRET=
 - `.env.local`은 커밋하지 않습니다.
 - `KAKAO_CLIENT_SECRET`은 카카오 개발자 콘솔에서 client secret이 활성화된 경우 넣습니다.
 - `SESSION_SECRET`은 모바일 앱용 자체 세션 토큰 서명에 사용합니다. 충분히 긴 랜덤 문자열을 사용합니다.
+- `MOBILE_INVITE_BASE_URL`은 가족 초대 링크 생성에 사용합니다. 미설정 시 기본값은 `housekeeping://family-invite`입니다.
 
 로컬에서 직접 `.env.local`을 만들려면:
 
@@ -276,10 +282,11 @@ npx vercel env pull .env.local --yes
 
 ## Supabase DB 준비
 
-Supabase 프로젝트를 만든 뒤 우선 로그인용 migration 파일을 적용합니다.
+Supabase 프로젝트를 만든 뒤 migration 파일을 적용합니다.
 
 ```text
 supabase/migrations/202605180001_add_users_and_authentications.sql
+supabase/migrations/202605230001_add_families.sql
 ```
 
 가장 간단한 방법은 Supabase Dashboard에서 SQL Editor를 열고 migration SQL을 실행하는 것입니다.
@@ -292,12 +299,23 @@ supabase link --project-ref <project-ref>
 supabase db push
 ```
 
-초기 로그인 schema에는 아래 테이블이 포함됩니다.
+현재 schema에는 아래 테이블이 포함됩니다.
 
 - `users`
 - `authentications`
+- `families`
+- `family_members`
+- `family_invitations`
 
 Row Level Security는 켜져 있습니다. 현재 Vercel API는 서버에서 Supabase secret key를 사용하므로 모바일 앱이 DB에 직접 접근하지 않습니다.
+
+가족 권한은 아래처럼 동작합니다.
+
+- `owner`: 대표. 가족 안의 추가, 수정, 삭제, 조회 가능
+- `co_owner`: 공동대표. 가족 안의 추가, 수정, 삭제, 조회 가능
+- `member`: 구성원. 가족과 구성원 조회만 가능
+
+가족 초대는 대표 또는 공동대표가 난수 초대 토큰을 만들고, 앱에서 초대 링크를 복사하거나 iOS 공유 시트로 카카오톡/문자 등에 전달하는 방식입니다. 초대받은 사용자는 가족 관리 화면의 `초대 링크 수락`에서 링크나 코드를 입력해 연결합니다. 초대 링크는 기본 7일 동안 유효합니다.
 
 ## 백엔드 API 실행
 
@@ -315,7 +333,11 @@ cd /Users/changhwanlee/Documents/project/house-keeping/apps/api
 npm run dev
 ```
 
-기본 Next.js dev server 주소는 `http://localhost:3000`입니다. 이미 3000번 포트가 사용 중이면 Next.js가 `http://localhost:3001`처럼 다른 포트를 안내합니다. health check는 아래처럼 확인합니다.
+기본 Next.js dev server 주소는 `http://localhost:3000`입니다. 이미 3000번 포트가 사용 중이면 Next.js가 `http://localhost:3001`처럼 다른 포트를 안내합니다.
+
+현재 API 앱은 로컬 dev에서 `next dev --webpack`을 사용합니다. Next.js가 상위 홈 디렉터리의 lockfile을 workspace root로 잘못 추론하거나 Turbopack dev server가 서버 패키지를 찾지 못하는 문제를 피하기 위한 설정입니다.
+
+health check는 아래처럼 확인합니다.
 
 ```bash
 curl http://localhost:3000/api/health
@@ -372,6 +394,8 @@ http://localhost:3000
 
 Flutter 앱은 카카오 Flutter SDK로 카카오 access token을 받은 뒤, Next.js 서버에 전달합니다. 서버는 다시 카카오 `user/me`를 호출해 토큰을 검증하고, `users`와 `authentications` 테이블을 생성 또는 갱신한 뒤 자체 session token을 반환합니다.
 
+신규 사용자는 첫 로그인 시 바로 `users`를 만들지 않고 `profile_required` 응답을 받습니다. Flutter 앱은 닉네임 입력 화면을 표시하고, 입력한 닉네임과 카카오 access token을 다시 보내 가입을 완료합니다. 기존 사용자의 닉네임은 카카오 프로필로 덮어쓰지 않고 프로필 화면에서만 수정합니다.
+
 로그인:
 
 ```http
@@ -390,6 +414,7 @@ content-type: application/json
   "tokenType": "Bearer",
   "accessToken": "<house keeping session token>",
   "expiresIn": 2592000,
+  "isNewUser": true,
   "user": {
     "id": "uuid",
     "nickname": "nickname",
@@ -397,6 +422,28 @@ content-type: application/json
     "created_at": "2026-05-18T00:00:00.000Z",
     "updated_at": "2026-05-18T00:00:00.000Z"
   }
+}
+```
+
+신규 사용자에게 닉네임 입력이 필요한 경우:
+
+```json
+{
+  "error": "profile_required",
+  "provider": "kakao",
+  "providerId": "1348234"
+}
+```
+
+닉네임을 포함해 가입 완료:
+
+```http
+POST /api/mobile/auth/kakao
+content-type: application/json
+
+{
+  "accessToken": "<kakao access token>",
+  "nickname": "아빠"
 }
 ```
 
@@ -415,6 +462,77 @@ authorization: Bearer <house keeping session token>
 ```
 
 로그아웃 API는 서버 세션 저장소를 아직 쓰지 않으므로 `{ "ok": true }`만 반환합니다. Flutter 앱에서는 secure storage에 저장한 session token을 삭제하면 됩니다.
+
+## 가족 관리 API
+
+모든 가족 관리 API는 `authorization: Bearer <house keeping session token>` 헤더가 필요합니다.
+
+가족 목록:
+
+```http
+GET /api/mobile/families
+```
+
+가족 생성:
+
+```http
+POST /api/mobile/families
+content-type: application/json
+
+{
+  "name": "우리집"
+}
+```
+
+가족 상세 조회:
+
+```http
+GET /api/mobile/families/<familyId>
+```
+
+가족 이름 수정:
+
+```http
+PATCH /api/mobile/families/<familyId>
+content-type: application/json
+
+{
+  "name": "새 가족 이름"
+}
+```
+
+가족 삭제:
+
+```http
+DELETE /api/mobile/families/<familyId>
+```
+
+초대 링크 생성:
+
+```http
+POST /api/mobile/families/<familyId>/invitations
+content-type: application/json
+
+{
+  "role": "member"
+}
+```
+
+`role`은 `owner`, `co_owner`, `member` 중 하나입니다.
+
+초대 수락:
+
+```http
+POST /api/mobile/family-invitations/<inviteToken>
+```
+
+구성원 삭제:
+
+```http
+DELETE /api/mobile/families/<familyId>/members/<memberId>
+```
+
+대표와 공동대표만 쓰기 API를 호출할 수 있습니다. 구성원은 조회만 가능합니다. 본인은 구성원 목록에서 삭제할 수 없으며, 서버도 `cannot_remove_self`로 거절합니다. 마지막 대표를 삭제하는 요청도 `cannot_remove_last_owner`로 거절합니다.
 
 ## 검증 명령어
 
@@ -464,6 +582,7 @@ Vercel Dashboard 또는 CLI로 아래 환경변수를 등록합니다.
 - `KAKAO_CLIENT_SECRET`
 - `KAKAO_REDIRECT_URI`
 - `SESSION_SECRET`
+- `MOBILE_INVITE_BASE_URL`
 
 현재 서버 코드는 Supabase 서버용 secret key만 사용하므로 `SUPABASE_PUBLISHABLE_KEY`는 필수값이 아닙니다.
 
@@ -523,9 +642,9 @@ curl https://api-one-ruby-46.vercel.app/api/health
 
 ## 다음 개발 순서
 
-1. 실제 iPhone에서 카카오 로그인 후 Supabase `users`, `authentications` 생성 확인
-2. 앱에 session token 저장소 추가
-3. 가족 구성원 관리 schema와 화면 설계
-4. 학원 일정 schema/API/화면 구현
-5. 주차 관리 schema/API/화면 구현
-6. Vercel Production 환경에서 모바일 로그인 회귀 테스트
+1. Supabase에 가족 관리 migration 적용
+2. Vercel Production 환경변수와 API 재배포
+3. 실제 iPhone에서 가입, 프로필 수정, 가족 생성, 초대 공유, 초대 수락 회귀 테스트
+4. 앱에 session token 저장소 추가
+5. 학원 일정 schema/API/화면 구현
+6. 주차 관리 schema/API/화면 구현

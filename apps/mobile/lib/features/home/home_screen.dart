@@ -1,12 +1,23 @@
 import 'package:flutter/cupertino.dart';
 
+import '../../core/api_client.dart';
+import '../family/family_screen.dart';
 import '../parking/parking_screen.dart';
+import '../profile/profile_screen.dart';
 import '../schedule/schedule_screen.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, this.userNickname, this.onLogout});
+  const HomeScreen({
+    super.key,
+    required this.user,
+    required this.sessionToken,
+    required this.onUpdateProfile,
+    this.onLogout,
+  });
 
-  final String? userNickname;
+  final AppUser user;
+  final String sessionToken;
+  final Future<AppUser> Function(String nickname) onUpdateProfile;
   final VoidCallback? onLogout;
 
   @override
@@ -14,13 +25,48 @@ class HomeScreen extends StatelessWidget {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
         middle: const Text('House Keeping'),
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(32, 32),
+          onPressed: () {
+            Navigator.of(context).push(
+              CupertinoPageRoute<void>(
+                builder: (_) => FamilyScreen(
+                  sessionToken: sessionToken,
+                  currentUserId: user.id,
+                ),
+              ),
+            );
+          },
+          child: const Icon(CupertinoIcons.person_2),
+        ),
         trailing: onLogout == null
             ? null
-            : CupertinoButton(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(32, 32),
-                onPressed: onLogout,
-                child: const Icon(CupertinoIcons.square_arrow_right),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(32, 32),
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        CupertinoPageRoute<void>(
+                          builder: (_) => ProfileScreen(
+                            user: user,
+                            onSave: onUpdateProfile,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Icon(CupertinoIcons.person_crop_circle),
+                  ),
+                  CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(32, 32),
+                    onPressed: onLogout,
+                    child: const Icon(CupertinoIcons.square_arrow_right),
+                  ),
+                ],
               ),
       ),
       child: SafeArea(
@@ -29,7 +75,7 @@ class HomeScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _HomeHeader(userNickname: userNickname),
+              _HomeHeader(userNickname: user.nickname),
               const SizedBox(height: 22),
               Expanded(
                 child: _HomeMenuTile(

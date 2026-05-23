@@ -16,6 +16,7 @@ class _AuthGateState extends State<AuthGate> {
   final _apiClient = ApiClient();
 
   AuthResponse? _auth;
+  String? _pendingKakaoAccessToken;
   String? _message;
   bool _isLoading = false;
 
@@ -36,14 +37,66 @@ class _AuthGateState extends State<AuthGate> {
         token = await UserApi.instance.loginWithKakaoAccount();
       }
 
+      await _completeKakaoLogin(token.accessToken);
+    });
+  }
+
+  Future<void> _completeKakaoLogin(
+    String accessToken, {
+    String? nickname,
+  }) async {
+    try {
       final auth = await _apiClient.loginWithKakaoAccessToken(
-        token.accessToken,
+        accessToken,
+        nickname: nickname,
       );
 
       setState(() {
         _auth = auth;
+        _pendingKakaoAccessToken = null;
       });
+    } on ApiException catch (error) {
+      if (error.isProfileRequired && nickname == null) {
+        setState(() {
+          _pendingKakaoAccessToken = accessToken;
+        });
+        return;
+      }
+
+      rethrow;
+    }
+  }
+
+  Future<void> _createProfile(String nickname) async {
+    final accessToken = _pendingKakaoAccessToken;
+
+    if (accessToken == null) {
+      setState(() {
+        _message = '카카오 로그인부터 다시 진행해 주세요.';
+      });
+      return;
+    }
+
+    await _run(() => _completeKakaoLogin(accessToken, nickname: nickname));
+  }
+
+  Future<AppUser> _updateProfile(String nickname) async {
+    final auth = _auth;
+
+    if (auth == null) {
+      throw const ApiConnectionException('로그인 정보가 없습니다.');
+    }
+
+    final user = await _apiClient.updateMyProfile(
+      auth.accessToken,
+      nickname: nickname,
+    );
+
+    setState(() {
+      _auth = auth.copyWith(user: user);
     });
+
+    return user;
   }
 
   Future<void> _run(Future<void> Function() task) async {
@@ -73,13 +126,34 @@ class _AuthGateState extends State<AuthGate> {
 
     if (auth != null) {
       return HomeScreen(
-        userNickname: auth.user.nickname,
+        user: auth.user,
+        sessionToken: auth.accessToken,
+        onUpdateProfile: _updateProfile,
         onLogout: () {
           setState(() {
             _auth = null;
+            _pendingKakaoAccessToken = null;
             _message = null;
           });
         },
+      );
+    }
+
+    final pendingKakaoAccessToken = _pendingKakaoAccessToken;
+
+    if (pendingKakaoAccessToken != null) {
+      return _NicknameSetupScreen(
+        isLoading: _isLoading,
+        message: _message,
+        onSubmit: _isLoading ? null : _createProfile,
+        onCancel: _isLoading
+            ? null
+            : () {
+                setState(() {
+                  _pendingKakaoAccessToken = null;
+                  _message = null;
+                });
+              },
       );
     }
 
@@ -103,6 +177,156 @@ class _AuthGateState extends State<AuthGate> {
               _KakaoLoginButton(
                 isLoading: _isLoading,
                 onPressed: _isLoading ? null : _loginWithKakaoSdk,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _NicknameSetupScreen extends StatefulWidget {
+  const _NicknameSetupScreen({
+    required this.isLoading,
+    required this.message,
+    required this.onSubmit,
+    required this.onCancel,
+  });
+
+  final bool isLoading;
+  final String? message;
+  final Future<void> Function(String nickname)? onSubmit;
+  final VoidCallback? onCancel;
+
+  @override
+  State<_NicknameSetupScreen> createState() => _NicknameSetupScreenState();
+}
+
+class _NicknameSetupScreenState extends State<_NicknameSetupScreen> {
+  final _controller = TextEditingController();
+  String? _validationMessage;
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final nickname = _controller.text.trim();
+
+    if (nickname.isEmpty) {
+      setState(() {
+        _validationMessage = '가족이 알아볼 수 있는 이름을 입력해 주세요.';
+      });
+      return;
+    }
+
+    if (nickname.length > 30) {
+      setState(() {
+        _validationMessage = '닉네임은 30자 이하로 입력해 주세요.';
+      });
+      return;
+    }
+
+    setState(() {
+      _validationMessage = null;
+    });
+
+    await widget.onSubmit?.call(nickname);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final message = _validationMessage ?? widget.message;
+
+    return CupertinoPageScaffold(
+      backgroundColor: const Color(0xFFF5F5F7),
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('프로필 설정'),
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(32, 32),
+          onPressed: widget.onCancel,
+          child: const Icon(CupertinoIcons.chevron_back),
+        ),
+      ),
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                '처음 사용할 이름을 정해 주세요.',
+                style: TextStyle(
+                  color: Color(0xFF111111),
+                  fontSize: 30,
+                  fontWeight: FontWeight.w800,
+                  height: 1.12,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                '카카오 계정 정보 대신 가족이 보기 편한 이름으로 저장됩니다.',
+                style: TextStyle(
+                  color: Color(0xFF6E6E73),
+                  fontSize: 16,
+                  height: 1.42,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 28),
+              CupertinoTextField(
+                controller: _controller,
+                autofocus: true,
+                clearButtonMode: OverlayVisibilityMode.editing,
+                placeholder: '예: 아빠, 엄마, 찬이',
+                textInputAction: TextInputAction.done,
+                maxLength: 30,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 15,
+                ),
+                style: const TextStyle(
+                  color: Color(0xFF111111),
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0,
+                ),
+                decoration: BoxDecoration(
+                  color: CupertinoColors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE5E5EA)),
+                ),
+                onSubmitted: (_) => _submit(),
+              ),
+              if (message != null) ...[
+                const SizedBox(height: 14),
+                _ErrorMessage(message: message),
+              ],
+              const Spacer(),
+              SizedBox(
+                height: 56,
+                child: CupertinoButton.filled(
+                  borderRadius: BorderRadius.circular(14),
+                  onPressed: widget.isLoading ? null : _submit,
+                  child: widget.isLoading
+                      ? const CupertinoActivityIndicator(
+                          color: CupertinoColors.white,
+                        )
+                      : const Text(
+                          '가입 완료하기',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                ),
               ),
             ],
           ),

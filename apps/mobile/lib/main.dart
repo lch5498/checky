@@ -29,12 +29,14 @@ class HouseKeepingApp extends StatelessWidget {
         barBackgroundColor: Color(0xF2F5F5F7),
         textTheme: CupertinoTextThemeData(
           navLargeTitleTextStyle: TextStyle(
+            inherit: false,
             color: Color(0xFF111111),
             fontSize: 34,
             fontWeight: FontWeight.w800,
             letterSpacing: 0,
           ),
           navTitleTextStyle: TextStyle(
+            inherit: false,
             color: Color(0xFF111111),
             fontSize: 17,
             fontWeight: FontWeight.w700,
