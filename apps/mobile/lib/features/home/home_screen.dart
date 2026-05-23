@@ -233,6 +233,7 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
           child: _HomeBody(
             user: widget.user,
+            sessionToken: widget.sessionToken,
             selectedFamily: selectedFamily,
             message: _message,
             isLoadingFamilies: _isLoadingFamilies,
@@ -313,6 +314,7 @@ class _HomeTitle extends StatelessWidget {
 class _HomeBody extends StatelessWidget {
   const _HomeBody({
     required this.user,
+    required this.sessionToken,
     required this.selectedFamily,
     required this.message,
     required this.isLoadingFamilies,
@@ -321,6 +323,7 @@ class _HomeBody extends StatelessWidget {
   });
 
   final AppUser user;
+  final String sessionToken;
   final AppFamily? selectedFamily;
   final String? message;
   final bool isLoadingFamilies;
@@ -383,7 +386,10 @@ class _HomeBody extends StatelessWidget {
             onPressed: () {
               Navigator.of(context).push(
                 CupertinoPageRoute<void>(
-                  builder: (_) => ParkingScreen(family: selectedFamily),
+                  builder: (_) => ParkingScreen(
+                    family: selectedFamily,
+                    sessionToken: sessionToken,
+                  ),
                 ),
               );
             },

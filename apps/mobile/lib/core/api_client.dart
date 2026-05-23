@@ -165,6 +165,137 @@ class ApiClient {
     return FamilyDetail.fromJson(json);
   }
 
+  Future<ParkingDashboard> getParkingDashboard(
+    String sessionToken, {
+    required String familyId,
+  }) async {
+    final json = await _requestJson(
+      'GET',
+      '/api/mobile/families/$familyId/parking',
+      bearerToken: sessionToken,
+    );
+
+    return ParkingDashboard.fromJson(json);
+  }
+
+  Future<Vehicle> createVehicle(
+    String sessionToken, {
+    required String familyId,
+    required String nickname,
+    required String plateNumber,
+  }) async {
+    final json = await _requestJson(
+      'POST',
+      '/api/mobile/families/$familyId/parking/vehicles',
+      bearerToken: sessionToken,
+      body: {'nickname': nickname, 'plateNumber': plateNumber},
+    );
+
+    return Vehicle.fromJson(json['vehicle'] as Map<String, Object?>);
+  }
+
+  Future<Vehicle> updateVehicle(
+    String sessionToken, {
+    required String familyId,
+    required String vehicleId,
+    required String nickname,
+    required String plateNumber,
+  }) async {
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/parking/vehicles/$vehicleId',
+      bearerToken: sessionToken,
+      body: {'nickname': nickname, 'plateNumber': plateNumber},
+    );
+
+    return Vehicle.fromJson(json['vehicle'] as Map<String, Object?>);
+  }
+
+  Future<void> deleteVehicle(
+    String sessionToken, {
+    required String familyId,
+    required String vehicleId,
+  }) async {
+    await _requestJson(
+      'DELETE',
+      '/api/mobile/families/$familyId/parking/vehicles/$vehicleId',
+      bearerToken: sessionToken,
+    );
+  }
+
+  Future<ParkingLocationPreset> createParkingLocationPreset(
+    String sessionToken, {
+    required String familyId,
+    required String name,
+  }) async {
+    final json = await _requestJson(
+      'POST',
+      '/api/mobile/families/$familyId/parking/presets',
+      bearerToken: sessionToken,
+      body: {'name': name},
+    );
+
+    return ParkingLocationPreset.fromJson(
+      json['preset'] as Map<String, Object?>,
+    );
+  }
+
+  Future<ParkingLocationPreset> updateParkingLocationPreset(
+    String sessionToken, {
+    required String familyId,
+    required String presetId,
+    required String name,
+  }) async {
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/parking/presets/$presetId',
+      bearerToken: sessionToken,
+      body: {'name': name},
+    );
+
+    return ParkingLocationPreset.fromJson(
+      json['preset'] as Map<String, Object?>,
+    );
+  }
+
+  Future<void> deleteParkingLocationPreset(
+    String sessionToken, {
+    required String familyId,
+    required String presetId,
+  }) async {
+    await _requestJson(
+      'DELETE',
+      '/api/mobile/families/$familyId/parking/presets/$presetId',
+      bearerToken: sessionToken,
+    );
+  }
+
+  Future<ParkingRecord> createParkingRecord(
+    String sessionToken, {
+    required String familyId,
+    required String vehicleId,
+    String? presetId,
+    required String locationText,
+  }) async {
+    final body = <String, Object?>{
+      'vehicleId': vehicleId,
+      'locationText': locationText,
+    };
+
+    if (presetId != null) {
+      body['presetId'] = presetId;
+    }
+
+    final json = await _requestJson(
+      'POST',
+      '/api/mobile/families/$familyId/parking/records',
+      bearerToken: sessionToken,
+      body: body,
+    );
+
+    return ParkingRecord.fromJson(json['record'] as Map<String, Object?>);
+  }
+
   Future<Map<String, Object?>> _requestJson(
     String method,
     String path, {
@@ -408,6 +539,131 @@ class FamilyInvitation {
       inviteToken: json['invite_token'] as String,
       inviteUrl: json['invite_url'] as String,
       expiresAt: json['expires_at'] as String,
+    );
+  }
+}
+
+class ParkingDashboard {
+  const ParkingDashboard({
+    required this.canManage,
+    required this.vehicles,
+    required this.presets,
+    required this.currentLocations,
+  });
+
+  final bool canManage;
+  final List<Vehicle> vehicles;
+  final List<ParkingLocationPreset> presets;
+  final List<ParkingRecord> currentLocations;
+
+  factory ParkingDashboard.fromJson(Map<String, Object?> json) {
+    final vehicles = json['vehicles'] as List<Object?>;
+    final presets = json['presets'] as List<Object?>;
+    final currentLocations = json['currentLocations'] as List<Object?>;
+
+    return ParkingDashboard(
+      canManage: json['canManage'] as bool,
+      vehicles: vehicles
+          .map((vehicle) => Vehicle.fromJson(vehicle as Map<String, Object?>))
+          .toList(),
+      presets: presets
+          .map(
+            (preset) =>
+                ParkingLocationPreset.fromJson(preset as Map<String, Object?>),
+          )
+          .toList(),
+      currentLocations: currentLocations
+          .map(
+            (record) => ParkingRecord.fromJson(record as Map<String, Object?>),
+          )
+          .toList(),
+    );
+  }
+}
+
+class Vehicle {
+  const Vehicle({
+    required this.id,
+    required this.familyId,
+    required this.nickname,
+    required this.plateNumber,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String familyId;
+  final String nickname;
+  final String plateNumber;
+  final String createdAt;
+  final String updatedAt;
+
+  factory Vehicle.fromJson(Map<String, Object?> json) {
+    return Vehicle(
+      id: json['id'] as String,
+      familyId: json['family_id'] as String,
+      nickname: json['nickname'] as String,
+      plateNumber: json['plate_number'] as String,
+      createdAt: json['created_at'] as String,
+      updatedAt: json['updated_at'] as String,
+    );
+  }
+}
+
+class ParkingLocationPreset {
+  const ParkingLocationPreset({
+    required this.id,
+    required this.familyId,
+    required this.name,
+    required this.sortOrder,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String familyId;
+  final String name;
+  final int sortOrder;
+  final String createdAt;
+  final String updatedAt;
+
+  factory ParkingLocationPreset.fromJson(Map<String, Object?> json) {
+    return ParkingLocationPreset(
+      id: json['id'] as String,
+      familyId: json['family_id'] as String,
+      name: json['name'] as String,
+      sortOrder: json['sort_order'] as int,
+      createdAt: json['created_at'] as String,
+      updatedAt: json['updated_at'] as String,
+    );
+  }
+}
+
+class ParkingRecord {
+  const ParkingRecord({
+    required this.id,
+    required this.familyId,
+    required this.vehicleId,
+    required this.presetId,
+    required this.locationText,
+    required this.parkedAt,
+  });
+
+  final String id;
+  final String familyId;
+  final String vehicleId;
+  final String? presetId;
+  final String locationText;
+  final String parkedAt;
+
+  factory ParkingRecord.fromJson(Map<String, Object?> json) {
+    return ParkingRecord(
+      id: json['id'] as String,
+      familyId: json['family_id'] as String,
+      vehicleId: json['vehicle_id'] as String,
+      presetId: json['preset_id'] as String?,
+      locationText: json['location_text'] as String,
+      parkedAt: json['parked_at'] as String,
     );
   }
 }

@@ -350,7 +350,7 @@ async function getFamilyOrThrow(familyId: string) {
   return data as Family;
 }
 
-async function requireMembership(userId: string, familyId: string) {
+export async function requireMembership(userId: string, familyId: string) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('family_members')
@@ -370,7 +370,7 @@ async function requireMembership(userId: string, familyId: string) {
   return data as FamilyMember;
 }
 
-async function requireFamilyManager(userId: string, familyId: string) {
+export async function requireFamilyManager(userId: string, familyId: string) {
   const membership = await requireMembership(userId, familyId);
 
   if (!canManage(membership.role)) {
