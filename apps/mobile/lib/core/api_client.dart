@@ -35,12 +35,14 @@ class ApiClient {
     return AuthResponse.fromJson(json);
   }
 
-  Future<Map<String, Object?>> getMe(String sessionToken) {
-    return _requestJson(
+  Future<AppUser> getMe(String sessionToken) async {
+    final json = await _requestJson(
       'GET',
       '/api/mobile/auth/me',
       bearerToken: sessionToken,
     );
+
+    return AppUser.fromJson(json['user'] as Map<String, Object?>);
   }
 
   Future<AppUser> updateMyProfile(

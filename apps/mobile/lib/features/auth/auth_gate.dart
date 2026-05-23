@@ -3,6 +3,7 @@ import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 
 import '../../core/api_client.dart';
 import '../../core/api_config.dart';
+import '../../core/auth_session_store.dart';
 import '../home/home_screen.dart';
 
 class AuthGate extends StatefulWidget {
@@ -14,11 +15,70 @@ class AuthGate extends StatefulWidget {
 
 class _AuthGateState extends State<AuthGate> {
   final _apiClient = ApiClient();
+  final _sessionStore = AuthSessionStore();
 
   AuthResponse? _auth;
   String? _pendingKakaoAccessToken;
   String? _message;
   bool _isLoading = false;
+  bool _isRestoringSession = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _restoreSession();
+  }
+
+  Future<void> _restoreSession() async {
+    try {
+      final storedSession = await _sessionStore.read();
+
+      if (storedSession == null) {
+        return;
+      }
+
+      if (storedSession.isExpired) {
+        await _sessionStore.clear();
+        return;
+      }
+
+      final user = await _apiClient.getMe(storedSession.accessToken);
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _auth = AuthResponse(
+          tokenType: storedSession.tokenType,
+          accessToken: storedSession.accessToken,
+          expiresIn: storedSession.remainingSeconds,
+          isNewUser: false,
+          user: user,
+        );
+      });
+    } on ApiException catch (error) {
+      if (error.statusCode == 401) {
+        await _sessionStore.clear();
+      } else if (mounted) {
+        setState(() {
+          _message = '저장된 로그인 확인에 실패했습니다. 다시 시도해 주세요.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _message = '저장된 로그인 확인에 실패했습니다. 다시 시도해 주세요.';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRestoringSession = false;
+        });
+      }
+    }
+  }
 
   Future<void> _loginWithKakaoSdk() async {
     if (ApiConfig.kakaoNativeAppKey.isEmpty) {
@@ -50,6 +110,8 @@ class _AuthGateState extends State<AuthGate> {
         accessToken,
         nickname: nickname,
       );
+
+      await _sessionStore.save(auth);
 
       setState(() {
         _auth = auth;
@@ -91,9 +153,12 @@ class _AuthGateState extends State<AuthGate> {
       auth.accessToken,
       nickname: nickname,
     );
+    final updatedAuth = auth.copyWith(user: user);
+
+    await _sessionStore.save(updatedAuth);
 
     setState(() {
-      _auth = auth.copyWith(user: user);
+      _auth = updatedAuth;
     });
 
     return user;
@@ -124,12 +189,25 @@ class _AuthGateState extends State<AuthGate> {
   Widget build(BuildContext context) {
     final auth = _auth;
 
+    if (_isRestoringSession) {
+      return const CupertinoPageScaffold(
+        backgroundColor: Color(0xFFF5F5F7),
+        child: Center(child: CupertinoActivityIndicator()),
+      );
+    }
+
     if (auth != null) {
       return HomeScreen(
         user: auth.user,
         sessionToken: auth.accessToken,
         onUpdateProfile: _updateProfile,
-        onLogout: () {
+        onLogout: () async {
+          await _sessionStore.clear();
+
+          if (!mounted) {
+            return;
+          }
+
           setState(() {
             _auth = null;
             _pendingKakaoAccessToken = null;

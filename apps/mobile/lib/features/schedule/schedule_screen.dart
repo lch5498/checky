@@ -177,19 +177,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     final selectedFamilyId = await showCupertinoModalPopup<String>(
       context: context,
-      builder: (_) => CupertinoActionSheet(
+      builder: (popupContext) => CupertinoActionSheet(
         title: const Text('가족 전환'),
         actions: widget.families
             .map(
               (family) => CupertinoActionSheetAction(
                 isDefaultAction: family.id == _family.id,
-                onPressed: () => Navigator.of(context).pop(family.id),
+                onPressed: () => Navigator.of(popupContext).pop(family.id),
                 child: Text(family.name),
               ),
             )
             .toList(),
         cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(popupContext).pop(),
           child: const Text('취소'),
         ),
       ),
@@ -1727,19 +1727,19 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
   Future<void> _pickMember() async {
     final selectedId = await showCupertinoModalPopup<String>(
       context: context,
-      builder: (_) => CupertinoActionSheet(
+      builder: (popupContext) => CupertinoActionSheet(
         title: const Text('가족 구성원'),
         actions: widget.members
             .map(
               (member) => CupertinoActionSheetAction(
                 isDefaultAction: member.id == _familyMemberId,
-                onPressed: () => Navigator.of(context).pop(member.id),
+                onPressed: () => Navigator.of(popupContext).pop(member.id),
                 child: Text(member.userNickname),
               ),
             )
             .toList(),
         cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(popupContext).pop(),
           child: const Text('취소'),
         ),
       ),
@@ -1797,7 +1797,7 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
 
     return showCupertinoModalPopup<DateTime>(
       context: context,
-      builder: (_) => Container(
+      builder: (popupContext) => Container(
         height: 320,
         color: CupertinoColors.systemBackground.resolveFrom(context),
         child: SafeArea(
@@ -1810,11 +1810,11 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     CupertinoButton(
-                      onPressed: () => Navigator.of(context).pop(),
+                      onPressed: () => Navigator.of(popupContext).pop(),
                       child: const Text('취소'),
                     ),
                     CupertinoButton(
-                      onPressed: () => Navigator.of(context).pop(selected),
+                      onPressed: () => Navigator.of(popupContext).pop(selected),
                       child: const Text('완료'),
                     ),
                   ],

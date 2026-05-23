@@ -92,6 +92,15 @@ Flutter Kakao SDK
 
 Flutter 앱에는 Supabase secret key를 절대 넣지 않는다. 앱은 Next.js API만 호출한다.
 
+### iOS 카카오 설정
+
+- `--dart-define=KAKAO_NATIVE_APP_KEY=...`는 Dart 런타임에서 `KakaoSdk.init(...)`에 쓰이는 값이다.
+- iOS 카카오 앱 복귀 URL Scheme은 `ios/Runner/Info.plist`의 `kakao$(KAKAO_NATIVE_APP_KEY)`가 사용한다.
+- `Info.plist` 치환 값은 Dart `--dart-define`으로 채워지지 않는다. 각 빌드 설정의 xcconfig에 따로 있어야 한다.
+- `ios/Flutter/Debug.xcconfig`, `ios/Flutter/Profile.xcconfig`, `ios/Flutter/Release.xcconfig`의 `KAKAO_NATIVE_APP_KEY` 값을 모두 맞춘다.
+- 디버그에서 카카오 로그인이 되는데 릴리즈에서 카카오톡이 앱으로 돌아오지 않으면, 먼저 `Release.xcconfig`의 `KAKAO_NATIVE_APP_KEY`와 최종 URL Scheme이 `kakao<Native App Key>` 형태인지 확인한다.
+- 카카오 개발자 콘솔 iOS 플랫폼의 Bundle ID는 Xcode `PRODUCT_BUNDLE_IDENTIFIER`와 일치해야 한다.
+
 ### 로컬 실행
 
 iOS Simulator에서는 기본 API 주소로 `http://localhost:3000`을 사용한다.
