@@ -190,9 +190,13 @@ class _ParkingScreenState extends State<ParkingScreen> {
       return;
     }
 
+    final currentLocation = _currentLocationsByVehicleId[vehicle.id];
     final selected = await showCupertinoModalPopup<_ParkingLocationInput>(
       context: context,
-      builder: (_) => _LocationPickerSheet(presets: dashboard.presets),
+      builder: (_) => _LocationPickerSheet(
+        presets: dashboard.presets,
+        currentLocation: currentLocation,
+      ),
     );
 
     if (selected == null) {
@@ -220,17 +224,17 @@ class _ParkingScreenState extends State<ParkingScreen> {
   }) async {
     final result = await showCupertinoDialog<bool>(
       context: context,
-      builder: (_) => CupertinoAlertDialog(
+      builder: (dialogContext) => CupertinoAlertDialog(
         title: Text(title),
         content: Text(message),
         actions: [
           CupertinoDialogAction(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('취소'),
           ),
           CupertinoDialogAction(
             isDestructiveAction: true,
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             child: Text(actionText),
           ),
         ],
@@ -247,19 +251,19 @@ class _ParkingScreenState extends State<ParkingScreen> {
 
     final selectedFamilyId = await showCupertinoModalPopup<String>(
       context: context,
-      builder: (_) => CupertinoActionSheet(
+      builder: (sheetContext) => CupertinoActionSheet(
         title: const Text('가족 전환'),
         actions: widget.families
             .map(
               (family) => CupertinoActionSheetAction(
                 isDefaultAction: family.id == _family.id,
-                onPressed: () => Navigator.of(context).pop(family.id),
+                onPressed: () => Navigator.of(sheetContext).pop(family.id),
                 child: Text(family.name),
               ),
             )
             .toList(),
         cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(sheetContext).pop(),
           child: const Text('취소'),
         ),
       ),
@@ -546,20 +550,22 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
   Future<void> _openPresetTypePicker() async {
     final presetType = await showCupertinoModalPopup<String>(
       context: context,
-      builder: (_) => CupertinoActionSheet(
+      builder: (sheetContext) => CupertinoActionSheet(
         title: const Text('즐겨찾기 추가'),
         actions: [
           CupertinoActionSheetAction(
-            onPressed: () => Navigator.of(context).pop(_parkingPresetTypeFloor),
+            onPressed: () =>
+                Navigator.of(sheetContext).pop(_parkingPresetTypeFloor),
             child: const Text('자주 쓰는 층수'),
           ),
           CupertinoActionSheetAction(
-            onPressed: () => Navigator.of(context).pop(_parkingPresetTypeSpot),
+            onPressed: () =>
+                Navigator.of(sheetContext).pop(_parkingPresetTypeSpot),
             child: const Text('자주 쓰는 위치'),
           ),
         ],
         cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(sheetContext).pop(),
           child: const Text('취소'),
         ),
       ),
@@ -621,17 +627,17 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
   Future<void> _deletePreset(ParkingLocationPreset preset) async {
     final confirmed = await showCupertinoDialog<bool>(
       context: context,
-      builder: (_) => CupertinoAlertDialog(
+      builder: (dialogContext) => CupertinoAlertDialog(
         title: const Text('즐겨찾기 삭제'),
         content: Text('${preset.name} 즐겨찾기를 삭제할까요?'),
         actions: [
           CupertinoDialogAction(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('취소'),
           ),
           CupertinoDialogAction(
             isDestructiveAction: true,
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(dialogContext).pop(true),
             child: const Text('삭제'),
           ),
         ],
@@ -1134,9 +1140,10 @@ class _PresetTile extends StatelessWidget {
 }
 
 class _LocationPickerSheet extends StatefulWidget {
-  const _LocationPickerSheet({required this.presets});
+  const _LocationPickerSheet({required this.presets, this.currentLocation});
 
   final List<ParkingLocationPreset> presets;
+  final ParkingRecord? currentLocation;
 
   @override
   State<_LocationPickerSheet> createState() => _LocationPickerSheetState();
@@ -1145,6 +1152,27 @@ class _LocationPickerSheet extends StatefulWidget {
 class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   _ParkingLocationChoice? _floor;
   _ParkingLocationChoice? _spot;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final currentLocation = widget.currentLocation;
+    if (currentLocation == null) {
+      return;
+    }
+
+    _floor = _choiceFromCurrentLocation(
+      presetType: _parkingPresetTypeFloor,
+      presetId: currentLocation.floorPresetId,
+      text: currentLocation.floorText,
+    );
+    _spot = _choiceFromCurrentLocation(
+      presetType: _parkingPresetTypeSpot,
+      presetId: currentLocation.spotPresetId,
+      text: currentLocation.spotText,
+    );
+  }
 
   List<_ParkingLocationChoice> _choicesFor(String presetType) {
     final presets = widget.presets
@@ -1164,6 +1192,32 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       for (final value in defaults)
         if (!presetNames.contains(value)) _ParkingLocationChoice(text: value),
     ];
+  }
+
+  _ParkingLocationChoice? _choiceFromCurrentLocation({
+    required String presetType,
+    required String? presetId,
+    required String text,
+  }) {
+    final normalizedText = text.trim();
+    if (normalizedText.isEmpty) {
+      return null;
+    }
+
+    final choices = _choicesFor(presetType);
+    for (final choice in choices) {
+      if (presetId != null && choice.presetId == presetId) {
+        return choice;
+      }
+    }
+
+    for (final choice in choices) {
+      if (choice.text == normalizedText) {
+        return choice;
+      }
+    }
+
+    return _ParkingLocationChoice(text: normalizedText);
   }
 
   Future<void> _openDirectInput({required bool isFloor}) async {

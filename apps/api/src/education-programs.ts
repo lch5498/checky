@@ -471,6 +471,7 @@ const programSelect = `
     id,
     family_id,
     user_id,
+    nickname,
     role,
     created_at,
     updated_at,

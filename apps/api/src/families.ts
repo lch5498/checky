@@ -2,6 +2,7 @@ import { randomBytes } from 'node:crypto';
 
 import { HttpError } from './http';
 import { getSupabaseAdmin } from './supabase';
+import { getUserById } from './users';
 
 export type FamilyRole = 'owner' | 'co_owner' | 'member';
 
@@ -16,7 +17,8 @@ export type Family = {
 export type FamilyMember = {
   id: string;
   family_id: string;
-  user_id: string;
+  user_id: string | null;
+  nickname: string;
   role: FamilyRole;
   created_at: string;
   updated_at: string;
@@ -29,8 +31,10 @@ export type FamilyMember = {
 export type FamilyInvitation = {
   id: string;
   family_id: string;
+  family_member_id: string;
   invited_by_user_id: string | null;
-  role: FamilyRole;
+  role?: FamilyRole;
+  member_nickname?: string;
   invite_token: string;
   expires_at: string;
   accepted_by_user_id: string | null;
@@ -79,6 +83,7 @@ export async function listFamilies(userId: string) {
 export async function createFamily(userId: string, name: string) {
   const supabase = getSupabaseAdmin();
   const familyName = normalizeName(name);
+  const user = await getUserById(userId);
 
   const { data: family, error: createFamilyError } = await supabase
     .from('families')
@@ -98,6 +103,7 @@ export async function createFamily(userId: string, name: string) {
     .insert({
       family_id: family.id,
       user_id: userId,
+      nickname: user?.nickname ?? '대표',
       role: 'owner',
     });
 
@@ -162,6 +168,7 @@ export async function listFamilyMembers(userId: string, familyId: string) {
         id,
         family_id,
         user_id,
+        nickname,
         role,
         created_at,
         updated_at,
@@ -179,6 +186,46 @@ export async function listFamilyMembers(userId: string, familyId: string) {
   }
 
   return (data ?? []) as unknown as FamilyMember[];
+}
+
+export async function createFamilyMember(
+  userId: string,
+  familyId: string,
+  input: { nickname: string; role: FamilyRole },
+) {
+  await requireFamilyManager(userId, familyId);
+  assertFamilyRole(input.role);
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('family_members')
+    .insert({
+      family_id: familyId,
+      nickname: normalizeNickname(input.nickname),
+      role: input.role,
+    })
+    .select(
+      `
+        id,
+        family_id,
+        user_id,
+        nickname,
+        role,
+        created_at,
+        updated_at,
+        user:users (
+          id,
+          nickname
+        )
+      `,
+    )
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as unknown as FamilyMember;
 }
 
 export async function removeFamilyMember(
@@ -238,12 +285,17 @@ export async function removeFamilyMember(
 export async function createFamilyInvitation(
   userId: string,
   familyId: string,
-  role: FamilyRole,
+  memberId: string,
 ) {
   await requireFamilyManager(userId, familyId);
-  assertFamilyRole(role);
 
   const supabase = getSupabaseAdmin();
+  const member = await getFamilyMemberOrThrow(familyId, memberId);
+
+  if (member.user_id) {
+    throw new HttpError(409, { error: 'family_member_already_linked' });
+  }
+
   const token = randomBytes(24).toString('base64url');
   const expiresAt = new Date(
     Date.now() + INVITATION_TTL_DAYS * 24 * 60 * 60 * 1000,
@@ -253,8 +305,8 @@ export async function createFamilyInvitation(
     .from('family_invitations')
     .insert({
       family_id: familyId,
+      family_member_id: member.id,
       invited_by_user_id: userId,
-      role,
       invite_token: token,
       expires_at: expiresAt,
     })
@@ -265,16 +317,26 @@ export async function createFamilyInvitation(
     throw error;
   }
 
-  return data as FamilyInvitation;
+  return {
+    ...(data as FamilyInvitation),
+    role: member.role,
+    member_nickname: member.nickname,
+  };
 }
 
 export async function getInvitationPreview(inviteToken: string) {
   const invitation = await getValidInvitation(inviteToken);
   const family = await getFamilyOrThrow(invitation.family_id);
+  const member = await getFamilyMemberOrThrow(
+    invitation.family_id,
+    invitation.family_member_id,
+  );
 
   return {
     family,
-    role: invitation.role,
+    memberId: member.id,
+    memberNickname: member.nickname,
+    role: member.role,
     expiresAt: invitation.expires_at,
   };
 }
@@ -282,18 +344,43 @@ export async function getInvitationPreview(inviteToken: string) {
 export async function acceptFamilyInvitation(userId: string, inviteToken: string) {
   const invitation = await getValidInvitation(inviteToken);
   const supabase = getSupabaseAdmin();
-
-  const { error: upsertError } = await supabase.from('family_members').upsert(
-    {
-      family_id: invitation.family_id,
-      user_id: userId,
-      role: invitation.role,
-    },
-    { onConflict: 'family_id,user_id' },
+  const member = await getFamilyMemberOrThrow(
+    invitation.family_id,
+    invitation.family_member_id,
   );
 
-  if (upsertError) {
-    throw upsertError;
+  if (member.user_id && member.user_id !== userId) {
+    throw new HttpError(409, { error: 'family_member_already_linked' });
+  }
+
+  const { data: existingMember, error: existingMemberError } = await supabase
+    .from('family_members')
+    .select('id')
+    .eq('family_id', invitation.family_id)
+    .eq('user_id', userId)
+    .neq('id', member.id)
+    .maybeSingle();
+
+  if (existingMemberError) {
+    throw existingMemberError;
+  }
+
+  if (existingMember) {
+    throw new HttpError(409, { error: 'family_user_already_linked' });
+  }
+
+  const user = await getUserById(userId);
+  const { error: updateMemberError } = await supabase
+    .from('family_members')
+    .update({
+      user_id: userId,
+      nickname: member.nickname || user?.nickname || '구성원',
+    })
+    .eq('id', member.id)
+    .eq('family_id', invitation.family_id);
+
+  if (updateMemberError) {
+    throw updateMemberError;
   }
 
   const { error: acceptError } = await supabase
@@ -331,6 +418,20 @@ function normalizeName(name: string) {
   return normalized;
 }
 
+function normalizeNickname(nickname: string) {
+  const normalized = nickname.trim();
+
+  if (!normalized) {
+    throw new HttpError(400, { error: 'nickname_required' });
+  }
+
+  if (normalized.length > 40) {
+    throw new HttpError(400, { error: 'nickname_too_long' });
+  }
+
+  return normalized;
+}
+
 async function getFamilyOrThrow(familyId: string) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
@@ -348,6 +449,26 @@ async function getFamilyOrThrow(familyId: string) {
   }
 
   return data as Family;
+}
+
+async function getFamilyMemberOrThrow(familyId: string, memberId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('family_members')
+    .select('*')
+    .eq('id', memberId)
+    .eq('family_id', familyId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    throw new HttpError(404, { error: 'member_not_found' });
+  }
+
+  return data as FamilyMember;
 }
 
 export async function requireMembership(userId: string, familyId: string) {

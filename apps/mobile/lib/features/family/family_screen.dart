@@ -355,19 +355,37 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
     });
   }
 
-  Future<void> _createInvitation() async {
+  Future<void> _createMember() async {
     final detail = _detail;
 
     if (detail == null) {
       return;
     }
 
-    final role = await showCupertinoDialog<String>(
+    final input = await showCupertinoDialog<_MemberInput>(
       context: context,
-      builder: (_) => const _RolePickerDialog(),
+      builder: (_) => const _MemberDialog(),
     );
 
-    if (role == null) {
+    if (input == null) {
+      return;
+    }
+
+    await _runDetailTask(() async {
+      await _apiClient.createFamilyMember(
+        widget.sessionToken,
+        familyId: detail.family.id,
+        nickname: input.nickname,
+        role: input.role,
+      );
+      await _loadFamily();
+    });
+  }
+
+  Future<void> _createInvitation(FamilyMember member) async {
+    final detail = _detail;
+
+    if (detail == null) {
       return;
     }
 
@@ -375,7 +393,7 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
       final invitation = await _apiClient.createFamilyInvitation(
         widget.sessionToken,
         familyId: detail.family.id,
-        role: role,
+        memberId: member.id,
       );
 
       if (mounted) {
@@ -478,7 +496,7 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
             ? CupertinoButton(
                 padding: EdgeInsets.zero,
                 minimumSize: const Size(32, 32),
-                onPressed: _isLoading ? null : _createInvitation,
+                onPressed: _isLoading ? null : _createMember,
                 child: const Icon(CupertinoIcons.person_badge_plus),
               )
             : null,
@@ -527,6 +545,8 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
                     canDelete:
                         detail.canManage &&
                         member.userId != widget.currentUserId,
+                    canInvite: detail.canManage && !member.isLinked,
+                    onInvite: () => _createInvitation(member),
                     onDelete: () => _removeMember(member),
                   ),
                 ),
@@ -660,11 +680,15 @@ class _MemberTile extends StatelessWidget {
   const _MemberTile({
     required this.member,
     required this.canDelete,
+    required this.canInvite,
+    required this.onInvite,
     required this.onDelete,
   });
 
   final FamilyMember member;
   final bool canDelete;
+  final bool canInvite;
+  final VoidCallback onInvite;
   final VoidCallback onDelete;
 
   @override
@@ -709,7 +733,7 @@ class _MemberTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  roleLabel(member.role),
+                  '${roleLabel(member.role)} · ${member.isLinked ? '계정 연결됨' : '계정 미연결'}',
                   style: const TextStyle(
                     color: Color(0xFF6E6E73),
                     fontSize: 13,
@@ -720,6 +744,13 @@ class _MemberTile extends StatelessWidget {
               ],
             ),
           ),
+          if (canInvite)
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(40, 40),
+              onPressed: onInvite,
+              child: const Icon(CupertinoIcons.link_circle),
+            ),
           if (canDelete)
             CupertinoButton(
               padding: EdgeInsets.zero,
@@ -955,45 +986,95 @@ class _InviteAcceptDialogState extends State<_InviteAcceptDialog> {
   }
 }
 
-class _RolePickerDialog extends StatefulWidget {
-  const _RolePickerDialog();
+class _MemberDialog extends StatefulWidget {
+  const _MemberDialog();
 
   @override
-  State<_RolePickerDialog> createState() => _RolePickerDialogState();
+  State<_MemberDialog> createState() => _MemberDialogState();
 }
 
-class _RolePickerDialogState extends State<_RolePickerDialog> {
+class _MemberDialogState extends State<_MemberDialog> {
+  final _nicknameController = TextEditingController();
   String _role = 'member';
+  String? _message;
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final nickname = _nicknameController.text.trim();
+
+    if (nickname.isEmpty) {
+      setState(() {
+        _message = '구성원 이름을 입력해 주세요.';
+      });
+      return;
+    }
+
+    if (nickname.length > 40) {
+      setState(() {
+        _message = '구성원 이름은 40자 이하로 입력해 주세요.';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(_MemberInput(nickname: nickname, role: _role));
+  }
 
   @override
   Widget build(BuildContext context) {
     return CupertinoAlertDialog(
-      title: const Text('초대 권한'),
+      title: const Text('구성원 추가'),
       content: Padding(
         padding: const EdgeInsets.only(top: 12),
-        child: CupertinoSlidingSegmentedControl<String>(
-          groupValue: _role,
-          children: const {
-            'owner': Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6),
-              child: Text('대표'),
+        child: Column(
+          children: [
+            CupertinoTextField(
+              controller: _nicknameController,
+              autofocus: true,
+              placeholder: '이름',
+              maxLength: 40,
+              onSubmitted: (_) => _submit(),
             ),
-            'co_owner': Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6),
-              child: Text('공동'),
+            const SizedBox(height: 10),
+            CupertinoSlidingSegmentedControl<String>(
+              groupValue: _role,
+              children: const {
+                'owner': Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Text('대표'),
+                ),
+                'co_owner': Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Text('공동'),
+                ),
+                'member': Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6),
+                  child: Text('구성원'),
+                ),
+              },
+              onValueChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _role = value;
+                  });
+                }
+              },
             ),
-            'member': Padding(
-              padding: EdgeInsets.symmetric(horizontal: 6),
-              child: Text('구성원'),
-            ),
-          },
-          onValueChanged: (value) {
-            if (value != null) {
-              setState(() {
-                _role = value;
-              });
-            }
-          },
+            if (_message != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _message!,
+                style: const TextStyle(
+                  color: CupertinoColors.destructiveRed,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
       actions: [
@@ -1001,13 +1082,17 @@ class _RolePickerDialogState extends State<_RolePickerDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('취소'),
         ),
-        CupertinoDialogAction(
-          onPressed: () => Navigator.of(context).pop(_role),
-          child: const Text('초대 만들기'),
-        ),
+        CupertinoDialogAction(onPressed: _submit, child: const Text('추가')),
       ],
     );
   }
+}
+
+class _MemberInput {
+  const _MemberInput({required this.nickname, required this.role});
+
+  final String nickname;
+  final String role;
 }
 
 class _InviteResultDialog extends StatelessWidget {
@@ -1033,7 +1118,9 @@ class _InviteResultDialog extends StatelessWidget {
         padding: const EdgeInsets.only(top: 12),
         child: Column(
           children: [
-            Text('${roleLabel(invitation.role)} 권한으로 초대합니다.'),
+            Text(
+              '${invitation.memberNickname}님을 ${roleLabel(invitation.role)} 권한으로 연결합니다.',
+            ),
             const SizedBox(height: 10),
             Text(invitation.inviteUrl, style: const TextStyle(fontSize: 13)),
           ],

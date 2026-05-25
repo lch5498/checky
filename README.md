@@ -42,7 +42,7 @@ harness/
 
 ## 현재 완료된 상태
 
-2026년 5월 23일 기준으로 아래 흐름까지 확인했습니다.
+2026년 5월 25일 기준으로 아래 흐름까지 확인했습니다.
 
 - GitHub `main` 브랜치 push 완료
 - Next.js API 서버 Vercel Production 배포 완료
@@ -53,13 +53,14 @@ harness/
 - Flutter 카카오 SDK 로그인 테스트 완료
 - Flutter 앱에서 카카오 access token을 Next.js API로 전달하는 모바일 로그인 흐름 구현
 - 최초 가입 시 닉네임 입력 및 프로필 닉네임 수정 구현
-- 가족 생성, 수정, 삭제, 구성원 조회, 구성원 초대/수락, 구성원 삭제 구현
+- 가족 생성, 수정, 삭제, 구성원 조회, 구성원 닉네임 기반 추가, 구성원별 초대/수락, 구성원 삭제 구현
 - iOS 공유 시트로 가족 초대 링크 공유 구현
 - 주차 관리 schema/API/Flutter 화면 구현
 - 차량 등록, 수정, 삭제 구현
-- 주차 위치 즐겨찾기 등록, 수정, 삭제 구현
-- 차량별 현재 주차 위치 등록 구현
+- 주차 위치 즐겨찾기를 층수와 위치로 분리해 등록, 수정, 삭제 구현
+- 차량별 현재 주차 위치 등록 구현, 기존 위치가 있으면 층/위치 자동 선택
 - 학원 일정 관리 schema/API/Flutter 화면 구현
+- 학교/학원 관리 schema/API/Flutter 화면 구현, 등록 시 캘린더 자동 일정 생성
 - 가족 구성원별 일정 등록, 수정, 삭제, 상세 조회 구현
 - 일정 일간/주간/월간 캘린더 화면 구현
 - 일간/주간 캘린더는 시간축 기반으로 표시하고 일정이 있는 시간대로 자동 이동
@@ -302,6 +303,7 @@ supabase/migrations/202605180001_add_users_and_authentications.sql
 supabase/migrations/202605230001_add_families.sql
 supabase/migrations/202605230002_add_parking_management.sql
 supabase/migrations/202605230003_add_schedule_management.sql
+supabase/migrations/202605250001_add_education_programs.sql
 ```
 
 가장 간단한 방법은 Supabase Dashboard에서 SQL Editor를 열고 migration SQL을 실행하는 것입니다.
@@ -325,6 +327,7 @@ supabase db push
 - `parking_location_presets`
 - `parking_records`
 - `schedules`
+- `education_programs`
 
 Row Level Security는 켜져 있습니다. 현재 Vercel API는 서버에서 Supabase secret key를 사용하므로 모바일 앱이 DB에 직접 접근하지 않습니다.
 
@@ -334,9 +337,9 @@ Row Level Security는 켜져 있습니다. 현재 Vercel API는 서버에서 Sup
 - `co_owner`: 공동대표. 가족 안의 추가, 수정, 삭제, 조회 가능
 - `member`: 구성원. 가족과 구성원 조회만 가능
 
-가족 초대는 대표 또는 공동대표가 난수 초대 토큰을 만들고, 앱에서 초대 링크를 복사하거나 iOS 공유 시트로 카카오톡/문자 등에 전달하는 방식입니다. 초대받은 사용자는 가족 관리 화면의 `초대 링크 수락`에서 링크나 코드를 입력해 연결합니다. 초대 링크는 기본 7일 동안 유효합니다.
+가족 구성원은 로그인 계정 없이도 먼저 닉네임과 권한으로 추가할 수 있습니다. 어린 자녀처럼 앱에 가입하지 않는 구성원도 일정과 학교/학원 담당자로 바로 사용할 수 있습니다. 초대가 필요한 경우 대표 또는 공동대표가 특정 구성원에 대한 난수 초대 토큰을 만들고, 앱에서 초대 링크를 복사하거나 iOS 공유 시트로 카카오톡/문자 등에 전달합니다. 초대받은 사용자가 가족 관리 화면의 `초대 링크 수락`에서 링크나 코드를 입력하면 해당 구성원의 `user_id`에 로그인 계정이 연결됩니다. 초대 링크는 기본 7일 동안 유효합니다.
 
-주차와 일정 데이터도 모두 `family_id`를 기준으로 저장합니다. 일정은 `family_member_id`를 함께 저장해 가족 구성원 중 누구의 일정인지 지정합니다.
+주차, 일정, 학교/학원 데이터도 모두 `family_id`를 기준으로 저장합니다. 일정과 학교/학원은 `family_member_id`를 함께 저장해 가족 구성원 중 누구의 일정인지 지정합니다.
 
 ## 백엔드 API 실행
 
@@ -528,18 +531,38 @@ content-type: application/json
 DELETE /api/mobile/families/<familyId>
 ```
 
-초대 링크 생성:
+구성원 목록:
+
+```http
+GET /api/mobile/families/<familyId>/members
+```
+
+구성원 추가:
+
+```http
+POST /api/mobile/families/<familyId>/members
+content-type: application/json
+
+{
+  "nickname": "첫째",
+  "role": "member"
+}
+```
+
+`role`은 `owner`, `co_owner`, `member` 중 하나입니다. `nickname`으로 먼저 구성원을 추가하므로, 해당 구성원이 아직 로그인 계정을 갖고 있지 않아도 일정과 학교/학원 담당자로 지정할 수 있습니다.
+
+구성원 초대 링크 생성:
 
 ```http
 POST /api/mobile/families/<familyId>/invitations
 content-type: application/json
 
 {
-  "role": "member"
+  "memberId": "<familyMemberId>"
 }
 ```
 
-`role`은 `owner`, `co_owner`, `member` 중 하나입니다.
+초대 링크는 특정 구성원에 매핑됩니다. 수락한 사용자의 계정은 새 구성원으로 추가되는 것이 아니라 해당 구성원의 `user_id`에 연결됩니다. 이미 계정이 연결된 구성원에는 초대 링크를 만들 수 없습니다.
 
 초대 수락:
 
@@ -553,7 +576,7 @@ POST /api/mobile/family-invitations/<inviteToken>
 DELETE /api/mobile/families/<familyId>/members/<memberId>
 ```
 
-대표와 공동대표만 쓰기 API를 호출할 수 있습니다. 구성원은 조회만 가능합니다. 본인은 구성원 목록에서 삭제할 수 없으며, 서버도 `cannot_remove_self`로 거절합니다. 마지막 대표를 삭제하는 요청도 `cannot_remove_last_owner`로 거절합니다.
+대표와 공동대표만 쓰기 API를 호출할 수 있습니다. 구성원은 조회만 가능합니다. 본인은 구성원 목록에서 삭제할 수 없으며, 서버도 `cannot_remove_self`로 거절합니다. 마지막 대표를 삭제하는 요청도 `cannot_remove_last_owner`로 거절합니다. 앱에서는 미연결 구성원 카드에 링크 버튼을 표시해 초대 링크를 만들고 공유할 수 있습니다.
 
 ## 주차 관리 API
 
@@ -593,9 +616,12 @@ POST /api/mobile/families/<familyId>/parking/presets
 content-type: application/json
 
 {
-  "name": "지하1층"
+  "presetType": "floor",
+  "name": "B1"
 }
 ```
+
+`presetType`은 `floor` 또는 `spot`입니다. 앱에서는 자주 쓰는 층수와 자주 쓰는 위치를 따로 관리합니다. 기본 선택지는 층수 `B1`, `B2`, `B3`, `B4`, 위치 `101동`, `107동`, `가운데`이며 직접 입력도 가능합니다.
 
 주차 위치 즐겨찾기 수정/삭제:
 
@@ -612,12 +638,14 @@ content-type: application/json
 
 {
   "vehicleId": "<vehicleId>",
-  "presetId": "<presetId>",
-  "locationText": "지하1층"
+  "floorPresetId": "<floorPresetId>",
+  "spotPresetId": "<spotPresetId>",
+  "floorText": "B2",
+  "spotText": "101동"
 }
 ```
 
-`presetId` 없이 `locationText`만 보내 직접 입력 위치를 저장할 수 있습니다. 대표와 공동대표만 쓰기 API를 호출할 수 있고, 구성원은 조회만 가능합니다.
+`floorPresetId`, `spotPresetId`는 선택 입력입니다. 프리셋 없이 `floorText`, `spotText`만 보내 직접 입력 위치를 저장할 수 있습니다. 서버는 표시용 `locationText`를 `층 / 위치` 형태로 함께 저장합니다. 앱에서 이미 등록된 현재 위치가 있으면 위치 등록 화면 진입 시 기존 층과 위치가 자동 선택됩니다. 대표와 공동대표만 쓰기 API를 호출할 수 있고, 구성원은 조회만 가능합니다.
 
 ## 일정 관리 API
 
@@ -660,6 +688,18 @@ DELETE /api/mobile/families/<familyId>/schedules/<scheduleId>
 대표와 공동대표만 등록, 수정, 삭제할 수 있고, 구성원은 조회만 가능합니다.
 
 Flutter 일정 화면은 Cupertino 위젯 기반입니다. 기본은 주간 뷰이며, 일/주/월 전환을 제공합니다. 캘린더는 `일 월 화 수 목 금 토` 순서로 표시합니다. 일간/주간 뷰는 시간축 기반이며, 해당 날짜 또는 오늘 일정이 있으면 가장 이른 일정 시간대로 자동 이동하고 일정이 없으면 8시 근처로 이동합니다. 캘린더의 날짜 또는 시간 칸을 누르면 해당 날짜와 시간으로 일정 등록 화면을 엽니다. 일정 칩을 누르면 상세 화면에서 제목, 내용, 구성원, From, To, 차량승차시각, 하차시각을 확인하고 수정 또는 삭제할 수 있습니다.
+
+## 학교/학원 관리
+
+학교/학원 관리는 가족 구성원별 반복 일정을 관리하는 기능입니다.
+
+- 이름
+- 담당 가족 구성원
+- 시작일과 종료일
+- 요일별 시작/종료 시각
+- 요일별 차량탑승시각과 하차시각
+
+학교/학원 등록 시 선택한 기간과 요일별 시각을 기준으로 일정 데이터도 자동 생성합니다. 캘린더에는 학교/학원 이름이 일정 제목으로 표시됩니다. 요일별 시간 입력은 클라이언트에서 바로 위 요일의 값을 복사할 수 있습니다.
 
 ## 검증 명령어
 
@@ -769,9 +809,8 @@ curl https://api-one-ruby-46.vercel.app/api/health
 
 ## 다음 개발 순서
 
-1. Supabase에 주차 관리와 일정 관리 migration 적용
+1. Supabase에 최신 migration 적용
 2. Vercel Production API 재배포
-3. 실제 iPhone에서 가입, 가족 생성, 주차 관리, 일정 등록/수정/삭제 회귀 테스트
-4. 앱에 session token 저장소 추가
-5. 일정 반복 규칙과 알림 같은 고급 기능 검토
-6. 주차 기록 히스토리와 차량별 기록 조회 기능 검토
+3. 실제 iPhone에서 가입, 가족 생성, 구성원 추가/초대/수락, 주차 관리, 일정 등록/수정/삭제 회귀 테스트
+4. 일정 반복 규칙과 알림 같은 고급 기능 검토
+5. 주차 기록 히스토리와 차량별 기록 조회 기능 검토

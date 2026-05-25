@@ -128,18 +128,34 @@ class ApiClient {
   Future<FamilyInvitation> createFamilyInvitation(
     String sessionToken, {
     required String familyId,
-    required String role,
+    required String memberId,
   }) async {
     final json = await _requestJson(
       'POST',
       '/api/mobile/families/$familyId/invitations',
       bearerToken: sessionToken,
-      body: {'role': role},
+      body: {'memberId': memberId},
     );
 
     return FamilyInvitation.fromJson(
       json['invitation'] as Map<String, Object?>,
     );
+  }
+
+  Future<FamilyMember> createFamilyMember(
+    String sessionToken, {
+    required String familyId,
+    required String nickname,
+    required String role,
+  }) async {
+    final json = await _requestJson(
+      'POST',
+      '/api/mobile/families/$familyId/members',
+      bearerToken: sessionToken,
+      body: {'nickname': nickname, 'role': role},
+    );
+
+    return FamilyMember.fromJson(json['member'] as Map<String, Object?>);
   }
 
   Future<void> deleteFamilyMember(
@@ -684,6 +700,7 @@ class FamilyMember {
     required this.id,
     required this.familyId,
     required this.userId,
+    required this.nickname,
     required this.role,
     required this.createdAt,
     required this.userNickname,
@@ -691,21 +708,26 @@ class FamilyMember {
 
   final String id;
   final String familyId;
-  final String userId;
+  final String? userId;
+  final String nickname;
   final String role;
   final String createdAt;
   final String userNickname;
 
+  bool get isLinked => userId != null;
+
   factory FamilyMember.fromJson(Map<String, Object?> json) {
     final user = json['user'] as Map<String, Object?>?;
+    final nickname = json['nickname'] as String? ?? '이름 없음';
 
     return FamilyMember(
       id: json['id'] as String,
       familyId: json['family_id'] as String,
-      userId: json['user_id'] as String,
+      userId: json['user_id'] as String?,
+      nickname: nickname,
       role: json['role'] as String,
       createdAt: json['created_at'] as String,
-      userNickname: user?['nickname'] as String? ?? '이름 없음',
+      userNickname: user?['nickname'] as String? ?? nickname,
     );
   }
 }
@@ -714,6 +736,8 @@ class FamilyInvitation {
   const FamilyInvitation({
     required this.id,
     required this.familyId,
+    required this.memberId,
+    required this.memberNickname,
     required this.role,
     required this.inviteToken,
     required this.inviteUrl,
@@ -722,6 +746,8 @@ class FamilyInvitation {
 
   final String id;
   final String familyId;
+  final String memberId;
+  final String memberNickname;
   final String role;
   final String inviteToken;
   final String inviteUrl;
@@ -731,6 +757,8 @@ class FamilyInvitation {
     return FamilyInvitation(
       id: json['id'] as String,
       familyId: json['family_id'] as String,
+      memberId: json['family_member_id'] as String,
+      memberNickname: json['member_nickname'] as String? ?? '구성원',
       role: json['role'] as String,
       inviteToken: json['invite_token'] as String,
       inviteUrl: json['invite_url'] as String,
@@ -1026,6 +1054,7 @@ class EducationProgram {
   factory EducationProgram.fromJson(Map<String, Object?> json) {
     final familyMember = json['family_member'] as Map<String, Object?>?;
     final user = familyMember?['user'] as Map<String, Object?>?;
+    final memberNickname = familyMember?['nickname'] as String?;
     final weeklySchedules = json['weekly_schedules'] as List<Object?>;
 
     return EducationProgram(
@@ -1042,7 +1071,8 @@ class EducationProgram {
             ),
           )
           .toList(),
-      memberNickname: user?['nickname'] as String? ?? '담당자 없음',
+      memberNickname:
+          user?['nickname'] as String? ?? memberNickname ?? '담당자 없음',
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String,
     );
@@ -1139,6 +1169,7 @@ class AppSchedule {
   factory AppSchedule.fromJson(Map<String, Object?> json) {
     final familyMember = json['family_member'] as Map<String, Object?>?;
     final user = familyMember?['user'] as Map<String, Object?>?;
+    final memberNickname = familyMember?['nickname'] as String?;
     final educationProgram = json['education_program'] as Map<String, Object?>?;
 
     return AppSchedule(
@@ -1157,7 +1188,8 @@ class AppSchedule {
       ),
       educationProgramId: json['education_program_id'] as String?,
       educationProgramName: educationProgram?['name'] as String?,
-      memberNickname: user?['nickname'] as String? ?? '담당자 없음',
+      memberNickname:
+          user?['nickname'] as String? ?? memberNickname ?? '담당자 없음',
     );
   }
 }

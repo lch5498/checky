@@ -6,7 +6,7 @@ import { jsonFromError } from '../../../../../../src/http';
 import { authenticateMobileRequest } from '../../../../../../src/mobile-auth';
 import {
   readJsonObject,
-  requiredFamilyRole,
+  requiredString,
 } from '../../../../../../src/validation';
 
 export const runtime = 'nodejs';
@@ -22,8 +22,8 @@ export async function POST(request: Request, context: RouteContext) {
     const userId = authenticateMobileRequest(request);
     const { familyId } = await context.params;
     const payload = await readJsonObject(request);
-    const role = requiredFamilyRole(payload, 'role');
-    const invitation = await createFamilyInvitation(userId, familyId, role);
+    const memberId = requiredString(payload, 'memberId');
+    const invitation = await createFamilyInvitation(userId, familyId, memberId);
 
     return Response.json(
       {
