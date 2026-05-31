@@ -32,6 +32,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
   ParkingDashboard? _dashboard;
   String? _message;
   bool _isLoading = true;
+  final Set<String> _registeringLocationVehicleIds = {};
 
   Map<String, ParkingRecord> get _currentLocationsByVehicleId {
     final dashboard = _dashboard;
@@ -203,7 +204,12 @@ class _ParkingScreenState extends State<ParkingScreen> {
       return;
     }
 
-    await _runTask(() async {
+    setState(() {
+      _message = null;
+      _registeringLocationVehicleIds.add(vehicle.id);
+    });
+
+    try {
       await _apiClient.createParkingRecord(
         widget.sessionToken,
         familyId: _family.id,
@@ -214,7 +220,19 @@ class _ParkingScreenState extends State<ParkingScreen> {
         spotText: selected.spotText,
       );
       await _loadParking();
-    });
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _registeringLocationVehicleIds.remove(vehicle.id);
+        });
+      }
+    }
   }
 
   Future<bool> _confirm({
@@ -292,8 +310,21 @@ class _ParkingScreenState extends State<ParkingScreen> {
     return CupertinoPageScaffold(
       backgroundColor: const Color(0xFFF5F5F7),
       navigationBar: CupertinoNavigationBar(
+        leading: dashboard == null
+            ? null
+            : CupertinoButton(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(32, 32),
+                onPressed: _isLoading ? null : _openPresetManagement,
+                child: const Icon(
+                  CupertinoIcons.star_fill,
+                  color: CupertinoColors.systemOrange,
+                  size: 20,
+                ),
+              ),
         middle: _FeatureFamilyTitle(
           family: _family,
+          featureName: '주차',
           canSwitch: widget.families.length > 1,
           onPressed: _switchFamily,
         ),
@@ -310,15 +341,10 @@ class _ParkingScreenState extends State<ParkingScreen> {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
           children: [
-            _ParkingHeader(
-              canManage: dashboard?.canManage ?? false,
-              onManagePresets: _openPresetManagement,
-            ),
             if (_message != null) ...[
-              const SizedBox(height: 14),
               _InlineMessage(message: _message!),
+              const SizedBox(height: 18),
             ],
-            const SizedBox(height: 18),
             if (_isLoading && dashboard == null)
               const Padding(
                 padding: EdgeInsets.only(top: 72),
@@ -349,6 +375,8 @@ class _ParkingScreenState extends State<ParkingScreen> {
                   child: _VehicleCard(
                     vehicle: vehicle,
                     currentLocation: _currentLocationsByVehicleId[vehicle.id],
+                    isRegisteringLocation: _registeringLocationVehicleIds
+                        .contains(vehicle.id),
                     canManage: dashboard.canManage,
                     onRegisterLocation: () => _registerParkingLocation(vehicle),
                     onEdit: () => _openVehicleForm(vehicle: vehicle),
@@ -366,19 +394,23 @@ class _ParkingScreenState extends State<ParkingScreen> {
 class _FeatureFamilyTitle extends StatelessWidget {
   const _FeatureFamilyTitle({
     required this.family,
+    required this.featureName,
     required this.canSwitch,
     required this.onPressed,
   });
 
   final AppFamily family;
+  final String featureName;
   final bool canSwitch;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final title = '${family.name} $featureName';
+
     if (!canSwitch) {
       return Text(
-        family.name,
+        title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
@@ -400,7 +432,7 @@ class _FeatureFamilyTitle extends StatelessWidget {
         children: [
           Flexible(
             child: Text(
-              family.name,
+              title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -832,90 +864,11 @@ class _PresetSection extends StatelessWidget {
   }
 }
 
-class _ParkingHeader extends StatelessWidget {
-  const _ParkingHeader({
-    required this.canManage,
-    required this.onManagePresets,
-  });
-
-  final bool canManage;
-  final VoidCallback onManagePresets;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: CupertinoColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            '차량과 주차 위치를 관리하세요.',
-            style: TextStyle(
-              color: Color(0xFF111111),
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              height: 1.12,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 44,
-            child: CupertinoButton(
-              color: const Color(0xFFFFF0E5),
-              borderRadius: BorderRadius.circular(12),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
-              onPressed: onManagePresets,
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    CupertinoIcons.location_solid,
-                    color: CupertinoColors.systemOrange,
-                    size: 18,
-                  ),
-                  SizedBox(width: 6),
-                  Text(
-                    '주차 위치 즐겨찾기',
-                    style: TextStyle(
-                      color: CupertinoColors.systemOrange,
-                      fontSize: 14,
-                      height: 1.1,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (!canManage) ...[
-            const SizedBox(height: 10),
-            const Text(
-              '구성원 권한은 조회만 가능합니다.',
-              style: TextStyle(
-                color: Color(0xFF6E6E73),
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
 class _VehicleCard extends StatelessWidget {
   const _VehicleCard({
     required this.vehicle,
     required this.currentLocation,
+    required this.isRegisteringLocation,
     required this.canManage,
     required this.onRegisterLocation,
     required this.onEdit,
@@ -924,6 +877,7 @@ class _VehicleCard extends StatelessWidget {
 
   final Vehicle vehicle;
   final ParkingRecord? currentLocation;
+  final bool isRegisteringLocation;
   final bool canManage;
   final VoidCallback onRegisterLocation;
   final VoidCallback onEdit;
@@ -932,6 +886,14 @@ class _VehicleCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final currentLocation = this.currentLocation;
+    final locationText = isRegisteringLocation
+        ? '위치 등록 중...'
+        : currentLocation?.locationText ?? '아직 등록된 위치가 없습니다.';
+    final locationColor = isRegisteringLocation
+        ? CupertinoColors.systemOrange
+        : currentLocation == null
+        ? const Color(0xFF8E8E93)
+        : const Color(0xFF111111);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -991,7 +953,7 @@ class _VehicleCard extends StatelessWidget {
                 CupertinoButton(
                   padding: EdgeInsets.zero,
                   minimumSize: const Size(38, 38),
-                  onPressed: onEdit,
+                  onPressed: isRegisteringLocation ? null : onEdit,
                   child: const Icon(CupertinoIcons.pencil, size: 20),
                 ),
             ],
@@ -1017,16 +979,30 @@ class _VehicleCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  currentLocation?.locationText ?? '아직 등록된 위치가 없습니다.',
-                  style: TextStyle(
-                    color: currentLocation == null
-                        ? const Color(0xFF8E8E93)
-                        : const Color(0xFF111111),
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
+                Row(
+                  children: [
+                    if (isRegisteringLocation) ...[
+                      const Icon(
+                        CupertinoIcons.hourglass,
+                        color: CupertinoColors.systemOrange,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 6),
+                    ],
+                    Expanded(
+                      child: Text(
+                        locationText,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: locationColor,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1040,10 +1016,12 @@ class _VehicleCard extends StatelessWidget {
                     height: 46,
                     child: CupertinoButton.filled(
                       borderRadius: BorderRadius.circular(12),
-                      onPressed: onRegisterLocation,
-                      child: const Text(
-                        '위치 등록',
-                        style: TextStyle(
+                      onPressed: isRegisteringLocation
+                          ? null
+                          : onRegisterLocation,
+                      child: Text(
+                        isRegisteringLocation ? '등록 중' : '위치 등록',
+                        style: const TextStyle(
                           fontSize: 15,
                           height: 1.1,
                           fontWeight: FontWeight.w800,
@@ -1058,7 +1036,7 @@ class _VehicleCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   color: const Color(0xFFFFE8E8),
                   borderRadius: BorderRadius.circular(12),
-                  onPressed: onDelete,
+                  onPressed: isRegisteringLocation ? null : onDelete,
                   child: const Icon(
                     CupertinoIcons.trash,
                     color: CupertinoColors.destructiveRed,

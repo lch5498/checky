@@ -343,6 +343,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       navigationBar: CupertinoNavigationBar(
         middle: _FeatureFamilyTitle(
           family: _family,
+          featureName: '일정',
           canSwitch: widget.families.length > 1,
           onPressed: _switchFamily,
         ),
@@ -431,19 +432,23 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 class _FeatureFamilyTitle extends StatelessWidget {
   const _FeatureFamilyTitle({
     required this.family,
+    required this.featureName,
     required this.canSwitch,
     required this.onPressed,
   });
 
   final AppFamily family;
+  final String featureName;
   final bool canSwitch;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
+    final title = '${family.name} $featureName';
+
     if (!canSwitch) {
       return Text(
-        family.name,
+        title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
@@ -465,7 +470,7 @@ class _FeatureFamilyTitle extends StatelessWidget {
         children: [
           Flexible(
             child: Text(
-              family.name,
+              title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
