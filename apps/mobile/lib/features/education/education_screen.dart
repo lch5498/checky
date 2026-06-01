@@ -339,29 +339,74 @@ class _EducationProgramCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final scheduleSummaries = _weeklyScheduleSummaries(program.weeklySchedules);
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 14, 12, 14),
       decoration: BoxDecoration(
         color: CupertinoColors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFE5E5EA)),
+        boxShadow: [
+          BoxShadow(
+            color: CupertinoColors.black.withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEAF4F2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  CupertinoIcons.book_fill,
+                  color: CupertinoColors.systemTeal,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  program.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF111111),
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      program.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Color(0xFF111111),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        _ProgramMetaPill(
+                          icon: CupertinoIcons.person_fill,
+                          label: program.memberNickname,
+                        ),
+                        _ProgramMetaPill(
+                          icon: CupertinoIcons.calendar,
+                          label:
+                              '${_dateText(program.startsOn)} - ${_dateText(program.endsOn)}',
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
               if (canManage) ...[
@@ -384,27 +429,105 @@ class _EducationProgramCard extends StatelessWidget {
               ],
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            '${program.memberNickname} · ${_dateText(program.startsOn)} - ${_dateText(program.endsOn)}',
-            style: const TextStyle(
-              color: Color(0xFF6E6E73),
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0,
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final summary in scheduleSummaries)
+                _WeeklyScheduleChip(summary: summary),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgramMetaPill extends StatelessWidget {
+  const _ProgramMetaPill({required this.icon, required this.label});
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF2F2F7),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 12, color: const Color(0xFF6E6E73)),
+          const SizedBox(width: 4),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 220),
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Color(0xFF6E6E73),
+                fontSize: 12,
+                height: 1.1,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
+              ),
             ),
           ),
-          const SizedBox(height: 10),
+        ],
+      ),
+    );
+  }
+}
+
+class _WeeklyScheduleChip extends StatelessWidget {
+  const _WeeklyScheduleChip({required this.summary});
+
+  final _WeeklyScheduleSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final vehicleText = summary.vehicleText;
+
+    return Container(
+      constraints: const BoxConstraints(minHeight: 34),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FBFA),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFD6E8E4)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
           Text(
-            _weeklySchedulesText(program.weeklySchedules),
+            '${summary.weekdayText} ${summary.startsAt}-${summary.endsAt}',
             style: const TextStyle(
               color: Color(0xFF111111),
-              fontSize: 14,
-              height: 1.35,
-              fontWeight: FontWeight.w600,
+              fontSize: 13,
+              height: 1.15,
+              fontWeight: FontWeight.w800,
               letterSpacing: 0,
             ),
           ),
+          if (vehicleText != null) ...[
+            const SizedBox(height: 4),
+            Text(
+              vehicleText,
+              style: const TextStyle(
+                color: Color(0xFF6E6E73),
+                fontSize: 12,
+                height: 1.15,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -637,7 +760,9 @@ class _EducationProgramFormScreenState
   }
 
   Future<DateTime?> _showDatePicker(DateTime initial) {
-    var selected = initial;
+    final minimumDate = _minimumEducationProgramDate();
+    final maximumDate = _maximumEducationProgramDate();
+    var selected = _clampDate(initial, minimumDate, maximumDate);
 
     return showCupertinoModalPopup<DateTime>(
       context: context,
@@ -646,7 +771,9 @@ class _EducationProgramFormScreenState
         onDone: () => Navigator.of(popupContext).pop(_dateOnly(selected)),
         child: CupertinoDatePicker(
           mode: CupertinoDatePickerMode.date,
-          initialDateTime: initial,
+          minimumDate: minimumDate,
+          maximumDate: maximumDate,
+          initialDateTime: selected,
           onDateTimeChanged: (value) {
             selected = value;
           },
@@ -699,6 +826,14 @@ class _EducationProgramFormScreenState
     if (_endsOn.isBefore(_startsOn)) {
       setState(() {
         _message = '종료 날짜는 시작 날짜 이후여야 합니다.';
+      });
+      return;
+    }
+
+    if (!_isInEducationProgramDateRange(_startsOn) ||
+        !_isInEducationProgramDateRange(_endsOn)) {
+      setState(() {
+        _message = '시작일과 종료일은 오늘 기준 1년 전부터 1년 후까지만 선택할 수 있습니다.';
       });
       return;
     }
@@ -1382,22 +1517,139 @@ class _InlineMessage extends StatelessWidget {
 DateTime _dateOnly(DateTime value) =>
     DateTime(value.year, value.month, value.day);
 
+DateTime _minimumEducationProgramDate() {
+  final today = _dateOnly(DateTime.now());
+
+  return DateTime(today.year - 1, today.month, today.day);
+}
+
+DateTime _maximumEducationProgramDate() {
+  final today = _dateOnly(DateTime.now());
+
+  return DateTime(today.year + 1, today.month, today.day);
+}
+
+bool _isInEducationProgramDateRange(DateTime value) {
+  final date = _dateOnly(value);
+  final minimumDate = _minimumEducationProgramDate();
+  final maximumDate = _maximumEducationProgramDate();
+
+  return !date.isBefore(minimumDate) && !date.isAfter(maximumDate);
+}
+
+DateTime _clampDate(
+  DateTime value,
+  DateTime minimumDate,
+  DateTime maximumDate,
+) {
+  final date = _dateOnly(value);
+
+  if (date.isBefore(minimumDate)) {
+    return minimumDate;
+  }
+
+  if (date.isAfter(maximumDate)) {
+    return maximumDate;
+  }
+
+  return date;
+}
+
 String _dateText(DateTime value) {
   return '${value.year}.${_twoDigits(value.month)}.${_twoDigits(value.day)}';
 }
 
-String _weeklySchedulesText(List<EducationWeeklySchedule> schedules) {
-  return schedules
-      .map((schedule) {
-        final vehicleText =
-            schedule.vehicleBoardingTime == null &&
-                schedule.vehicleDropoffTime == null
-            ? ''
-            : ' 차량 ${schedule.vehicleBoardingTime?.toApiString() ?? '-'} / ${schedule.vehicleDropoffTime?.toApiString() ?? '-'}';
+List<_WeeklyScheduleSummary> _weeklyScheduleSummaries(
+  List<EducationWeeklySchedule> schedules,
+) {
+  final sorted = [...schedules]..sort((a, b) => a.weekday.compareTo(b.weekday));
+  final groupedSchedules = <String, List<EducationWeeklySchedule>>{};
+  final groupOrder = <String>[];
 
-        return '${_weekdayLabels[schedule.weekday]} ${schedule.startsAt.toApiString()}-${schedule.endsAt.toApiString()}$vehicleText';
-      })
-      .join(' · ');
+  for (final schedule in sorted) {
+    final key = _scheduleTimeKey(schedule);
+    groupedSchedules
+        .putIfAbsent(key, () {
+          groupOrder.add(key);
+          return [];
+        })
+        .add(schedule);
+  }
+
+  return groupOrder.map((key) {
+    final group = groupedSchedules[key]!;
+
+    return _WeeklyScheduleSummary.fromSchedules(
+      weekdays: group.map((schedule) => schedule.weekday).toList(),
+      schedule: group.first,
+    );
+  }).toList();
+}
+
+String _scheduleTimeKey(EducationWeeklySchedule schedule) {
+  return [
+    schedule.startsAt.toApiString(),
+    schedule.endsAt.toApiString(),
+    schedule.vehicleBoardingTime?.toApiString() ?? '',
+    schedule.vehicleDropoffTime?.toApiString() ?? '',
+  ].join('|');
+}
+
+String _weekdayGroupText(List<int> weekdays) {
+  final sorted = [...weekdays]..sort();
+  final parts = <String>[];
+
+  for (var index = 0; index < sorted.length;) {
+    final start = sorted[index];
+    var end = start;
+
+    while (index + 1 < sorted.length && sorted[index + 1] == end + 1) {
+      index += 1;
+      end = sorted[index];
+    }
+
+    parts.add(
+      start == end
+          ? _weekdayLabels[start]
+          : '${_weekdayLabels[start]}~${_weekdayLabels[end]}',
+    );
+    index += 1;
+  }
+
+  return parts.join(',');
+}
+
+class _WeeklyScheduleSummary {
+  const _WeeklyScheduleSummary({
+    required this.weekdayText,
+    required this.startsAt,
+    required this.endsAt,
+    required this.vehicleText,
+  });
+
+  final String weekdayText;
+  final String startsAt;
+  final String endsAt;
+  final String? vehicleText;
+
+  factory _WeeklyScheduleSummary.fromSchedules({
+    required List<int> weekdays,
+    required EducationWeeklySchedule schedule,
+  }) {
+    final boardingTime = schedule.vehicleBoardingTime?.toApiString();
+    final dropoffTime = schedule.vehicleDropoffTime?.toApiString();
+    final vehicleParts = [
+      if (boardingTime != null) '승차 $boardingTime',
+      if (dropoffTime != null) '하차 $dropoffTime',
+    ];
+
+    return _WeeklyScheduleSummary(
+      weekdayText: _weekdayGroupText(weekdays),
+      startsAt: schedule.startsAt.toApiString(),
+      endsAt: schedule.endsAt.toApiString(),
+      vehicleText: vehicleParts.isEmpty ? null : vehicleParts.join(' · '),
+    );
+  }
 }
 
 int _minutes(TimeOfDayValue value) => value.hour * 60 + value.minute;

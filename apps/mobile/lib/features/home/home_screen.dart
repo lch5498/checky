@@ -780,7 +780,7 @@ class _ScheduleBriefingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final timeText =
-        '${_twoDigits(schedule.startsAt.hour)}:${_twoDigits(schedule.startsAt.minute)}';
+        '${_koreanTimeText(schedule.startsAt)}~${_koreanTimeText(schedule.endsAt)}';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -788,12 +788,12 @@ class _ScheduleBriefingTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 46,
+            width: 92,
             child: Text(
               timeText,
               style: const TextStyle(
                 color: CupertinoColors.systemGrey,
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0,
               ),
@@ -901,7 +901,16 @@ class _ParkingBriefingTile extends StatelessWidget {
   }
 }
 
-String _twoDigits(int value) => value.toString().padLeft(2, '0');
+String _koreanTimeText(DateTime value) {
+  final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
+  final minute = value.minute;
+
+  if (minute == 0) {
+    return '$hour시';
+  }
+
+  return '$hour시$minute분';
+}
 
 class _FamilyRequiredIntro extends StatelessWidget {
   const _FamilyRequiredIntro({

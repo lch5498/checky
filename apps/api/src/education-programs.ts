@@ -7,6 +7,7 @@ import { HttpError } from './http';
 import { getSupabaseAdmin } from './supabase';
 
 const MAX_GENERATED_SCHEDULES = 370;
+const EDUCATION_PROGRAM_DATE_WINDOW_YEARS = 1;
 
 export type EducationWeeklySchedule = {
   weekday: number;
@@ -123,6 +124,7 @@ export async function createEducationProgram(
       familyId,
       data.id as string,
       normalized,
+      { futureOnly: false },
     );
 
     return {
@@ -171,6 +173,7 @@ export async function updateEducationProgram(
     familyId,
     programId,
     normalized,
+    { futureOnly: true },
   );
 
   return {
@@ -203,14 +206,34 @@ async function replaceGeneratedSchedules(
   familyId: string,
   programId: string,
   input: NormalizedEducationProgramInput,
+  options: { futureOnly: boolean },
 ) {
-  const generatedSchedules = generateSchedules(familyId, programId, userId, input);
+  const today = dateOnlyInTimeZone(new Date(), input.timeZoneOffsetMinutes);
+  const startsOnOrToday = maxDateOnly(input.startsOn, formatDateOnly(today));
+  const generationInput = options.futureOnly
+    ? { ...input, startsOn: startsOnOrToday }
+    : input;
+  const generatedSchedules = generateSchedules(
+    familyId,
+    programId,
+    userId,
+    generationInput,
+  );
   const supabase = getSupabaseAdmin();
-  const { error: deleteError } = await supabase
+  let deleteQuery = supabase
     .from('schedules')
     .delete()
     .eq('education_program_id', programId)
     .eq('family_id', familyId);
+
+  if (options.futureOnly) {
+    deleteQuery = deleteQuery.gte(
+      'starts_at',
+      zonedDateTimeIso(today, '00:00', input.timeZoneOffsetMinutes),
+    );
+  }
+
+  const { error: deleteError } = await deleteQuery;
 
   if (deleteError) {
     throw deleteError;
@@ -288,6 +311,11 @@ async function normalizeEducationProgramInput(
 
   const startsOn = normalizeDateOnly(input.startsOn, 'startsOn');
   const endsOn = normalizeDateOnly(input.endsOn, 'endsOn');
+  const timeZoneOffsetMinutes = normalizeTimeZoneOffset(
+    input.timeZoneOffsetMinutes,
+  );
+  assertDateInAllowedWindow(startsOn, 'startsOn', timeZoneOffsetMinutes);
+  assertDateInAllowedWindow(endsOn, 'endsOn', timeZoneOffsetMinutes);
 
   if (parseDateOnly(endsOn, 'endsOn').getTime() < parseDateOnly(startsOn, 'startsOn').getTime()) {
     throw new HttpError(400, { error: 'invalid_payload', field: 'endsOn' });
@@ -301,7 +329,7 @@ async function normalizeEducationProgramInput(
     startsOn,
     endsOn,
     weeklySchedules,
-    timeZoneOffsetMinutes: normalizeTimeZoneOffset(input.timeZoneOffsetMinutes),
+    timeZoneOffsetMinutes,
   };
 }
 
@@ -395,6 +423,26 @@ function parseDateOnly(value: string, field: string) {
   return date;
 }
 
+function assertDateInAllowedWindow(
+  value: string,
+  field: string,
+  offsetMinutes: number,
+) {
+  const date = parseDateOnly(value, field);
+  const today = dateOnlyInTimeZone(new Date(), offsetMinutes);
+  const minDate = addYears(today, -EDUCATION_PROGRAM_DATE_WINDOW_YEARS);
+  const maxDate = addYears(today, EDUCATION_PROGRAM_DATE_WINDOW_YEARS);
+
+  if (date.getTime() < minDate.getTime() || date.getTime() > maxDate.getTime()) {
+    throw new HttpError(400, {
+      error: 'education_program_date_out_of_range',
+      field,
+      min: formatDateOnly(minDate),
+      max: formatDateOnly(maxDate),
+    });
+  }
+}
+
 function normalizeTime(value: string, field: string) {
   const normalized = value.trim();
 
@@ -450,6 +498,36 @@ function addDays(value: Date, days: number) {
   next.setUTCDate(next.getUTCDate() + days);
 
   return next;
+}
+
+function addYears(value: Date, years: number) {
+  const next = new Date(value);
+  next.setUTCFullYear(next.getUTCFullYear() + years);
+
+  return next;
+}
+
+function dateOnlyInTimeZone(value: Date, offsetMinutes: number) {
+  const shifted = new Date(value.getTime() + offsetMinutes * 60 * 1000);
+
+  return new Date(
+    Date.UTC(
+      shifted.getUTCFullYear(),
+      shifted.getUTCMonth(),
+      shifted.getUTCDate(),
+    ),
+  );
+}
+
+function formatDateOnly(value: Date) {
+  return value.toISOString().slice(0, 10);
+}
+
+function maxDateOnly(left: string, right: string) {
+  return parseDateOnly(left, 'startsOn').getTime() >=
+    parseDateOnly(right, 'startsOn').getTime()
+    ? left
+    : right;
 }
 
 function zonedDateTimeIso(date: Date, time: string, offsetMinutes: number) {
