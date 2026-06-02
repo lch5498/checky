@@ -370,18 +370,15 @@ class _ParkingScreenState extends State<ParkingScreen> {
               )
             else
               ...dashboard.vehicles.map(
-                (vehicle) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: _VehicleCard(
-                    vehicle: vehicle,
-                    currentLocation: _currentLocationsByVehicleId[vehicle.id],
-                    isRegisteringLocation: _registeringLocationVehicleIds
-                        .contains(vehicle.id),
-                    canManage: dashboard.canManage,
-                    onRegisterLocation: () => _registerParkingLocation(vehicle),
-                    onEdit: () => _openVehicleForm(vehicle: vehicle),
-                    onDelete: () => _deleteVehicle(vehicle),
-                  ),
+                (vehicle) => _VehicleCard(
+                  vehicle: vehicle,
+                  currentLocation: _currentLocationsByVehicleId[vehicle.id],
+                  isRegisteringLocation: _registeringLocationVehicleIds
+                      .contains(vehicle.id),
+                  canManage: dashboard.canManage,
+                  onRegisterLocation: () => _registerParkingLocation(vehicle),
+                  onEdit: () => _openVehicleForm(vehicle: vehicle),
+                  onDelete: () => _deleteVehicle(vehicle),
                 ),
               ),
           ],
@@ -896,11 +893,9 @@ class _VehicleCard extends StatelessWidget {
         : const Color(0xFF111111);
 
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: CupertinoColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+      padding: const EdgeInsets.fromLTRB(0, 14, 0, 16),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -908,19 +903,6 @@ class _VehicleCard extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF0E5),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  CupertinoIcons.car_detailed,
-                  color: CupertinoColors.systemOrange,
-                ),
-              ),
-              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,

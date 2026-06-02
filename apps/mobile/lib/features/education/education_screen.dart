@@ -186,15 +186,29 @@ class _EducationScreenState extends State<EducationScreen> {
       return;
     }
 
-    final input = await Navigator.of(context).push<EducationProgramInput>(
-      CupertinoPageRoute(
-        fullscreenDialog: true,
-        builder: (_) => _EducationProgramFormScreen(
-          members: dashboard.members,
-          program: program,
-        ),
-      ),
-    );
+    final formResult = await Navigator.of(context)
+        .push<_EducationProgramFormResult>(
+          CupertinoPageRoute(
+            fullscreenDialog: true,
+            builder: (_) => _EducationProgramFormScreen(
+              members: dashboard.members,
+              program: program,
+            ),
+          ),
+        );
+
+    if (formResult == null) {
+      return;
+    }
+
+    if (formResult.shouldDelete) {
+      if (program != null) {
+        await _deleteProgram(program, confirmBeforeDelete: false);
+      }
+      return;
+    }
+
+    final input = formResult.input;
 
     if (input == null) {
       return;
@@ -240,28 +254,33 @@ class _EducationScreenState extends State<EducationScreen> {
     });
   }
 
-  Future<void> _deleteProgram(EducationProgram program) async {
-    final confirmed = await showCupertinoDialog<bool>(
-      context: context,
-      builder: (dialogContext) => CupertinoAlertDialog(
-        title: const Text('학교/학원 삭제'),
-        content: Text('${program.name}와 연결된 캘린더 일정을 삭제할까요?'),
-        actions: [
-          CupertinoDialogAction(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('취소'),
-          ),
-          CupertinoDialogAction(
-            isDestructiveAction: true,
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('삭제'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _deleteProgram(
+    EducationProgram program, {
+    bool confirmBeforeDelete = true,
+  }) async {
+    if (confirmBeforeDelete) {
+      final confirmed = await showCupertinoDialog<bool>(
+        context: context,
+        builder: (dialogContext) => CupertinoAlertDialog(
+          title: const Text('학교/학원 삭제'),
+          content: Text('${program.name}와 연결된 캘린더 일정을 삭제할까요?'),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('취소'),
+            ),
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('삭제'),
+            ),
+          ],
+        ),
+      );
 
-    if (confirmed != true) {
-      return;
+      if (confirmed != true) {
+        return;
+      }
     }
 
     await _runTask(() async {
@@ -333,7 +352,6 @@ class _EducationScreenState extends State<EducationScreen> {
                       memberColor: _programMemberColor(program, memberColors),
                       canManage: dashboard?.canManage ?? false,
                       onEdit: () => _openProgramForm(program: program),
-                      onDelete: () => _deleteProgram(program),
                     ),
                   ),
               ],
@@ -406,20 +424,18 @@ class _EducationProgramCard extends StatelessWidget {
     required this.memberColor,
     required this.canManage,
     required this.onEdit,
-    required this.onDelete,
   });
 
   final EducationProgram program;
   final MemberFilterColor memberColor;
   final bool canManage;
   final VoidCallback onEdit;
-  final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final scheduleSummaries = _weeklyScheduleSummaries(program.weeklySchedules);
 
-    return Container(
+    final content = Container(
       padding: const EdgeInsets.fromLTRB(0, 14, 0, 16),
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA))),
@@ -449,24 +465,6 @@ class _EducationProgramCard extends StatelessWidget {
                   ),
                 ),
               ),
-              if (canManage) ...[
-                CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(32, 32),
-                  onPressed: onEdit,
-                  child: const Icon(CupertinoIcons.pencil, size: 20),
-                ),
-                CupertinoButton(
-                  padding: EdgeInsets.zero,
-                  minimumSize: const Size(32, 32),
-                  onPressed: onDelete,
-                  child: const Icon(
-                    CupertinoIcons.delete,
-                    color: CupertinoColors.destructiveRed,
-                    size: 20,
-                  ),
-                ),
-              ],
             ],
           ),
           const SizedBox(height: 12),
@@ -477,6 +475,16 @@ class _EducationProgramCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    if (!canManage) {
+      return content;
+    }
+
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onEdit,
+      child: content,
     );
   }
 }
@@ -647,6 +655,18 @@ class _EducationFilterCard extends StatelessWidget {
       ),
     );
   }
+}
+
+class _EducationProgramFormResult {
+  const _EducationProgramFormResult._({this.input, this.shouldDelete = false});
+
+  const _EducationProgramFormResult.save(EducationProgramInput input)
+    : this._(input: input);
+
+  const _EducationProgramFormResult.delete() : this._(shouldDelete: true);
+
+  final EducationProgramInput? input;
+  final bool shouldDelete;
 }
 
 class _EducationProgramFormScreen extends StatefulWidget {
@@ -941,14 +961,49 @@ class _EducationProgramFormScreenState
     }
 
     Navigator.of(context).pop(
-      EducationProgramInput(
-        familyMemberId: _familyMemberId,
-        name: name,
-        startsOn: _startsOn,
-        endsOn: _endsOn,
-        weeklySchedules: weeklySchedules,
+      _EducationProgramFormResult.save(
+        EducationProgramInput(
+          familyMemberId: _familyMemberId,
+          name: name,
+          startsOn: _startsOn,
+          endsOn: _endsOn,
+          weeklySchedules: weeklySchedules,
+        ),
       ),
     );
+  }
+
+  Future<void> _confirmDelete() async {
+    final program = widget.program;
+
+    if (program == null) {
+      return;
+    }
+
+    final confirmed = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (dialogContext) => CupertinoAlertDialog(
+        title: const Text('학교/학원 삭제'),
+        content: Text('${program.name}와 연결된 캘린더 일정을 삭제할까요?'),
+        actions: [
+          CupertinoDialogAction(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          CupertinoDialogAction(
+            isDestructiveAction: true,
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('삭제'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || confirmed != true) {
+      return;
+    }
+
+    Navigator.of(context).pop(const _EducationProgramFormResult.delete());
   }
 
   @override
@@ -1035,7 +1090,39 @@ class _EducationProgramFormScreenState
                   ),
               ],
             ),
+            if (widget.program != null) ...[
+              const SizedBox(height: 18),
+              _DeleteProgramButton(onPressed: _confirmDelete),
+            ],
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DeleteProgramButton extends StatelessWidget {
+  const _DeleteProgramButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: CupertinoButton(
+        padding: EdgeInsets.zero,
+        color: const Color(0xFFFFE8E8),
+        borderRadius: BorderRadius.circular(12),
+        onPressed: onPressed,
+        child: const Text(
+          '학교/학원 삭제',
+          style: TextStyle(
+            color: CupertinoColors.destructiveRed,
+            fontSize: 15,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0,
+          ),
         ),
       ),
     );

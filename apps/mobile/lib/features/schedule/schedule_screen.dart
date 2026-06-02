@@ -12,6 +12,7 @@ class ScheduleScreen extends StatefulWidget {
     required this.families,
     required this.sessionToken,
     required this.refreshToken,
+    required this.todayRequestToken,
     required this.onSelectFamily,
   });
 
@@ -19,6 +20,7 @@ class ScheduleScreen extends StatefulWidget {
   final List<AppFamily> families;
   final String sessionToken;
   final int refreshToken;
+  final int todayRequestToken;
   final Future<void> Function(AppFamily family) onSelectFamily;
 
   @override
@@ -62,6 +64,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
   void initState() {
     super.initState();
     _family = widget.family;
+    if (widget.todayRequestToken > 0) {
+      _setTodayDayViewState();
+    }
     _loadSchedules();
   }
 
@@ -73,9 +78,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       _family = widget.family;
       _hiddenMemberIds.clear();
       _loadSchedules();
+    } else if (oldWidget.todayRequestToken != widget.todayRequestToken) {
+      setState(_setTodayDayViewState);
+      _loadSchedules();
     } else if (oldWidget.refreshToken != widget.refreshToken) {
       _loadSchedules();
     }
+  }
+
+  void _setTodayDayViewState() {
+    _mode = _CalendarMode.day;
+    _anchorDate = _dateOnly(DateTime.now());
   }
 
   Future<void> _loadSchedules() async {
@@ -518,11 +531,9 @@ class _ScheduleHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: CupertinoColors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA))),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

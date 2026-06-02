@@ -39,6 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isLoadingFamilies = true;
   int _homeRefreshToken = 0;
   int _scheduleRefreshToken = 0;
+  int _todayScheduleRequestToken = 0;
 
   AppFamily? get _selectedFamily {
     if (_families.isEmpty) {
@@ -82,6 +83,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _openScheduleTab() {
+    setState(() {
+      _todayScheduleRequestToken += 1;
+    });
     _tabController.index = 1;
   }
 
@@ -265,6 +269,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     families: families,
                     sessionToken: widget.sessionToken,
                     refreshToken: _scheduleRefreshToken,
+                    todayRequestToken: _todayScheduleRequestToken,
                     onSelectFamily: _selectFamily,
                   );
                 case 2:
@@ -615,7 +620,6 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
                 schedules: _scheduleDashboard?.schedules ?? const [],
                 onPressed: widget.onOpenSchedule,
               ),
-              const SizedBox(height: 14),
               _ParkingBriefingSection(
                 dashboard: _parkingDashboard,
                 onPressed: widget.onOpenParking,
@@ -676,7 +680,7 @@ class _ParkingBriefingSection extends StatelessWidget {
 
     return _BriefingSection(
       icon: CupertinoIcons.car_detailed,
-      title: '현재 주차 위치',
+      title: '주차 위치',
       emptyText: '등록된 현재 주차 위치가 없습니다.',
       isEmpty: currentLocations.isEmpty,
       onPressed: onPressed,
@@ -713,14 +717,11 @@ class _BriefingSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return CupertinoButton(
       padding: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(16),
       onPressed: onPressed,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
-        decoration: BoxDecoration(
-          color: CupertinoColors.white,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE5E5EA)),
+        padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA))),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -788,13 +789,13 @@ class _ScheduleBriefingTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 92,
+            width: 132,
             child: Text(
               timeText,
               style: const TextStyle(
-                color: CupertinoColors.systemGrey,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+                color: Color(0xFF111111),
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
                 letterSpacing: 0,
               ),
             ),
