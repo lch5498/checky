@@ -433,12 +433,15 @@ class ApiClient {
     String sessionToken, {
     required String familyId,
     required EducationProgramInput input,
+    required CalendarApplyScope calendarApplyScope,
   }) async {
+    final body = input.toJson()
+      ..['calendarApplyScope'] = calendarApplyScope.toApiString();
     final json = await _requestJson(
       'POST',
       '/api/mobile/families/$familyId/education-programs',
       bearerToken: sessionToken,
-      body: input.toJson(),
+      body: body,
     );
 
     return EducationProgramMutationResult.fromJson(json);
@@ -449,12 +452,15 @@ class ApiClient {
     required String familyId,
     required String programId,
     required EducationProgramInput input,
+    required CalendarApplyScope calendarApplyScope,
   }) async {
+    final body = input.toJson()
+      ..['calendarApplyScope'] = calendarApplyScope.toApiString();
     final json = await _requestJson(
       'PATCH',
       '/api/mobile/families/$familyId/education-programs/$programId',
       bearerToken: sessionToken,
-      body: input.toJson(),
+      body: body,
     );
 
     return EducationProgramMutationResult.fromJson(json);
@@ -464,11 +470,16 @@ class ApiClient {
     String sessionToken, {
     required String familyId,
     required String programId,
+    required CalendarApplyScope calendarApplyScope,
   }) async {
     await _requestJson(
       'DELETE',
       '/api/mobile/families/$familyId/education-programs/$programId',
       bearerToken: sessionToken,
+      body: {
+        'calendarApplyScope': calendarApplyScope.toApiString(),
+        'timeZoneOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
+      },
     );
   }
 
@@ -994,6 +1005,18 @@ class EducationProgramMutationResult {
       ),
       generatedScheduleCount: json['generatedScheduleCount'] as int,
     );
+  }
+}
+
+enum CalendarApplyScope {
+  all,
+  future;
+
+  String toApiString() {
+    return switch (this) {
+      CalendarApplyScope.all => 'all',
+      CalendarApplyScope.future => 'future',
+    };
   }
 }
 

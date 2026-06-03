@@ -34,14 +34,21 @@ export async function POST(request: Request, context: RouteContext) {
     const userId = authenticateMobileRequest(request);
     const { familyId } = await context.params;
     const payload = await readJsonObject(request);
-    const result = await createEducationProgram(userId, familyId, {
-      familyMemberId: requiredString(payload, 'familyMemberId'),
-      name: requiredString(payload, 'name', { maxLength: 80 }),
-      startsOn: requiredString(payload, 'startsOn'),
-      endsOn: requiredString(payload, 'endsOn'),
-      weeklySchedules: requiredWeeklySchedules(payload),
-      timeZoneOffsetMinutes: optionalNumber(payload, 'timeZoneOffsetMinutes'),
-    });
+    const result = await createEducationProgram(
+      userId,
+      familyId,
+      {
+        familyMemberId: requiredString(payload, 'familyMemberId'),
+        name: requiredString(payload, 'name', { maxLength: 80 }),
+        startsOn: requiredString(payload, 'startsOn'),
+        endsOn: requiredString(payload, 'endsOn'),
+        weeklySchedules: requiredWeeklySchedules(payload),
+        timeZoneOffsetMinutes: optionalNumber(payload, 'timeZoneOffsetMinutes'),
+      },
+      {
+        calendarApplyScope: optionalCalendarApplyScope(payload),
+      },
+    );
 
     return Response.json(result, { status: 201 });
   } catch (error) {
@@ -71,6 +78,23 @@ function optionalNumber(payload: Record<string, unknown>, key: string) {
 
   if (typeof value !== 'number') {
     throw new HttpError(400, { error: 'invalid_payload', field: key });
+  }
+
+  return value;
+}
+
+function optionalCalendarApplyScope(payload: Record<string, unknown>) {
+  const value = payload.calendarApplyScope;
+
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (value !== 'all' && value !== 'future') {
+    throw new HttpError(400, {
+      error: 'invalid_payload',
+      field: 'calendarApplyScope',
+    });
   }
 
   return value;

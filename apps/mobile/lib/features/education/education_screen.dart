@@ -172,6 +172,12 @@ class _EducationScreenState extends State<EducationScreen> {
     final selectedFamily = widget.families.firstWhere(
       (family) => family.id == selectedFamilyId,
     );
+
+    setState(() {
+      _family = selectedFamily;
+      _dashboard = null;
+      _hiddenMemberIds.clear();
+    });
     await widget.onSelectFamily(selectedFamily);
     await _loadPrograms();
   }
@@ -203,7 +209,11 @@ class _EducationScreenState extends State<EducationScreen> {
 
     if (formResult.shouldDelete) {
       if (program != null) {
-        await _deleteProgram(program, confirmBeforeDelete: false);
+        await _deleteProgram(
+          program,
+          calendarApplyScope: formResult.calendarApplyScope,
+          confirmBeforeDelete: false,
+        );
       }
       return;
     }
@@ -229,12 +239,14 @@ class _EducationScreenState extends State<EducationScreen> {
                 widget.sessionToken,
                 familyId: _family.id,
                 input: input,
+                calendarApplyScope: formResult.calendarApplyScope,
               )
             : await _apiClient.updateEducationProgram(
                 widget.sessionToken,
                 familyId: _family.id,
                 programId: program.id,
                 input: input,
+                calendarApplyScope: formResult.calendarApplyScope,
               );
 
         await _loadPrograms();
@@ -256,6 +268,7 @@ class _EducationScreenState extends State<EducationScreen> {
 
   Future<void> _deleteProgram(
     EducationProgram program, {
+    required CalendarApplyScope calendarApplyScope,
     bool confirmBeforeDelete = true,
   }) async {
     if (confirmBeforeDelete) {
@@ -288,6 +301,7 @@ class _EducationScreenState extends State<EducationScreen> {
         widget.sessionToken,
         familyId: _family.id,
         programId: program.id,
+        calendarApplyScope: calendarApplyScope,
       );
       await _loadPrograms();
     });
@@ -658,14 +672,23 @@ class _EducationFilterCard extends StatelessWidget {
 }
 
 class _EducationProgramFormResult {
-  const _EducationProgramFormResult._({this.input, this.shouldDelete = false});
+  const _EducationProgramFormResult._({
+    this.input,
+    required this.calendarApplyScope,
+    this.shouldDelete = false,
+  });
 
-  const _EducationProgramFormResult.save(EducationProgramInput input)
-    : this._(input: input);
+  const _EducationProgramFormResult.save(
+    EducationProgramInput input,
+    CalendarApplyScope calendarApplyScope,
+  ) : this._(input: input, calendarApplyScope: calendarApplyScope);
 
-  const _EducationProgramFormResult.delete() : this._(shouldDelete: true);
+  const _EducationProgramFormResult.delete(
+    CalendarApplyScope calendarApplyScope,
+  ) : this._(shouldDelete: true, calendarApplyScope: calendarApplyScope);
 
   final EducationProgramInput? input;
+  final CalendarApplyScope calendarApplyScope;
   final bool shouldDelete;
 }
 
@@ -907,7 +930,7 @@ class _EducationProgramFormScreenState
     );
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     final name = _nameController.text.trim();
     final weeklySchedules = _dayRules.entries
         .where((entry) => entry.value.enabled)
@@ -960,6 +983,17 @@ class _EducationProgramFormScreenState
       }
     }
 
+    final calendarApplyScope = await _pickCalendarApplyScope(
+      title: '캘린더 반영 범위',
+      message: '학교/학원 일정을 캘린더에 어느 범위로 반영할까요?',
+      allLabel: '전체 기간에 반영',
+      futureLabel: '오늘 이후 일정에 반영',
+    );
+
+    if (!mounted || calendarApplyScope == null) {
+      return;
+    }
+
     Navigator.of(context).pop(
       _EducationProgramFormResult.save(
         EducationProgramInput(
@@ -968,6 +1002,39 @@ class _EducationProgramFormScreenState
           startsOn: _startsOn,
           endsOn: _endsOn,
           weeklySchedules: weeklySchedules,
+        ),
+        calendarApplyScope,
+      ),
+    );
+  }
+
+  Future<CalendarApplyScope?> _pickCalendarApplyScope({
+    required String title,
+    required String message,
+    required String allLabel,
+    required String futureLabel,
+  }) {
+    return showCupertinoModalPopup<CalendarApplyScope>(
+      context: context,
+      builder: (popupContext) => CupertinoActionSheet(
+        title: Text(title),
+        message: Text(message),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () =>
+                Navigator.of(popupContext).pop(CalendarApplyScope.all),
+            child: Text(allLabel),
+          ),
+          CupertinoActionSheetAction(
+            isDefaultAction: true,
+            onPressed: () =>
+                Navigator.of(popupContext).pop(CalendarApplyScope.future),
+            child: Text(futureLabel),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(popupContext).pop(),
+          child: const Text('취소'),
         ),
       ),
     );
@@ -1003,7 +1070,20 @@ class _EducationProgramFormScreenState
       return;
     }
 
-    Navigator.of(context).pop(const _EducationProgramFormResult.delete());
+    final calendarApplyScope = await _pickCalendarApplyScope(
+      title: '캘린더 삭제 범위',
+      message: '연결된 캘린더 일정을 어느 범위로 삭제할까요?',
+      allLabel: '전체 기간 일정 삭제',
+      futureLabel: '오늘 이후 일정 삭제',
+    );
+
+    if (!mounted || calendarApplyScope == null) {
+      return;
+    }
+
+    Navigator.of(
+      context,
+    ).pop(_EducationProgramFormResult.delete(calendarApplyScope));
   }
 
   @override

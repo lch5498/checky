@@ -191,19 +191,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final selectedFamilyId = await showCupertinoModalPopup<String>(
       context: context,
-      builder: (_) => CupertinoActionSheet(
+      builder: (popupContext) => CupertinoActionSheet(
         title: const Text('가족 전환'),
         actions: _families
             .map(
               (summary) => CupertinoActionSheetAction(
                 isDefaultAction: summary.family.id == _selectedFamilyId,
-                onPressed: () => Navigator.of(context).pop(summary.family.id),
+                onPressed: () =>
+                    Navigator.of(popupContext).pop(summary.family.id),
                 child: Text(summary.family.name),
               ),
             )
             .toList(),
         cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: () => Navigator.of(popupContext).pop(),
           child: const Text('취소'),
         ),
       ),
@@ -261,6 +262,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         tabBuilder: (context, index) {
           return CupertinoTabView(
+            key: ValueKey('family-tab-${selectedFamily.id}-$index'),
             builder: (context) {
               switch (index) {
                 case 1:

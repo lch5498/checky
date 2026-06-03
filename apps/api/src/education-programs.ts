@@ -49,6 +49,8 @@ export type EducationProgramInput = {
   timeZoneOffsetMinutes?: number;
 };
 
+export type CalendarApplyScope = 'all' | 'future';
+
 type NormalizedEducationProgramInput = {
   familyMemberId: string;
   name: string;
@@ -96,6 +98,7 @@ export async function createEducationProgram(
   userId: string,
   familyId: string,
   input: EducationProgramInput,
+  options: { calendarApplyScope?: CalendarApplyScope } = {},
 ) {
   await requireFamilyManager(userId, familyId);
   const normalized = await normalizeEducationProgramInput(familyId, input);
@@ -124,7 +127,7 @@ export async function createEducationProgram(
       familyId,
       data.id as string,
       normalized,
-      { futureOnly: false },
+      { futureOnly: options.calendarApplyScope === 'future' },
     );
 
     return {
@@ -142,6 +145,7 @@ export async function updateEducationProgram(
   familyId: string,
   programId: string,
   input: EducationProgramInput,
+  options: { calendarApplyScope?: CalendarApplyScope } = {},
 ) {
   await requireFamilyManager(userId, familyId);
   const normalized = await normalizeEducationProgramInput(familyId, input);
@@ -173,7 +177,7 @@ export async function updateEducationProgram(
     familyId,
     programId,
     normalized,
-    { futureOnly: true },
+    { futureOnly: options.calendarApplyScope !== 'all' },
   );
 
   return {
@@ -186,10 +190,32 @@ export async function deleteEducationProgram(
   userId: string,
   familyId: string,
   programId: string,
+  options: {
+    calendarApplyScope?: CalendarApplyScope;
+    timeZoneOffsetMinutes?: number;
+  } = {},
 ) {
   await requireFamilyManager(userId, familyId);
 
   const supabase = getSupabaseAdmin();
+
+  if (options.calendarApplyScope === 'future') {
+    const timeZoneOffsetMinutes = normalizeTimeZoneOffset(
+      options.timeZoneOffsetMinutes,
+    );
+    const today = dateOnlyInTimeZone(new Date(), timeZoneOffsetMinutes);
+    const { error: detachError } = await supabase
+      .from('schedules')
+      .update({ education_program_id: null })
+      .eq('education_program_id', programId)
+      .eq('family_id', familyId)
+      .lt('starts_at', zonedDateTimeIso(today, '00:00', timeZoneOffsetMinutes));
+
+    if (detachError) {
+      throw detachError;
+    }
+  }
+
   const { error } = await supabase
     .from('education_programs')
     .delete()

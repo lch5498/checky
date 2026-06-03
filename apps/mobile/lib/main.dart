@@ -24,10 +24,22 @@ class HouseKeepingApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: CupertinoThemeData(
         brightness: Brightness.light,
-        primaryColor: CupertinoColors.systemTeal,
+        primaryColor: Color(0xFF0057D9),
         scaffoldBackgroundColor: Color(0xFFF5F5F7),
         barBackgroundColor: Color(0xF2F5F5F7),
         textTheme: CupertinoTextThemeData(
+          actionTextStyle: TextStyle(
+            inherit: false,
+            color: Color(0xFF0057D9),
+            fontSize: 17,
+            letterSpacing: 0,
+          ),
+          navActionTextStyle: TextStyle(
+            inherit: false,
+            color: Color(0xFF0057D9),
+            fontSize: 17,
+            letterSpacing: 0,
+          ),
           navLargeTitleTextStyle: TextStyle(
             inherit: false,
             color: Color(0xFF111111),

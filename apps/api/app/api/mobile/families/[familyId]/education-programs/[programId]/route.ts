@@ -23,14 +23,22 @@ export async function PATCH(request: Request, context: RouteContext) {
     const userId = authenticateMobileRequest(request);
     const { familyId, programId } = await context.params;
     const payload = await readJsonObject(request);
-    const result = await updateEducationProgram(userId, familyId, programId, {
-      familyMemberId: requiredString(payload, 'familyMemberId'),
-      name: requiredString(payload, 'name', { maxLength: 80 }),
-      startsOn: requiredString(payload, 'startsOn'),
-      endsOn: requiredString(payload, 'endsOn'),
-      weeklySchedules: requiredWeeklySchedules(payload),
-      timeZoneOffsetMinutes: optionalNumber(payload, 'timeZoneOffsetMinutes'),
-    });
+    const result = await updateEducationProgram(
+      userId,
+      familyId,
+      programId,
+      {
+        familyMemberId: requiredString(payload, 'familyMemberId'),
+        name: requiredString(payload, 'name', { maxLength: 80 }),
+        startsOn: requiredString(payload, 'startsOn'),
+        endsOn: requiredString(payload, 'endsOn'),
+        weeklySchedules: requiredWeeklySchedules(payload),
+        timeZoneOffsetMinutes: optionalNumber(payload, 'timeZoneOffsetMinutes'),
+      },
+      {
+        calendarApplyScope: optionalCalendarApplyScope(payload),
+      },
+    );
 
     return Response.json(result);
   } catch (error) {
@@ -42,7 +50,11 @@ export async function DELETE(request: Request, context: RouteContext) {
   try {
     const userId = authenticateMobileRequest(request);
     const { familyId, programId } = await context.params;
-    await deleteEducationProgram(userId, familyId, programId);
+    const payload = await readJsonObject(request);
+    await deleteEducationProgram(userId, familyId, programId, {
+      calendarApplyScope: optionalCalendarApplyScope(payload),
+      timeZoneOffsetMinutes: optionalNumber(payload, 'timeZoneOffsetMinutes'),
+    });
 
     return new Response(null, { status: 204 });
   } catch (error) {
@@ -72,6 +84,23 @@ function optionalNumber(payload: Record<string, unknown>, key: string) {
 
   if (typeof value !== 'number') {
     throw new HttpError(400, { error: 'invalid_payload', field: key });
+  }
+
+  return value;
+}
+
+function optionalCalendarApplyScope(payload: Record<string, unknown>) {
+  const value = payload.calendarApplyScope;
+
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (value !== 'all' && value !== 'future') {
+    throw new HttpError(400, {
+      error: 'invalid_payload',
+      field: 'calendarApplyScope',
+    });
   }
 
   return value;
