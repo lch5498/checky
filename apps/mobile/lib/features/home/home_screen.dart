@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
+import '../../design_system/app_colors.dart';
 import '../education/education_screen.dart';
 import '../family/family_screen.dart';
 import '../parking/parking_screen.dart';
@@ -238,6 +239,10 @@ class _HomeScreenState extends State<HomeScreen> {
       return CupertinoTabScaffold(
         controller: _tabController,
         tabBar: CupertinoTabBar(
+          backgroundColor: AppColors.darkSurface,
+          activeColor: AppColors.darkPrimary,
+          inactiveColor: AppColors.darkTextMuted,
+          border: const Border(top: BorderSide(color: AppColors.darkBorder)),
           items: const [
             BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.house),
@@ -364,7 +369,7 @@ class _HomeTitle extends StatelessWidget {
     final family = this.family;
 
     if (family == null) {
-      return const Text('House Keeping');
+      return const Text('파비스');
     }
 
     if (!canSwitch) {
@@ -374,7 +379,7 @@ class _HomeTitle extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
           inherit: false,
-          color: Color(0xFF111111),
+          color: AppColors.darkTextPrimary,
           fontSize: 17,
           fontWeight: FontWeight.w700,
           letterSpacing: 0,
@@ -396,7 +401,7 @@ class _HomeTitle extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 inherit: false,
-                color: Color(0xFF111111),
+                color: AppColors.darkTextPrimary,
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0,
@@ -596,7 +601,7 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
               SizedBox(
                 height: 48,
                 child: CupertinoButton(
-                  color: CupertinoColors.white,
+                  color: AppColors.darkSurfaceElevated,
                   borderRadius: BorderRadius.circular(14),
                   onPressed: _loadBriefing,
                   child: const Text(
@@ -725,7 +730,7 @@ class _BriefingSection extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA))),
+          border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -740,7 +745,7 @@ class _BriefingSection extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF111111),
+                      color: AppColors.darkTextPrimary,
                       fontSize: 18,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0,
@@ -761,7 +766,7 @@ class _BriefingSection extends StatelessWidget {
                 child: Text(
                   emptyText,
                   style: const TextStyle(
-                    color: Color(0xFF6E6E73),
+                    color: AppColors.darkTextSecondary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0,
@@ -797,7 +802,7 @@ class _ScheduleBriefingTile extends StatelessWidget {
             child: Text(
               timeText,
               style: const TextStyle(
-                color: Color(0xFF111111),
+                color: AppColors.darkTextPrimary,
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0,
@@ -813,7 +818,7 @@ class _ScheduleBriefingTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Color(0xFF111111),
+                    color: AppColors.darkTextPrimary,
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
@@ -825,7 +830,7 @@ class _ScheduleBriefingTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Color(0xFF6E6E73),
+                    color: AppColors.darkTextSecondary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0,
@@ -860,7 +865,7 @@ class _ParkingBriefingTile extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: const Color(0xFFE6F3F1),
+              color: AppColors.darkPrimarySoft,
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
@@ -879,7 +884,7 @@ class _ParkingBriefingTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Color(0xFF111111),
+                    color: AppColors.darkTextPrimary,
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
@@ -891,7 +896,7 @@ class _ParkingBriefingTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Color(0xFF6E6E73),
+                    color: AppColors.darkTextSecondary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0,
@@ -940,7 +945,7 @@ class _FamilyRequiredIntro extends StatelessWidget {
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            color: CupertinoColors.white,
+            color: AppColors.darkSurface,
             borderRadius: BorderRadius.circular(16),
             boxShadow: const [
               BoxShadow(
@@ -960,7 +965,7 @@ class _FamilyRequiredIntro extends StatelessWidget {
         Text(
           '$userNickname님, 가족을 먼저 등록해 주세요.',
           style: const TextStyle(
-            color: Color(0xFF111111),
+            color: AppColors.darkTextPrimary,
             fontSize: 30,
             fontWeight: FontWeight.w800,
             height: 1.12,
@@ -969,9 +974,9 @@ class _FamilyRequiredIntro extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const Text(
-          'House Keeping의 학원 일정, 차량, 주차 기록은 모두 가족 단위로 저장됩니다. 가족을 만들거나 초대 링크를 수락하면 홈에서 기능을 사용할 수 있습니다.',
+          '파비스의 학원 일정, 차량, 주차 기록은 모두 가족 단위로 저장됩니다. 가족을 만들거나 초대 링크를 수락하면 홈에서 기능을 사용할 수 있습니다.',
           style: TextStyle(
-            color: Color(0xFF6E6E73),
+            color: AppColors.darkTextSecondary,
             fontSize: 16,
             height: 1.45,
             fontWeight: FontWeight.w500,
@@ -1002,7 +1007,7 @@ class _FamilyRequiredIntro extends StatelessWidget {
         SizedBox(
           height: 50,
           child: CupertinoButton(
-            color: CupertinoColors.white,
+            color: AppColors.darkSurfaceElevated,
             borderRadius: BorderRadius.circular(14),
             onPressed: onReloadFamilies,
             child: const Text(
@@ -1030,16 +1035,16 @@ class _InlineMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Text(
           message,
           style: const TextStyle(
-            color: Color(0xFFB42318),
+            color: AppColors.darkDanger,
             fontSize: 14,
             height: 1.35,
             fontWeight: FontWeight.w600,

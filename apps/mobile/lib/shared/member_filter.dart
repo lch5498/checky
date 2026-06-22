@@ -1,5 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
+import '../design_system/app_colors.dart';
+
 import '../core/api_client.dart';
 
 enum MemberFilterColor {
@@ -79,7 +81,7 @@ class _MemberFilterButton extends StatelessWidget {
         height: 30,
         child: CupertinoButton(
           padding: const EdgeInsets.symmetric(horizontal: 8),
-          color: isActive ? style.background : const Color(0xFFF5F5F7),
+          color: isActive ? style.background : AppColors.darkBackground,
           borderRadius: BorderRadius.circular(9),
           onPressed: onPressed,
           child: Row(
@@ -101,7 +103,7 @@ class _MemberFilterButton extends StatelessWidget {
                   style: TextStyle(
                     color: isActive
                         ? style.foreground
-                        : const Color(0xFF6E6E73),
+                        : AppColors.darkTextSecondary,
                     fontSize: 12,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
@@ -130,7 +132,7 @@ class MemberFilterColorStyle {
   factory MemberFilterColorStyle.from(MemberFilterColor color) {
     return switch (color) {
       MemberFilterColor.teal => const MemberFilterColorStyle(
-        background: Color(0xFFE6F3F1),
+        background: AppColors.darkPrimarySoft,
         foreground: Color(0xFF006D68),
         border: Color(0xFFD2E8E5),
       ),

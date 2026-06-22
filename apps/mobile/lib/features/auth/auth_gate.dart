@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 
 import '../../core/api_client.dart';
+import '../../design_system/app_colors.dart';
 import '../../core/api_config.dart';
 import '../../core/auth_session_store.dart';
 import '../home/home_screen.dart';
@@ -191,7 +192,7 @@ class _AuthGateState extends State<AuthGate> {
 
     if (_isRestoringSession) {
       return const CupertinoPageScaffold(
-        backgroundColor: Color(0xFFF5F5F7),
+        backgroundColor: AppColors.darkBackground,
         child: Center(child: CupertinoActivityIndicator()),
       );
     }
@@ -236,7 +237,7 @@ class _AuthGateState extends State<AuthGate> {
     }
 
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: AppColors.darkBackground,
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
@@ -320,7 +321,7 @@ class _NicknameSetupScreenState extends State<_NicknameSetupScreen> {
     final message = _validationMessage ?? widget.message;
 
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: AppColors.darkBackground,
       navigationBar: CupertinoNavigationBar(
         middle: const Text('프로필 설정'),
         leading: CupertinoButton(
@@ -339,7 +340,7 @@ class _NicknameSetupScreenState extends State<_NicknameSetupScreen> {
               const Text(
                 '처음 사용할 이름을 정해 주세요.',
                 style: TextStyle(
-                  color: Color(0xFF111111),
+                  color: AppColors.darkTextPrimary,
                   fontSize: 30,
                   fontWeight: FontWeight.w800,
                   height: 1.12,
@@ -350,7 +351,7 @@ class _NicknameSetupScreenState extends State<_NicknameSetupScreen> {
               const Text(
                 '카카오 계정 정보 대신 가족이 보기 편한 이름으로 저장됩니다.',
                 style: TextStyle(
-                  color: Color(0xFF6E6E73),
+                  color: AppColors.darkTextSecondary,
                   fontSize: 16,
                   height: 1.42,
                   fontWeight: FontWeight.w500,
@@ -370,15 +371,15 @@ class _NicknameSetupScreenState extends State<_NicknameSetupScreen> {
                   vertical: 15,
                 ),
                 style: const TextStyle(
-                  color: Color(0xFF111111),
+                  color: AppColors.darkTextPrimary,
                   fontSize: 17,
                   fontWeight: FontWeight.w600,
                   letterSpacing: 0,
                 ),
                 decoration: BoxDecoration(
-                  color: CupertinoColors.white,
+                  color: AppColors.darkSurface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE5E5EA)),
+                  border: Border.all(color: AppColors.darkBorder),
                 ),
                 onSubmitted: (_) => _submit(),
               ),
@@ -425,7 +426,7 @@ class _AppMark extends StatelessWidget {
         width: 64,
         height: 64,
         decoration: BoxDecoration(
-          color: CupertinoColors.white,
+          color: AppColors.darkSurface,
           borderRadius: BorderRadius.circular(16),
           boxShadow: const [
             BoxShadow(
@@ -439,7 +440,7 @@ class _AppMark extends StatelessWidget {
         child: const Text(
           'H',
           style: TextStyle(
-            color: Color(0xFF111111),
+            color: AppColors.darkTextPrimary,
             fontSize: 30,
             fontWeight: FontWeight.w800,
           ),
@@ -458,9 +459,9 @@ class _LoginTitle extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'House Keeping',
+          '파비스',
           style: TextStyle(
-            color: Color(0xFF111111),
+            color: AppColors.darkTextPrimary,
             fontSize: 38,
             fontWeight: FontWeight.w800,
             height: 1.05,
@@ -470,7 +471,7 @@ class _LoginTitle extends StatelessWidget {
         Text(
           '가족 일정과 주차 기록을 간단하게 관리하세요.',
           style: TextStyle(
-            color: Color(0xFF6E6E73),
+            color: AppColors.darkTextSecondary,
             fontSize: 17,
             height: 1.45,
             fontWeight: FontWeight.w500,
@@ -490,16 +491,16 @@ class _ErrorMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Text(
           message,
           style: const TextStyle(
-            color: Color(0xFFB42318),
+            color: AppColors.darkDanger,
             fontSize: 14,
             height: 1.35,
             fontWeight: FontWeight.w600,

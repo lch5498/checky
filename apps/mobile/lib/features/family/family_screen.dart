@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
+import '../../design_system/app_colors.dart';
 
 const _shareChannel = MethodChannel('housekeeping/share');
 
@@ -135,7 +136,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: AppColors.darkBackground,
       navigationBar: CupertinoNavigationBar(
         middle: const Text('가족 관리'),
         trailing: CupertinoButton(
@@ -152,7 +153,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
             const Text(
               '가족을 만들고 구성원을 초대하세요.',
               style: TextStyle(
-                color: Color(0xFF111111),
+                color: AppColors.darkTextPrimary,
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
                 height: 1.12,
@@ -163,7 +164,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
             const Text(
               '대표와 공동대표는 가족 안의 추가, 수정, 삭제를 할 수 있고 구성원은 조회만 할 수 있습니다.',
               style: TextStyle(
-                color: Color(0xFF6E6E73),
+                color: AppColors.darkTextSecondary,
                 fontSize: 16,
                 height: 1.4,
                 fontWeight: FontWeight.w500,
@@ -174,7 +175,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
             SizedBox(
               height: 48,
               child: CupertinoButton(
-                color: CupertinoColors.white,
+                color: AppColors.darkSurfaceElevated,
                 borderRadius: BorderRadius.circular(12),
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 onPressed: _isLoading ? null : _acceptInvitation,
@@ -489,7 +490,7 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
     final detail = _detail;
 
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: AppColors.darkBackground,
       navigationBar: CupertinoNavigationBar(
         middle: Text(detail?.family.name ?? '가족'),
         trailing: detail?.canManage == true
@@ -574,9 +575,9 @@ class _FamilyTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: CupertinoColors.white,
+          color: AppColors.darkSurface,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE5E5EA)),
+          border: Border.all(color: AppColors.darkBorder),
         ),
         child: Row(
           children: [
@@ -584,7 +585,7 @@ class _FamilyTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: const Color(0xFFE6F3F1),
+                color: AppColors.darkPrimarySoft,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: const Icon(
@@ -602,7 +603,7 @@ class _FamilyTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF111111),
+                      color: AppColors.darkTextPrimary,
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0,
@@ -612,7 +613,7 @@ class _FamilyTile extends StatelessWidget {
                   Text(
                     roleLabel(summary.role),
                     style: const TextStyle(
-                      color: Color(0xFF6E6E73),
+                      color: AppColors.darkTextSecondary,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                       letterSpacing: 0,
@@ -643,9 +644,9 @@ class _FamilyDetailHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -653,7 +654,7 @@ class _FamilyDetailHeader extends StatelessWidget {
           Text(
             detail.family.name,
             style: const TextStyle(
-              color: Color(0xFF111111),
+              color: AppColors.darkTextPrimary,
               fontSize: 26,
               fontWeight: FontWeight.w800,
               height: 1.12,
@@ -664,7 +665,7 @@ class _FamilyDetailHeader extends StatelessWidget {
           Text(
             '${roleLabel(detail.myRole)} 권한 · 구성원 ${detail.members.length}명',
             style: const TextStyle(
-              color: Color(0xFF6E6E73),
+              color: AppColors.darkTextSecondary,
               fontSize: 15,
               fontWeight: FontWeight.w600,
               letterSpacing: 0,
@@ -696,9 +697,9 @@ class _MemberTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Row(
         children: [
@@ -706,7 +707,7 @@ class _MemberTile extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: const Color(0xFFF2F2F7),
+              color: AppColors.darkSurfaceElevated,
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
@@ -725,7 +726,7 @@ class _MemberTile extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                    color: Color(0xFF111111),
+                    color: AppColors.darkTextPrimary,
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
@@ -735,7 +736,7 @@ class _MemberTile extends StatelessWidget {
                 Text(
                   '${roleLabel(member.role)} · ${member.isLinked ? '계정 연결됨' : '계정 미연결'}',
                   style: const TextStyle(
-                    color: Color(0xFF6E6E73),
+                    color: AppColors.darkTextSecondary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0,
@@ -807,8 +808,8 @@ class _ActionButton extends StatelessWidget {
     return SizedBox(
       height: 48,
       child: CupertinoButton(
-        color: CupertinoColors.white,
-        disabledColor: CupertinoColors.white,
+        color: AppColors.darkSurfaceElevated,
+        disabledColor: AppColors.darkSurfaceElevated,
         borderRadius: BorderRadius.circular(12),
         padding: const EdgeInsets.symmetric(horizontal: 12),
         onPressed: onPressed,
@@ -1164,9 +1165,9 @@ class _EmptyFamilies extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: const Column(
         children: [
@@ -1179,7 +1180,7 @@ class _EmptyFamilies extends StatelessWidget {
           Text(
             '아직 등록된 가족이 없습니다.',
             style: TextStyle(
-              color: Color(0xFF111111),
+              color: AppColors.darkTextPrimary,
               fontSize: 17,
               fontWeight: FontWeight.w800,
               letterSpacing: 0,
@@ -1190,7 +1191,7 @@ class _EmptyFamilies extends StatelessWidget {
             '오른쪽 위 + 버튼으로 가족을 먼저 만들어 주세요.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFF6E6E73),
+              color: AppColors.darkTextSecondary,
               fontSize: 14,
               height: 1.35,
               fontWeight: FontWeight.w500,
@@ -1213,7 +1214,7 @@ class _SectionTitle extends StatelessWidget {
     return Text(
       title,
       style: const TextStyle(
-        color: Color(0xFF111111),
+        color: AppColors.darkTextPrimary,
         fontSize: 18,
         fontWeight: FontWeight.w800,
         letterSpacing: 0,
@@ -1231,16 +1232,16 @@ class _InlineMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Text(
           message,
           style: const TextStyle(
-            color: Color(0xFFB42318),
+            color: AppColors.darkDanger,
             fontSize: 14,
             height: 1.35,
             fontWeight: FontWeight.w600,

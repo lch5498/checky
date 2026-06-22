@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../core/api_client.dart';
+import '../../design_system/app_colors.dart';
 import '../../shared/member_filter.dart';
 import '../../shared/refreshable_scroll_view.dart';
 
@@ -420,7 +421,7 @@ class _FullScreenProgressOverlay extends StatelessWidget {
                     message,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Color(0xFF111111),
+                      color: AppColors.darkTextPrimary,
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0,
@@ -456,7 +457,7 @@ class _EducationProgramCard extends StatelessWidget {
     final content = Container(
       padding: const EdgeInsets.fromLTRB(0, 14, 0, 16),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA))),
+        border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,7 +475,7 @@ class _EducationProgramCard extends StatelessWidget {
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF111111),
+                      color: AppColors.darkTextPrimary,
                       fontSize: 18,
                       height: 1.15,
                       fontWeight: FontWeight.w800,
@@ -560,9 +561,9 @@ class _EducationScheduleGroup extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFAFAFC),
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -573,7 +574,7 @@ class _EducationScheduleGroup extends StatelessWidget {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              color: Color(0xFF111111),
+              color: AppColors.darkTextPrimary,
               fontSize: 13,
               height: 1.15,
               fontWeight: FontWeight.w800,
@@ -608,9 +609,9 @@ class _EducationScheduleChip extends StatelessWidget {
       constraints: const BoxConstraints(minHeight: 34),
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: const Color(0xFFE0EEEB)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -619,7 +620,7 @@ class _EducationScheduleChip extends StatelessWidget {
           Text(
             summary.title,
             style: const TextStyle(
-              color: Color(0xFF111111),
+              color: AppColors.darkTextPrimary,
               fontSize: 13,
               height: 1.15,
               fontWeight: FontWeight.w800,
@@ -631,7 +632,7 @@ class _EducationScheduleChip extends StatelessWidget {
             Text(
               vehicleText,
               style: const TextStyle(
-                color: Color(0xFF6E6E73),
+                color: AppColors.darkTextSecondary,
                 fontSize: 12,
                 height: 1.15,
                 fontWeight: FontWeight.w700,
@@ -663,7 +664,7 @@ class _EducationFilterCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(0, 0, 0, 14),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA))),
+        border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
       ),
       child: MemberFilterBar(
         members: members,
@@ -1414,7 +1415,7 @@ class _DeleteProgramButton extends StatelessWidget {
       height: 48,
       child: CupertinoButton(
         padding: EdgeInsets.zero,
-        color: const Color(0xFFFFE8E8),
+        color: AppColors.darkSurfaceElevated,
         borderRadius: BorderRadius.circular(12),
         onPressed: onPressed,
         child: const Text(
@@ -1478,9 +1479,9 @@ class _FormSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Column(children: children),
     );
@@ -1509,7 +1510,7 @@ class _TextFieldRow extends StatelessWidget {
             child: Text(
               label,
               style: const TextStyle(
-                color: Color(0xFF111111),
+                color: AppColors.darkTextPrimary,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0,
@@ -1554,7 +1555,7 @@ class _PickerRow extends StatelessWidget {
             child: Text(
               label,
               style: const TextStyle(
-                color: Color(0xFF111111),
+                color: AppColors.darkTextPrimary,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0,
@@ -1598,7 +1599,7 @@ class _RecurrenceTypeRow extends StatelessWidget {
             child: Text(
               '반복',
               style: TextStyle(
-                color: Color(0xFF111111),
+                color: AppColors.darkTextPrimary,
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0,
@@ -1673,7 +1674,7 @@ class _WeekdayRuleRow extends StatelessWidget {
                 child: Text(
                   _weekdayLabels[weekday],
                   style: const TextStyle(
-                    color: Color(0xFF111111),
+                    color: AppColors.darkTextPrimary,
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
@@ -1692,13 +1693,13 @@ class _WeekdayRuleRow extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     decoration: BoxDecoration(
                       color: canCopy
-                          ? const Color(0xFFEAF3FF)
-                          : const Color(0xFFF2F2F7),
+                          ? AppColors.darkPrimarySoft
+                          : AppColors.darkSurfaceElevated,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
                         color: canCopy
-                            ? const Color(0xFFCDE2FF)
-                            : const Color(0xFFE5E5EA),
+                            ? AppColors.darkBorder
+                            : AppColors.darkBorder,
                       ),
                     ),
                     child: Row(
@@ -1795,7 +1796,7 @@ class _MonthlyRuleRow extends StatelessWidget {
                 child: Text(
                   _weekOfMonthLabels[weekOfMonth] ?? '$weekOfMonth주',
                   style: const TextStyle(
-                    color: Color(0xFF111111),
+                    color: AppColors.darkTextPrimary,
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
@@ -1808,7 +1809,7 @@ class _MonthlyRuleRow extends StatelessWidget {
                 height: 34,
                 child: CupertinoButton(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  color: const Color(0xFFF2F2F7),
+                  color: AppColors.darkSurfaceElevated,
                   borderRadius: BorderRadius.circular(9),
                   onPressed: rule.enabled ? onPickWeekday : null,
                   child: Text(
@@ -1880,7 +1881,7 @@ class _RuleTimeLine extends StatelessWidget {
           child: Text(
             label,
             style: const TextStyle(
-              color: Color(0xFF6E6E73),
+              color: AppColors.darkTextSecondary,
               fontSize: 12,
               fontWeight: FontWeight.w800,
               letterSpacing: 0,
@@ -1894,7 +1895,10 @@ class _RuleTimeLine extends StatelessWidget {
           const SizedBox(width: 6),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 4),
-          child: Text('-', style: TextStyle(color: Color(0xFF6E6E73))),
+          child: Text(
+            '-',
+            style: TextStyle(color: AppColors.darkTextSecondary),
+          ),
         ),
         _SmallTimeButton(value: endValue, onPressed: onPickEnd),
         if (onClearEnd != null)
@@ -1934,7 +1938,7 @@ class _SmallTimeButton extends StatelessWidget {
       height: 34,
       child: CupertinoButton(
         padding: const EdgeInsets.symmetric(horizontal: 10),
-        color: const Color(0xFFF2F2F7),
+        color: AppColors.darkSurfaceElevated,
         borderRadius: BorderRadius.circular(9),
         onPressed: onPressed,
         child: Text(
@@ -2067,7 +2071,7 @@ class _FeatureFamilyTitle extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
           inherit: false,
-          color: Color(0xFF111111),
+          color: AppColors.darkTextPrimary,
           fontSize: 17,
           fontWeight: FontWeight.w700,
           letterSpacing: 0,
@@ -2089,7 +2093,7 @@ class _FeatureFamilyTitle extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 inherit: false,
-                color: Color(0xFF111111),
+                color: AppColors.darkTextPrimary,
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0,
@@ -2114,14 +2118,14 @@ class _EmptyPrograms extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Text(
         canManage ? '등록된 학교/학원이 없습니다. + 버튼으로 추가해 주세요.' : '등록된 학교/학원이 없습니다.',
         style: const TextStyle(
-          color: Color(0xFF6E6E73),
+          color: AppColors.darkTextSecondary,
           fontSize: 15,
           height: 1.35,
           fontWeight: FontWeight.w600,
@@ -2140,14 +2144,14 @@ class _EmptyFilteredPrograms extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: const Text(
         '선택한 구성원의 학교/학원이 없습니다.',
         style: TextStyle(
-          color: Color(0xFF6E6E73),
+          color: AppColors.darkTextSecondary,
           fontSize: 15,
           height: 1.35,
           fontWeight: FontWeight.w600,
@@ -2168,14 +2172,14 @@ class _InlineMessage extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Text(
         message,
         style: const TextStyle(
-          color: Color(0xFFB42318),
+          color: AppColors.darkDanger,
           fontSize: 14,
           height: 1.35,
           fontWeight: FontWeight.w600,

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../core/api_client.dart';
+import '../../design_system/app_colors.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, required this.user, required this.onSave});
@@ -76,7 +77,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: AppColors.darkBackground,
       navigationBar: CupertinoNavigationBar(
         middle: const Text('프로필'),
         trailing: CupertinoButton(
@@ -101,7 +102,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             const Text(
               '가족에게 보일 이름',
               style: TextStyle(
-                color: Color(0xFF111111),
+                color: AppColors.darkTextPrimary,
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
                 height: 1.12,
@@ -110,9 +111,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 10),
             const Text(
-              '카카오 계정 이름과 별개로 House Keeping 안에서만 사용하는 이름입니다.',
+              '카카오 계정 이름과 별개로 파비스 안에서만 사용하는 이름입니다.',
               style: TextStyle(
-                color: Color(0xFF6E6E73),
+                color: AppColors.darkTextSecondary,
                 fontSize: 16,
                 height: 1.4,
                 fontWeight: FontWeight.w500,
@@ -129,15 +130,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
               textInputAction: TextInputAction.done,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
               style: const TextStyle(
-                color: Color(0xFF111111),
+                color: AppColors.darkTextPrimary,
                 fontSize: 17,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 0,
               ),
               decoration: BoxDecoration(
-                color: CupertinoColors.white,
+                color: AppColors.darkSurface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE5E5EA)),
+                border: Border.all(color: AppColors.darkBorder),
               ),
               onSubmitted: (_) => _save(),
             ),
@@ -181,16 +182,16 @@ class _ProfileMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Text(
           message,
           style: const TextStyle(
-            color: Color(0xFFB42318),
+            color: AppColors.darkDanger,
             fontSize: 14,
             height: 1.35,
             fontWeight: FontWeight.w600,

@@ -1,7 +1,11 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 
 import 'core/api_config.dart';
+import 'design_system/app_theme.dart';
+import 'design_system/app_theme_extension.dart';
+import 'design_system/app_typography.dart';
 import 'features/auth/auth_gate.dart';
 
 void main() async {
@@ -11,52 +15,40 @@ void main() async {
     KakaoSdk.init(nativeAppKey: ApiConfig.kakaoNativeAppKey);
   }
 
-  runApp(const HouseKeepingApp());
+  runApp(const FavisApp());
 }
 
-class HouseKeepingApp extends StatelessWidget {
-  const HouseKeepingApp({super.key});
+class FavisApp extends StatelessWidget {
+  const FavisApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return const CupertinoApp(
-      title: 'House Keeping',
+    return MaterialApp(
+      title: '파비스',
       debugShowCheckedModeBanner: false,
-      theme: CupertinoThemeData(
-        brightness: Brightness.light,
-        primaryColor: Color(0xFF0057D9),
-        scaffoldBackgroundColor: Color(0xFFF5F5F7),
-        barBackgroundColor: Color(0xF2F5F5F7),
-        textTheme: CupertinoTextThemeData(
-          actionTextStyle: TextStyle(
-            inherit: false,
-            color: Color(0xFF0057D9),
-            fontSize: 17,
-            letterSpacing: 0,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.dark,
+      builder: (context, child) {
+        final brightness = Theme.of(context).brightness;
+        final colors = AppThemeExtension.of(context);
+        final textStyle = AppTypography.bodyMedium.copyWith(
+          color: colors.textPrimary,
+          decoration: TextDecoration.none,
+        );
+
+        return CupertinoTheme(
+          data: AppTheme.cupertinoTheme(brightness),
+          child: DefaultTextStyle.merge(
+            style: textStyle,
+            child: IconTheme(
+              data: IconThemeData(color: colors.textPrimary),
+              child: child ?? const SizedBox.shrink(),
+            ),
           ),
-          navActionTextStyle: TextStyle(
-            inherit: false,
-            color: Color(0xFF0057D9),
-            fontSize: 17,
-            letterSpacing: 0,
-          ),
-          navLargeTitleTextStyle: TextStyle(
-            inherit: false,
-            color: Color(0xFF111111),
-            fontSize: 34,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
-          navTitleTextStyle: TextStyle(
-            inherit: false,
-            color: Color(0xFF111111),
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
-          ),
-        ),
-      ),
-      home: AuthGate(),
+        );
+      },
+      home: const AuthGate(),
     );
   }
 }

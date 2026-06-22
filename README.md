@@ -1,4 +1,4 @@
-# House Keeping
+# 파비스 (Favis)
 
 가족만 사용하는 housekeeping 앱입니다. iOS Flutter 앱은 하단 탭으로 홈, 일정, 주차를 구분합니다.
 

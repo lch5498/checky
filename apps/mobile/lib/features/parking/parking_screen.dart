@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../core/api_client.dart';
+import '../../design_system/app_colors.dart';
 import '../../shared/refreshable_scroll_view.dart';
 
 const _parkingPresetTypeFloor = 'floor';
@@ -309,7 +310,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
     final dashboard = _dashboard;
 
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: AppColors.darkBackground,
       navigationBar: CupertinoNavigationBar(
         leading: dashboard == null
             ? null
@@ -414,7 +415,7 @@ class _FeatureFamilyTitle extends StatelessWidget {
         overflow: TextOverflow.ellipsis,
         style: const TextStyle(
           inherit: false,
-          color: Color(0xFF111111),
+          color: AppColors.darkTextPrimary,
           fontSize: 17,
           fontWeight: FontWeight.w700,
           letterSpacing: 0,
@@ -436,7 +437,7 @@ class _FeatureFamilyTitle extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 inherit: false,
-                color: Color(0xFF111111),
+                color: AppColors.darkTextPrimary,
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
                 letterSpacing: 0,
@@ -692,7 +693,7 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0xFFF5F5F7),
+      backgroundColor: AppColors.darkBackground,
       navigationBar: CupertinoNavigationBar(
         middle: const Text('주차 위치 즐겨찾기'),
         trailing: widget.canManage
@@ -711,7 +712,7 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
             const Text(
               '자주 쓰는 주차 위치',
               style: TextStyle(
-                color: Color(0xFF111111),
+                color: AppColors.darkTextPrimary,
                 fontSize: 28,
                 fontWeight: FontWeight.w800,
                 height: 1.12,
@@ -722,7 +723,7 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
             const Text(
               '층수와 위치를 나눠 등록해 두면 주차 위치를 빠르게 기록할 수 있습니다.',
               style: TextStyle(
-                color: Color(0xFF6E6E73),
+                color: AppColors.darkTextSecondary,
                 fontSize: 16,
                 height: 1.4,
                 fontWeight: FontWeight.w500,
@@ -799,9 +800,9 @@ class _PresetSection extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFFFF),
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -812,7 +813,7 @@ class _PresetSection extends StatelessWidget {
                 child: Text(
                   title,
                   style: const TextStyle(
-                    color: Color(0xFF111111),
+                    color: AppColors.darkTextPrimary,
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
@@ -834,13 +835,13 @@ class _PresetSection extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F5F7),
+                color: AppColors.darkBackground,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 emptyText,
                 style: const TextStyle(
-                  color: Color(0xFF8E8E93),
+                  color: AppColors.darkTextMuted,
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0,
@@ -891,13 +892,13 @@ class _VehicleCard extends StatelessWidget {
     final locationColor = isRegisteringLocation
         ? CupertinoColors.systemOrange
         : currentLocation == null
-        ? const Color(0xFF8E8E93)
-        : const Color(0xFF111111);
+        ? AppColors.darkTextMuted
+        : AppColors.darkTextPrimary;
 
     return Container(
       padding: const EdgeInsets.fromLTRB(0, 14, 0, 16),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFE5E5EA))),
+        border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -914,7 +915,7 @@ class _VehicleCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        color: Color(0xFF111111),
+                        color: AppColors.darkTextPrimary,
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0,
@@ -924,7 +925,7 @@ class _VehicleCard extends StatelessWidget {
                     Text(
                       vehicle.plateNumber,
                       style: const TextStyle(
-                        color: Color(0xFF6E6E73),
+                        color: AppColors.darkTextSecondary,
                         fontSize: 14,
                         fontWeight: FontWeight.w700,
                         letterSpacing: 0,
@@ -947,7 +948,7 @@ class _VehicleCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F7),
+              color: AppColors.darkBackground,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Column(
@@ -956,7 +957,7 @@ class _VehicleCard extends StatelessWidget {
                 const Text(
                   '현재 위치',
                   style: TextStyle(
-                    color: Color(0xFF6E6E73),
+                    color: AppColors.darkTextSecondary,
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0,
@@ -995,7 +996,7 @@ class _VehicleCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF6E6E73),
+                      color: AppColors.darkTextSecondary,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 0,
@@ -1032,7 +1033,7 @@ class _VehicleCard extends StatelessWidget {
                 const SizedBox(width: 10),
                 CupertinoButton(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  color: const Color(0xFFFFE8E8),
+                  color: AppColors.darkSurfaceElevated,
                   borderRadius: BorderRadius.circular(12),
                   onPressed: isRegisteringLocation ? null : onDelete,
                   child: const Icon(
@@ -1068,9 +1069,9 @@ class _PresetTile extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Row(
         children: [
@@ -1085,7 +1086,7 @@ class _PresetTile extends StatelessWidget {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                color: Color(0xFF111111),
+                color: AppColors.darkTextPrimary,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
                 letterSpacing: 0,
@@ -1255,7 +1256,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
         Text(
           title,
           style: const TextStyle(
-            color: Color(0xFF111111),
+            color: AppColors.darkTextPrimary,
             fontSize: 16,
             fontWeight: FontWeight.w800,
             letterSpacing: 0,
@@ -1309,7 +1310,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                     child: Text(
                       '주차 위치 등록',
                       style: TextStyle(
-                        color: Color(0xFF111111),
+                        color: AppColors.darkTextPrimary,
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0,
@@ -1380,13 +1381,15 @@ class _LocationChoiceButton extends StatelessWidget {
     return CupertinoButton(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
       minimumSize: Size.zero,
-      color: isSelected ? CupertinoColors.activeBlue : const Color(0xFFF2F2F7),
+      color: isSelected
+          ? CupertinoColors.activeBlue
+          : AppColors.darkSurfaceElevated,
       borderRadius: BorderRadius.circular(999),
       onPressed: onPressed,
       child: Text(
         label,
         style: TextStyle(
-          color: isSelected ? CupertinoColors.white : const Color(0xFF111111),
+          color: isSelected ? CupertinoColors.white : AppColors.darkTextPrimary,
           fontSize: 14,
           fontWeight: FontWeight.w800,
           letterSpacing: 0,
@@ -1606,9 +1609,9 @@ class _EmptyState extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Column(
         children: [
@@ -1622,7 +1625,7 @@ class _EmptyState extends StatelessWidget {
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Color(0xFF111111),
+              color: AppColors.darkTextPrimary,
               fontSize: 17,
               fontWeight: FontWeight.w800,
               letterSpacing: 0,
@@ -1633,7 +1636,7 @@ class _EmptyState extends StatelessWidget {
             subtitle,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              color: Color(0xFF6E6E73),
+              color: AppColors.darkTextSecondary,
               fontSize: 14,
               height: 1.35,
               fontWeight: FontWeight.w500,
@@ -1674,16 +1677,16 @@ class _InlineMessage extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: CupertinoColors.white,
+        color: AppColors.darkSurface,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E5EA)),
+        border: Border.all(color: AppColors.darkBorder),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Text(
           message,
           style: const TextStyle(
-            color: Color(0xFFB42318),
+            color: AppColors.darkDanger,
             fontSize: 14,
             height: 1.35,
             fontWeight: FontWeight.w600,
