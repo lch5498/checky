@@ -25,7 +25,7 @@ class HomeScreen extends StatefulWidget {
   final AppUser user;
   final String sessionToken;
   final Future<AppUser> Function(String nickname) onUpdateProfile;
-  final VoidCallback? onLogout;
+  final Future<void> Function()? onLogout;
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -427,7 +427,7 @@ class _HomeNavigationTrailing extends StatelessWidget {
 
   final AppUser user;
   final Future<AppUser> Function(String nickname) onUpdateProfile;
-  final VoidCallback? onLogout;
+  final Future<void> Function()? onLogout;
 
   @override
   Widget build(BuildContext context) {
@@ -477,7 +477,7 @@ class _HomeDashboardTab extends StatefulWidget {
   final VoidCallback onOpenSchedule;
   final VoidCallback onOpenParking;
   final Future<AppUser> Function(String nickname) onUpdateProfile;
-  final VoidCallback? onLogout;
+  final Future<void> Function()? onLogout;
 
   @override
   State<_HomeDashboardTab> createState() => _HomeDashboardTabState();

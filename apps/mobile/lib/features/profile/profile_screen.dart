@@ -13,7 +13,7 @@ class ProfileScreen extends StatefulWidget {
 
   final AppUser user;
   final Future<AppUser> Function(String nickname) onSave;
-  final VoidCallback? onLogout;
+  final Future<void> Function()? onLogout;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -102,11 +102,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
 
-    if (shouldLogout != true || !mounted) {
+    final onLogout = widget.onLogout;
+
+    if (shouldLogout != true || !mounted || onLogout == null) {
       return;
     }
 
-    widget.onLogout?.call();
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    }
+
+    await onLogout();
   }
 
   @override
