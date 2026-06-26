@@ -4,10 +4,16 @@ import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
 
 class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key, required this.user, required this.onSave});
+  const ProfileScreen({
+    super.key,
+    required this.user,
+    required this.onSave,
+    this.onLogout,
+  });
 
   final AppUser user;
   final Future<AppUser> Function(String nickname) onSave;
+  final VoidCallback? onLogout;
 
   @override
   State<ProfileScreen> createState() => _ProfileScreenState();
@@ -72,6 +78,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     }
+  }
+
+  Future<void> _confirmLogout() async {
+    final shouldLogout = await showCupertinoDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return CupertinoAlertDialog(
+          title: const Text('로그아웃할까요?'),
+          content: const Text('다시 사용하려면 카카오 로그인이 필요합니다.'),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: const Text('취소'),
+            ),
+            CupertinoDialogAction(
+              isDestructiveAction: true,
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: const Text('로그아웃'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (shouldLogout != true || !mounted) {
+      return;
+    }
+
+    widget.onLogout?.call();
   }
 
   @override
@@ -166,6 +201,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
               ),
             ),
+            if (widget.onLogout != null) ...[
+              const SizedBox(height: 14),
+              SizedBox(
+                height: 52,
+                child: CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  color: AppColors.darkSurfaceElevated,
+                  borderRadius: BorderRadius.circular(14),
+                  onPressed: _isSaving ? null : _confirmLogout,
+                  child: const Center(
+                    child: Text(
+                      '로그아웃',
+                      style: TextStyle(
+                        color: AppColors.darkDanger,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),

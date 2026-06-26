@@ -431,33 +431,21 @@ class _HomeNavigationTrailing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (onLogout == null) {
-      return const SizedBox.shrink();
-    }
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CupertinoButton(
-          padding: EdgeInsets.zero,
-          minimumSize: const Size(32, 32),
-          onPressed: () {
-            Navigator.of(context).push(
-              CupertinoPageRoute<void>(
-                builder: (_) =>
-                    ProfileScreen(user: user, onSave: onUpdateProfile),
-              ),
-            );
-          },
-          child: const Icon(CupertinoIcons.person_crop_circle),
-        ),
-        CupertinoButton(
-          padding: EdgeInsets.zero,
-          minimumSize: const Size(32, 32),
-          onPressed: onLogout,
-          child: const Icon(CupertinoIcons.square_arrow_right),
-        ),
-      ],
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      minimumSize: const Size(32, 32),
+      onPressed: () {
+        Navigator.of(context).push(
+          CupertinoPageRoute<void>(
+            builder: (_) => ProfileScreen(
+              user: user,
+              onSave: onUpdateProfile,
+              onLogout: onLogout,
+            ),
+          ),
+        );
+      },
+      child: const Icon(CupertinoIcons.person_crop_circle),
     );
   }
 }
@@ -963,23 +951,56 @@ class _FamilyRequiredIntro extends StatelessWidget {
         ),
         const SizedBox(height: 22),
         Text(
-          '$userNickname님, 가족을 먼저 등록해 주세요.',
+          '$userNickname님,\n파비스를 시작해 볼까요?',
           style: const TextStyle(
             color: AppColors.darkTextPrimary,
-            fontSize: 30,
+            fontSize: 28,
             fontWeight: FontWeight.w800,
-            height: 1.12,
+            height: 1.16,
             letterSpacing: 0,
           ),
         ),
         const SizedBox(height: 12),
         const Text(
-          '파비스의 학원 일정, 차량, 주차 기록은 모두 가족 단위로 저장됩니다. 가족을 만들거나 초대 링크를 수락하면 홈에서 기능을 사용할 수 있습니다.',
+          '파비스는 Family + Javis에서 온 이름이에요. 아이 일정과 주차 위치를 가족이 함께 관리하는 작은 비서입니다.',
           style: TextStyle(
             color: AppColors.darkTextSecondary,
             fontSize: 16,
             height: 1.45,
             fontWeight: FontWeight.w500,
+            letterSpacing: 0,
+          ),
+        ),
+        const SizedBox(height: 18),
+        const Row(
+          children: [
+            Expanded(
+              child: _IntroFeaturePill(
+                icon: CupertinoIcons.calendar,
+                title: '아이 일정 관리',
+                description: '학교와 학원 시간을 가족이 함께 확인',
+                color: AppColors.darkPrimary,
+              ),
+            ),
+            SizedBox(width: 10),
+            Expanded(
+              child: _IntroFeaturePill(
+                icon: CupertinoIcons.car_detailed,
+                title: '주차 관리',
+                description: '차량별 주차 위치를 빠르게 공유',
+                color: AppColors.darkSuccess,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          '일정, 차량, 주차 기록은 모두 가족 단위로 저장됩니다. 가족을 만들거나 초대 링크를 수락하면 홈에서 바로 사용할 수 있어요.',
+          style: TextStyle(
+            color: AppColors.darkTextMuted,
+            fontSize: 14,
+            height: 1.42,
+            fontWeight: FontWeight.w600,
             letterSpacing: 0,
           ),
         ),
@@ -991,14 +1012,18 @@ class _FamilyRequiredIntro extends StatelessWidget {
         SizedBox(
           height: 54,
           child: CupertinoButton.filled(
+            padding: EdgeInsets.zero,
             borderRadius: BorderRadius.circular(14),
             onPressed: onOpenFamilyManagement,
-            child: const Text(
-              '가족 등록하기',
-              style: TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+            child: const Center(
+              child: Text(
+                '가족 등록하기',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                  letterSpacing: 0,
+                ),
               ),
             ),
           ),
@@ -1007,21 +1032,85 @@ class _FamilyRequiredIntro extends StatelessWidget {
         SizedBox(
           height: 50,
           child: CupertinoButton(
+            padding: EdgeInsets.zero,
             color: AppColors.darkSurfaceElevated,
             borderRadius: BorderRadius.circular(14),
             onPressed: onReloadFamilies,
-            child: const Text(
-              '가족 목록 새로고침',
-              style: TextStyle(
-                color: CupertinoColors.systemTeal,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+            child: const Center(
+              child: Text(
+                '가족 목록 새로고침',
+                style: TextStyle(
+                  color: CupertinoColors.systemTeal,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                  height: 1,
+                  letterSpacing: 0,
+                ),
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+class _IntroFeaturePill extends StatelessWidget {
+  const _IntroFeaturePill({
+    required this.icon,
+    required this.title,
+    required this.description,
+    required this.color,
+  });
+
+  final IconData icon;
+  final String title;
+  final String description;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.darkSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.darkBorder),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: color, size: 22),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.darkTextPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                height: 1.15,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.darkTextSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                height: 1.3,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

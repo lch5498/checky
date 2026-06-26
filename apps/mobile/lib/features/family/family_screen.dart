@@ -154,9 +154,9 @@ class _FamilyScreenState extends State<FamilyScreen> {
               '가족을 만들고 구성원을 초대하세요.',
               style: TextStyle(
                 color: AppColors.darkTextPrimary,
-                fontSize: 28,
+                fontSize: 24,
                 fontWeight: FontWeight.w800,
-                height: 1.12,
+                height: 1.18,
                 letterSpacing: 0,
               ),
             ),
