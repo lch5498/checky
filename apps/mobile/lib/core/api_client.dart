@@ -246,12 +246,18 @@ class ApiClient {
     required String familyId,
     required String presetType,
     required String name,
+    String? parentPresetId,
   }) async {
+    final body = <String, Object?>{'presetType': presetType, 'name': name};
+    if (parentPresetId != null) {
+      body['parentPresetId'] = parentPresetId;
+    }
+
     final json = await _requestJson(
       'POST',
       '/api/mobile/families/$familyId/parking/presets',
       bearerToken: sessionToken,
-      body: {'presetType': presetType, 'name': name},
+      body: body,
     );
 
     return ParkingLocationPreset.fromJson(
@@ -265,12 +271,18 @@ class ApiClient {
     required String presetId,
     required String presetType,
     required String name,
+    String? parentPresetId,
   }) async {
+    final body = <String, Object?>{'presetType': presetType, 'name': name};
+    if (parentPresetId != null) {
+      body['parentPresetId'] = parentPresetId;
+    }
+
     final json = await _requestJson(
       'PATCH',
       '/api/mobile/families/$familyId/parking/presets/$presetId',
       bearerToken: sessionToken,
-      body: {'presetType': presetType, 'name': name},
+      body: body,
     );
 
     return ParkingLocationPreset.fromJson(
@@ -294,23 +306,30 @@ class ApiClient {
     String sessionToken, {
     required String familyId,
     required String vehicleId,
+    String? buildingPresetId,
     String? floorPresetId,
-    String? spotPresetId,
+    String? detailPresetId,
+    required String buildingText,
     required String floorText,
-    required String spotText,
+    required String detailText,
   }) async {
     final body = <String, Object?>{
       'vehicleId': vehicleId,
+      'buildingText': buildingText,
       'floorText': floorText,
-      'spotText': spotText,
+      'detailText': detailText,
     };
+
+    if (buildingPresetId != null) {
+      body['buildingPresetId'] = buildingPresetId;
+    }
 
     if (floorPresetId != null) {
       body['floorPresetId'] = floorPresetId;
     }
 
-    if (spotPresetId != null) {
-      body['spotPresetId'] = spotPresetId;
+    if (detailPresetId != null) {
+      body['detailPresetId'] = detailPresetId;
     }
 
     final json = await _requestJson(
@@ -849,6 +868,7 @@ class ParkingLocationPreset {
   const ParkingLocationPreset({
     required this.id,
     required this.familyId,
+    required this.parentPresetId,
     required this.presetType,
     required this.name,
     required this.sortOrder,
@@ -858,6 +878,7 @@ class ParkingLocationPreset {
 
   final String id;
   final String familyId;
+  final String? parentPresetId;
   final String presetType;
   final String name;
   final int sortOrder;
@@ -868,6 +889,7 @@ class ParkingLocationPreset {
     return ParkingLocationPreset(
       id: json['id'] as String,
       familyId: json['family_id'] as String,
+      parentPresetId: json['parent_preset_id'] as String?,
       presetType: json['preset_type'] as String,
       name: json['name'] as String,
       sortOrder: json['sort_order'] as int,
@@ -882,10 +904,12 @@ class ParkingRecord {
     required this.id,
     required this.familyId,
     required this.vehicleId,
+    required this.buildingPresetId,
     required this.floorPresetId,
-    required this.spotPresetId,
+    required this.detailPresetId,
+    required this.buildingText,
     required this.floorText,
-    required this.spotText,
+    required this.detailText,
     required this.locationText,
     required this.createdByUserId,
     required this.createdByNickname,
@@ -896,10 +920,12 @@ class ParkingRecord {
   final String id;
   final String familyId;
   final String vehicleId;
+  final String? buildingPresetId;
   final String? floorPresetId;
-  final String? spotPresetId;
+  final String? detailPresetId;
+  final String buildingText;
   final String floorText;
-  final String spotText;
+  final String detailText;
   final String locationText;
   final String? createdByUserId;
   final String createdByNickname;
@@ -913,10 +939,12 @@ class ParkingRecord {
       id: json['id'] as String,
       familyId: json['family_id'] as String,
       vehicleId: json['vehicle_id'] as String,
+      buildingPresetId: json['building_preset_id'] as String?,
       floorPresetId: json['floor_preset_id'] as String?,
-      spotPresetId: json['spot_preset_id'] as String?,
+      detailPresetId: json['detail_preset_id'] as String?,
+      buildingText: json['building_text'] as String,
       floorText: json['floor_text'] as String,
-      spotText: json['spot_text'] as String,
+      detailText: json['detail_text'] as String,
       locationText: json['location_text'] as String,
       createdByUserId: json['created_by_user_id'] as String?,
       createdByNickname: createdByUser?['nickname'] as String? ?? '알 수 없음',

@@ -5,6 +5,7 @@ import {
 import { jsonFromError } from '../../../../../../../../src/http';
 import { authenticateMobileRequest } from '../../../../../../../../src/mobile-auth';
 import {
+  optionalString,
   readJsonObject,
   requiredString,
 } from '../../../../../../../../src/validation';
@@ -25,9 +26,11 @@ export async function PATCH(request: Request, context: RouteContext) {
     const payload = await readJsonObject(request);
     const name = requiredString(payload, 'name', { maxLength: 40 });
     const presetType = requiredString(payload, 'presetType');
+    const parentPresetId = optionalString(payload, 'parentPresetId');
     const preset = await updateParkingLocationPreset(userId, familyId, presetId, {
       presetType,
       name,
+      parentPresetId,
     });
 
     return Response.json({ preset });

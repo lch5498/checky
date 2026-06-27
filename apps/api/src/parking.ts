@@ -2,7 +2,7 @@ import { requireFamilyManager, requireMembership } from './families';
 import { HttpError } from './http';
 import { getSupabaseAdmin } from './supabase';
 
-export type ParkingPresetType = 'floor' | 'spot';
+export type ParkingPresetType = 'building' | 'floor' | 'detail';
 
 export type Vehicle = {
   id: string;
@@ -16,6 +16,7 @@ export type Vehicle = {
 export type ParkingLocationPreset = {
   id: string;
   family_id: string;
+  parent_preset_id: string | null;
   preset_type: ParkingPresetType;
   name: string;
   sort_order: number;
@@ -27,10 +28,12 @@ export type ParkingRecord = {
   id: string;
   family_id: string;
   vehicle_id: string;
+  building_preset_id: string | null;
   floor_preset_id: string | null;
-  spot_preset_id: string | null;
+  detail_preset_id: string | null;
+  building_text: string;
   floor_text: string;
-  spot_text: string;
+  detail_text: string;
   location_text: string;
   created_by_user_id: string | null;
   parked_at: string;
@@ -189,16 +192,23 @@ export async function listParkingLocationPresets(
 export async function createParkingLocationPreset(
   userId: string,
   familyId: string,
-  input: { presetType: string; name: string },
+  input: { presetType: string; name: string; parentPresetId?: string },
 ) {
   await requireFamilyManager(userId, familyId);
 
+  const presetType = normalizePresetType(input.presetType);
+  const parentPresetId = await normalizeParentPresetId(
+    familyId,
+    presetType,
+    input.parentPresetId,
+  );
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('parking_location_presets')
     .insert({
       family_id: familyId,
-      preset_type: normalizePresetType(input.presetType),
+      parent_preset_id: parentPresetId,
+      preset_type: presetType,
       name: normalizeText(input.name, 'name', 40),
     })
     .select('*')
@@ -215,15 +225,29 @@ export async function updateParkingLocationPreset(
   userId: string,
   familyId: string,
   presetId: string,
-  input: { presetType: string; name: string },
+  input: { presetType: string; name: string; parentPresetId?: string },
 ) {
   await requireFamilyManager(userId, familyId);
+
+  const presetType = normalizePresetType(input.presetType);
+  const parentPresetId = await normalizeParentPresetId(
+    familyId,
+    presetType,
+    input.parentPresetId,
+  );
+  if (parentPresetId === presetId) {
+    throw new HttpError(400, {
+      error: 'invalid_payload',
+      field: 'parentPresetId',
+    });
+  }
 
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('parking_location_presets')
     .update({
-      preset_type: normalizePresetType(input.presetType),
+      parent_preset_id: parentPresetId,
+      preset_type: presetType,
       name: normalizeText(input.name, 'name', 40),
     })
     .eq('id', presetId)
@@ -266,21 +290,27 @@ export async function createParkingRecord(
   familyId: string,
   input: {
     vehicleId: string;
+    buildingPresetId?: string;
     floorPresetId?: string;
-    spotPresetId?: string;
+    detailPresetId?: string;
+    buildingText: string;
     floorText: string;
-    spotText: string;
+    detailText: string;
   },
 ) {
   await requireFamilyManager(userId, familyId);
 
+  const buildingText = normalizeText(input.buildingText, 'buildingText', 40);
   const floorText = normalizeText(input.floorText, 'floorText', 40);
-  const spotText = normalizeText(input.spotText, 'spotText', 40);
-  const [vehicle, floorPresetId, spotPresetId] = await Promise.all([
-    getVehicleOrThrow(familyId, input.vehicleId),
-    normalizePresetId(familyId, input.floorPresetId, 'floor'),
-    normalizePresetId(familyId, input.spotPresetId, 'spot'),
-  ]);
+  const detailText = normalizeText(input.detailText, 'detailText', 40);
+  const [vehicle, buildingPreset, floorPreset, detailPreset] =
+    await Promise.all([
+      getVehicleOrThrow(familyId, input.vehicleId),
+      normalizePreset(familyId, input.buildingPresetId, 'building'),
+      normalizePreset(familyId, input.floorPresetId, 'floor'),
+      normalizePreset(familyId, input.detailPresetId, 'detail'),
+    ]);
+  validateParkingRecordPresetHierarchy(buildingPreset, floorPreset, detailPreset);
 
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
@@ -288,11 +318,13 @@ export async function createParkingRecord(
     .insert({
       family_id: familyId,
       vehicle_id: vehicle.id,
-      floor_preset_id: floorPresetId,
-      spot_preset_id: spotPresetId,
+      building_preset_id: buildingPreset?.id ?? null,
+      floor_preset_id: floorPreset?.id ?? null,
+      detail_preset_id: detailPreset?.id ?? null,
+      building_text: buildingText,
       floor_text: floorText,
-      spot_text: spotText,
-      location_text: `${floorText} / ${spotText}`,
+      detail_text: detailText,
+      location_text: `${buildingText} / ${floorText} / ${detailText}`,
       created_by_user_id: userId,
     })
     .select(parkingRecordSelect)
@@ -357,7 +389,7 @@ async function getPresetOrThrow(familyId: string, presetId: string) {
   return data as ParkingLocationPreset;
 }
 
-async function normalizePresetId(
+async function normalizePreset(
   familyId: string,
   presetId: string | undefined,
   presetType: ParkingPresetType,
@@ -371,17 +403,91 @@ async function normalizePresetId(
   const preset = await getPresetOrThrow(familyId, normalized);
 
   if (preset.preset_type !== presetType) {
+    const fieldByPresetType: Record<ParkingPresetType, string> = {
+      building: 'buildingPresetId',
+      floor: 'floorPresetId',
+      detail: 'detailPresetId',
+    };
+
     throw new HttpError(400, {
       error: 'parking_preset_type_mismatch',
-      field: presetType === 'floor' ? 'floorPresetId' : 'spotPresetId',
+      field: fieldByPresetType[presetType],
     });
   }
 
-  return preset.id;
+  return preset;
+}
+
+async function normalizeParentPresetId(
+  familyId: string,
+  presetType: ParkingPresetType,
+  parentPresetId: string | undefined,
+) {
+  if (presetType === 'building') {
+    return null;
+  }
+
+  const expectedParentType: ParkingPresetType = 'building';
+  const parent = await normalizePreset(
+    familyId,
+    parentPresetId,
+    expectedParentType,
+  );
+
+  if (!parent) {
+    throw new HttpError(400, {
+      error: 'invalid_payload',
+      field: 'parentPresetId',
+    });
+  }
+
+  return parent.id;
+}
+
+function validateParkingRecordPresetHierarchy(
+  buildingPreset: ParkingLocationPreset | null,
+  floorPreset: ParkingLocationPreset | null,
+  detailPreset: ParkingLocationPreset | null,
+) {
+  if (floorPreset && !buildingPreset) {
+    throw new HttpError(400, {
+      error: 'invalid_payload',
+      field: 'buildingPresetId',
+    });
+  }
+
+  if (detailPreset && !buildingPreset) {
+    throw new HttpError(400, {
+      error: 'invalid_payload',
+      field: 'buildingPresetId',
+    });
+  }
+
+  if (
+    buildingPreset &&
+    floorPreset &&
+    floorPreset.parent_preset_id !== buildingPreset.id
+  ) {
+    throw new HttpError(400, {
+      error: 'parking_preset_parent_mismatch',
+      field: 'floorPresetId',
+    });
+  }
+
+  if (
+    detailPreset &&
+    buildingPreset &&
+    detailPreset.parent_preset_id !== buildingPreset.id
+  ) {
+    throw new HttpError(400, {
+      error: 'parking_preset_parent_mismatch',
+      field: 'detailPresetId',
+    });
+  }
 }
 
 function normalizePresetType(value: string): ParkingPresetType {
-  if (value === 'floor' || value === 'spot') {
+  if (value === 'building' || value === 'floor' || value === 'detail') {
     return value;
   }
 

@@ -21,16 +21,22 @@ export async function POST(request: Request, context: RouteContext) {
     const { familyId } = await context.params;
     const payload = await readJsonObject(request);
     const vehicleId = requiredString(payload, 'vehicleId');
+    const buildingPresetId = optionalString(payload, 'buildingPresetId');
     const floorPresetId = optionalString(payload, 'floorPresetId');
-    const spotPresetId = optionalString(payload, 'spotPresetId');
+    const detailPresetId = optionalString(payload, 'detailPresetId');
+    const buildingText = requiredString(payload, 'buildingText', {
+      maxLength: 40,
+    });
     const floorText = requiredString(payload, 'floorText', { maxLength: 40 });
-    const spotText = requiredString(payload, 'spotText', { maxLength: 40 });
+    const detailText = requiredString(payload, 'detailText', { maxLength: 40 });
     const record = await createParkingRecord(userId, familyId, {
       vehicleId,
+      buildingPresetId,
       floorPresetId,
-      spotPresetId,
+      detailPresetId,
+      buildingText,
       floorText,
-      spotText,
+      detailText,
     });
 
     return Response.json({ record }, { status: 201 });

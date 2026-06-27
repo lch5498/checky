@@ -4,10 +4,12 @@ import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/refreshable_scroll_view.dart';
 
+const _parkingPresetTypeBuilding = 'building';
 const _parkingPresetTypeFloor = 'floor';
-const _parkingPresetTypeSpot = 'spot';
-const _defaultFloorChoices = ['B1', 'B2', 'B3', 'B4'];
-const _defaultSpotChoices = ['101동', '107동', '가운데'];
+const _parkingPresetTypeDetail = 'detail';
+const _defaultBuildingChoices = <String>[];
+const _defaultFloorChoices = <String>[];
+const _defaultDetailChoices = <String>[];
 
 class ParkingScreen extends StatefulWidget {
   const ParkingScreen({
@@ -199,6 +201,15 @@ class _ParkingScreenState extends State<ParkingScreen> {
       builder: (_) => _LocationPickerSheet(
         presets: dashboard.presets,
         currentLocation: currentLocation,
+        onCreatePreset:
+            ({required presetType, required name, parentPresetId}) =>
+                _apiClient.createParkingLocationPreset(
+                  widget.sessionToken,
+                  familyId: _family.id,
+                  presetType: presetType,
+                  name: name,
+                  parentPresetId: parentPresetId,
+                ),
       ),
     );
 
@@ -216,10 +227,12 @@ class _ParkingScreenState extends State<ParkingScreen> {
         widget.sessionToken,
         familyId: _family.id,
         vehicleId: vehicle.id,
+        buildingPresetId: selected.buildingPresetId,
         floorPresetId: selected.floorPresetId,
-        spotPresetId: selected.spotPresetId,
+        detailPresetId: selected.detailPresetId,
+        buildingText: selected.buildingText,
         floorText: selected.floorText,
-        spotText: selected.spotText,
+        detailText: selected.detailText,
       );
       await _loadParking();
     } catch (error) {
@@ -472,11 +485,8 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
   final _apiClient = ApiClient();
 
   List<ParkingLocationPreset> _presets = const [];
-  List<ParkingLocationPreset> get _floorPresets => _presets
-      .where((preset) => preset.presetType == _parkingPresetTypeFloor)
-      .toList();
-  List<ParkingLocationPreset> get _spotPresets => _presets
-      .where((preset) => preset.presetType == _parkingPresetTypeSpot)
+  List<ParkingLocationPreset> get _buildingPresets => _presets
+      .where((preset) => preset.presetType == _parkingPresetTypeBuilding)
       .toList();
   String? _message;
   bool _isLoading = true;
@@ -544,6 +554,7 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
 
   Future<void> _openPresetForm({
     required String presetType,
+    String? parentPresetId,
     ParkingLocationPreset? preset,
   }) async {
     final name = preset == null
@@ -564,6 +575,7 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
           familyId: widget.family.id,
           presetType: presetType,
           name: name,
+          parentPresetId: parentPresetId,
         );
       } else {
         await _apiClient.updateParkingLocationPreset(
@@ -572,6 +584,7 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
           presetId: preset.id,
           presetType: presetType,
           name: name,
+          parentPresetId: parentPresetId ?? preset.parentPresetId,
         );
       }
 
@@ -579,44 +592,22 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
     });
   }
 
-  Future<void> _openPresetTypePicker() async {
-    final presetType = await showCupertinoModalPopup<String>(
-      context: context,
-      builder: (sheetContext) => CupertinoActionSheet(
-        title: const Text('즐겨찾기 추가'),
-        actions: [
-          CupertinoActionSheetAction(
-            onPressed: () =>
-                Navigator.of(sheetContext).pop(_parkingPresetTypeFloor),
-            child: const Text('자주 쓰는 층수'),
-          ),
-          CupertinoActionSheetAction(
-            onPressed: () =>
-                Navigator.of(sheetContext).pop(_parkingPresetTypeSpot),
-            child: const Text('자주 쓰는 위치'),
-          ),
-        ],
-        cancelButton: CupertinoActionSheetAction(
-          onPressed: () => Navigator.of(sheetContext).pop(),
-          child: const Text('취소'),
-        ),
-      ),
-    );
-
-    if (presetType == null) {
-      return;
-    }
-
-    await _openPresetForm(presetType: presetType);
-  }
-
   Future<String?> _pickPresetName(String presetType) async {
-    final defaults = presetType == _parkingPresetTypeFloor
-        ? _defaultFloorChoices
-        : _defaultSpotChoices;
-    final title = presetType == _parkingPresetTypeFloor
-        ? '자주 쓰는 층수'
-        : '자주 쓰는 위치';
+    final defaults = switch (presetType) {
+      _parkingPresetTypeBuilding => _defaultBuildingChoices,
+      _parkingPresetTypeFloor => _defaultFloorChoices,
+      _ => _defaultDetailChoices,
+    };
+    final title = switch (presetType) {
+      _parkingPresetTypeBuilding => '자주 쓰는 건물',
+      _parkingPresetTypeFloor => '자주 쓰는 층수',
+      _ => '자주 쓰는 상세위치',
+    };
+    final placeholder = switch (presetType) {
+      _parkingPresetTypeBuilding => '예: A동',
+      _parkingPresetTypeFloor => '예: B5',
+      _ => '예: 기둥 A12',
+    };
 
     return showCupertinoModalPopup<String>(
       context: context,
@@ -634,9 +625,7 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
                 context: popupContext,
                 builder: (_) => _TextInputDialog(
                   title: '$title 직접 입력',
-                  placeholder: presetType == _parkingPresetTypeFloor
-                      ? '예: B5'
-                      : '예: 105동',
+                  placeholder: placeholder,
                   maxLength: 40,
                 ),
               );
@@ -690,6 +679,19 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
     });
   }
 
+  List<ParkingLocationPreset> _childPresets({
+    required String parentPresetId,
+    required String presetType,
+  }) {
+    return _presets
+        .where(
+          (preset) =>
+              preset.parentPresetId == parentPresetId &&
+              preset.presetType == presetType,
+        )
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
@@ -700,7 +702,11 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
             ? CupertinoButton(
                 padding: EdgeInsets.zero,
                 minimumSize: const Size(32, 32),
-                onPressed: _isLoading ? null : _openPresetTypePicker,
+                onPressed: _isLoading
+                    ? null
+                    : () => _openPresetForm(
+                        presetType: _parkingPresetTypeBuilding,
+                      ),
                 child: const Icon(CupertinoIcons.plus),
               )
             : null,
@@ -721,7 +727,7 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
             ),
             const SizedBox(height: 10),
             const Text(
-              '층수와 위치를 나눠 등록해 두면 주차 위치를 빠르게 기록할 수 있습니다.',
+              '건물 아래에 층수와 상세위치를 등록해 두면 주차 위치를 빠르게 기록할 수 있습니다.',
               style: TextStyle(
                 color: AppColors.darkTextSecondary,
                 fontSize: 16,
@@ -740,35 +746,62 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
                 padding: EdgeInsets.only(top: 56),
                 child: Center(child: CupertinoActivityIndicator()),
               )
-            else ...[
+            else if (_buildingPresets.isEmpty)
               _PresetSection(
-                title: '자주 쓰는 층수',
-                presets: _floorPresets,
+                title: '자주 쓰는 건물',
+                presets: _buildingPresets,
                 canManage: widget.canManage,
-                emptyText: '등록된 층수가 없습니다.',
+                emptyText: '등록된 건물이 없습니다.',
                 onAdd: () =>
-                    _openPresetForm(presetType: _parkingPresetTypeFloor),
+                    _openPresetForm(presetType: _parkingPresetTypeBuilding),
                 onEdit: (preset) => _openPresetForm(
-                  presetType: _parkingPresetTypeFloor,
+                  presetType: _parkingPresetTypeBuilding,
                   preset: preset,
                 ),
                 onDelete: _deletePreset,
-              ),
-              const SizedBox(height: 14),
-              _PresetSection(
-                title: '자주 쓰는 위치',
-                presets: _spotPresets,
-                canManage: widget.canManage,
-                emptyText: '등록된 위치가 없습니다.',
-                onAdd: () =>
-                    _openPresetForm(presetType: _parkingPresetTypeSpot),
-                onEdit: (preset) => _openPresetForm(
-                  presetType: _parkingPresetTypeSpot,
-                  preset: preset,
+              )
+            else
+              for (final building in _buildingPresets) ...[
+                _BuildingPresetBlock(
+                  building: building,
+                  floors: _childPresets(
+                    parentPresetId: building.id,
+                    presetType: _parkingPresetTypeFloor,
+                  ),
+                  details: _childPresets(
+                    parentPresetId: building.id,
+                    presetType: _parkingPresetTypeDetail,
+                  ),
+                  canManage: widget.canManage,
+                  onAddFloor: () => _openPresetForm(
+                    presetType: _parkingPresetTypeFloor,
+                    parentPresetId: building.id,
+                  ),
+                  onEditBuilding: () => _openPresetForm(
+                    presetType: _parkingPresetTypeBuilding,
+                    preset: building,
+                  ),
+                  onDeleteBuilding: () => _deletePreset(building),
+                  onAddDetail: () => _openPresetForm(
+                    presetType: _parkingPresetTypeDetail,
+                    parentPresetId: building.id,
+                  ),
+                  onEditFloor: (floor) => _openPresetForm(
+                    presetType: _parkingPresetTypeFloor,
+                    parentPresetId: building.id,
+                    preset: floor,
+                  ),
+                  onDeleteFloor: _deletePreset,
+                  onEditDetail: (detail) => _openPresetForm(
+                    presetType: _parkingPresetTypeDetail,
+                    parentPresetId: building.id,
+                    preset: detail,
+                  ),
+                  onDeleteDetail: _deletePreset,
                 ),
-                onDelete: _deletePreset,
-              ),
-            ],
+                if (building != _buildingPresets.last)
+                  const SizedBox(height: 14),
+              ],
           ],
         ),
       ),
@@ -859,6 +892,272 @@ class _PresetSection extends StatelessWidget {
               if (preset != presets.last) const SizedBox(height: 8),
             ],
         ],
+      ),
+    );
+  }
+}
+
+class _BuildingPresetBlock extends StatelessWidget {
+  const _BuildingPresetBlock({
+    required this.building,
+    required this.floors,
+    required this.details,
+    required this.canManage,
+    required this.onAddFloor,
+    required this.onEditBuilding,
+    required this.onDeleteBuilding,
+    required this.onAddDetail,
+    required this.onEditFloor,
+    required this.onDeleteFloor,
+    required this.onEditDetail,
+    required this.onDeleteDetail,
+  });
+
+  final ParkingLocationPreset building;
+  final List<ParkingLocationPreset> floors;
+  final List<ParkingLocationPreset> details;
+  final bool canManage;
+  final VoidCallback onAddFloor;
+  final VoidCallback onEditBuilding;
+  final VoidCallback onDeleteBuilding;
+  final VoidCallback onAddDetail;
+  final ValueChanged<ParkingLocationPreset> onEditFloor;
+  final ValueChanged<ParkingLocationPreset> onDeleteFloor;
+  final ValueChanged<ParkingLocationPreset> onEditDetail;
+  final ValueChanged<ParkingLocationPreset> onDeleteDetail;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      decoration: BoxDecoration(
+        color: AppColors.darkSurface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.darkBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                CupertinoIcons.building_2_fill,
+                color: CupertinoColors.systemOrange,
+                size: 21,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  building.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: AppColors.darkTextPrimary,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ),
+              if (canManage) ...[
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(34, 34),
+                  onPressed: onAddFloor,
+                  child: const Icon(CupertinoIcons.plus_circle_fill, size: 21),
+                ),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(34, 34),
+                  onPressed: onEditBuilding,
+                  child: const Icon(CupertinoIcons.pencil, size: 18),
+                ),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(34, 34),
+                  onPressed: onDeleteBuilding,
+                  child: const Icon(
+                    CupertinoIcons.minus_circle,
+                    color: CupertinoColors.destructiveRed,
+                    size: 20,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 10),
+          _PresetGroupHeader(
+            title: '층',
+            canManage: canManage,
+            onAdd: onAddFloor,
+          ),
+          const SizedBox(height: 8),
+          if (floors.isEmpty)
+            const _PresetEmptyText(text: '등록된 층수가 없습니다.')
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final floor in floors)
+                  _PresetNameChip(
+                    preset: floor,
+                    canManage: canManage,
+                    onEdit: () => onEditFloor(floor),
+                    onDelete: () => onDeleteFloor(floor),
+                  ),
+              ],
+            ),
+          const SizedBox(height: 14),
+          _PresetGroupHeader(
+            title: '상세위치',
+            canManage: canManage,
+            onAdd: onAddDetail,
+          ),
+          const SizedBox(height: 8),
+          if (details.isEmpty)
+            const _PresetEmptyText(text: '등록된 상세위치가 없습니다.')
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final detail in details)
+                  _PresetNameChip(
+                    preset: detail,
+                    canManage: canManage,
+                    onEdit: () => onEditDetail(detail),
+                    onDelete: () => onDeleteDetail(detail),
+                  ),
+              ],
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PresetGroupHeader extends StatelessWidget {
+  const _PresetGroupHeader({
+    required this.title,
+    required this.canManage,
+    required this.onAdd,
+  });
+
+  final String title;
+  final bool canManage;
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: const TextStyle(
+              color: AppColors.darkTextSecondary,
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0,
+            ),
+          ),
+        ),
+        if (canManage)
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(30, 30),
+            onPressed: onAdd,
+            child: const Icon(CupertinoIcons.plus_circle, size: 19),
+          ),
+      ],
+    );
+  }
+}
+
+class _PresetNameChip extends StatelessWidget {
+  const _PresetNameChip({
+    required this.preset,
+    required this.canManage,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final ParkingLocationPreset preset;
+  final bool canManage;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.darkSurfaceElevated,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CupertinoButton(
+            padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
+            minimumSize: Size.zero,
+            onPressed: canManage ? onEdit : null,
+            child: Text(
+              preset.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: AppColors.darkTextPrimary,
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+          if (canManage)
+            Padding(
+              padding: const EdgeInsets.only(right: 4),
+              child: CupertinoButton(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(24, 24),
+                onPressed: onDelete,
+                child: const Icon(
+                  CupertinoIcons.xmark_circle_fill,
+                  color: CupertinoColors.systemGrey,
+                  size: 16,
+                ),
+              ),
+            )
+          else
+            const SizedBox(width: 8),
+        ],
+      ),
+    );
+  }
+}
+
+class _PresetEmptyText extends StatelessWidget {
+  const _PresetEmptyText({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.darkBackground,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(
+          color: AppColors.darkTextMuted,
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0,
+        ),
       ),
     );
   }
@@ -1116,10 +1415,22 @@ class _PresetTile extends StatelessWidget {
   }
 }
 
+typedef _CreateParkingLocationPreset =
+    Future<ParkingLocationPreset> Function({
+      required String presetType,
+      required String name,
+      String? parentPresetId,
+    });
+
 class _LocationPickerSheet extends StatefulWidget {
-  const _LocationPickerSheet({required this.presets, this.currentLocation});
+  const _LocationPickerSheet({
+    required this.presets,
+    required this.onCreatePreset,
+    this.currentLocation,
+  });
 
   final List<ParkingLocationPreset> presets;
+  final _CreateParkingLocationPreset onCreatePreset;
   final ParkingRecord? currentLocation;
 
   @override
@@ -1127,41 +1438,64 @@ class _LocationPickerSheet extends StatefulWidget {
 }
 
 class _LocationPickerSheetState extends State<_LocationPickerSheet> {
+  late final List<ParkingLocationPreset> _presets;
+  _ParkingLocationChoice? _building;
   _ParkingLocationChoice? _floor;
-  _ParkingLocationChoice? _spot;
+  _ParkingLocationChoice? _detail;
+  String? _message;
+  bool _isCreatingPreset = false;
 
   @override
   void initState() {
     super.initState();
+    _presets = [...widget.presets];
 
     final currentLocation = widget.currentLocation;
     if (currentLocation == null) {
       return;
     }
 
+    _building = _choiceFromCurrentLocation(
+      presetType: _parkingPresetTypeBuilding,
+      presetId: currentLocation.buildingPresetId,
+      text: currentLocation.buildingText,
+    );
     _floor = _choiceFromCurrentLocation(
       presetType: _parkingPresetTypeFloor,
       presetId: currentLocation.floorPresetId,
       text: currentLocation.floorText,
+      parentPresetId: _building?.presetId,
     );
-    _spot = _choiceFromCurrentLocation(
-      presetType: _parkingPresetTypeSpot,
-      presetId: currentLocation.spotPresetId,
-      text: currentLocation.spotText,
+    _detail = _choiceFromCurrentLocation(
+      presetType: _parkingPresetTypeDetail,
+      presetId: currentLocation.detailPresetId,
+      text: currentLocation.detailText,
+      parentPresetId: _building?.presetId,
     );
   }
 
-  List<_ParkingLocationChoice> _choicesFor(String presetType) {
-    final presets = widget.presets
-        .where((preset) => preset.presetType == presetType)
+  List<_ParkingLocationChoice> _choicesFor(
+    String presetType, {
+    String? parentPresetId,
+  }) {
+    final presets = _presets
+        .where(
+          (preset) =>
+              preset.presetType == presetType &&
+              (presetType == _parkingPresetTypeBuilding
+                  ? preset.parentPresetId == null
+                  : preset.parentPresetId == parentPresetId),
+        )
         .map(
           (preset) =>
               _ParkingLocationChoice(presetId: preset.id, text: preset.name),
         )
         .toList();
-    final defaults = presetType == _parkingPresetTypeFloor
-        ? _defaultFloorChoices
-        : _defaultSpotChoices;
+    final defaults = switch (presetType) {
+      _parkingPresetTypeBuilding => _defaultBuildingChoices,
+      _parkingPresetTypeFloor => _defaultFloorChoices,
+      _ => _defaultDetailChoices,
+    };
     final presetNames = presets.map((choice) => choice.text).toSet();
 
     return [
@@ -1175,13 +1509,14 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     required String presetType,
     required String? presetId,
     required String text,
+    String? parentPresetId,
   }) {
     final normalizedText = text.trim();
     if (normalizedText.isEmpty) {
       return null;
     }
 
-    final choices = _choicesFor(presetType);
+    final choices = _choicesFor(presetType, parentPresetId: parentPresetId);
     for (final choice in choices) {
       if (presetId != null && choice.presetId == presetId) {
         return choice;
@@ -1197,13 +1532,34 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     return _ParkingLocationChoice(text: normalizedText);
   }
 
-  Future<void> _openDirectInput({required bool isFloor}) async {
-    final title = isFloor ? '층 직접 입력' : '위치 직접 입력';
+  Future<void> _openDirectInput({required String presetType}) async {
+    final parentPresetId = switch (presetType) {
+      _parkingPresetTypeBuilding => null,
+      _ => _building?.presetId,
+    };
+
+    if (presetType != _parkingPresetTypeBuilding && parentPresetId == null) {
+      setState(() {
+        _message = '건물을 먼저 선택해 주세요.';
+      });
+      return;
+    }
+
+    final title = switch (presetType) {
+      _parkingPresetTypeBuilding => '건물 직접 입력',
+      _parkingPresetTypeFloor => '층 직접 입력',
+      _ => '상세위치 직접 입력',
+    };
+    final placeholder = switch (presetType) {
+      _parkingPresetTypeBuilding => '예: A동',
+      _parkingPresetTypeFloor => '예: B5',
+      _ => '예: 기둥 A12',
+    };
     final value = await showCupertinoDialog<String>(
       context: context,
       builder: (_) => _TextInputDialog(
         title: title,
-        placeholder: isFloor ? '예: B5' : '예: 105동',
+        placeholder: placeholder,
         maxLength: 40,
       ),
     );
@@ -1212,31 +1568,102 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       return;
     }
 
-    setState(() {
-      final choice = _ParkingLocationChoice(text: value);
+    final normalizedValue = value.trim();
+    final existing = _presets.where(
+      (preset) =>
+          preset.presetType == presetType &&
+          preset.parentPresetId == parentPresetId &&
+          preset.name == normalizedValue,
+    );
+    final preset = existing.isNotEmpty
+        ? existing.first
+        : await _createPreset(
+            presetType: presetType,
+            name: normalizedValue,
+            parentPresetId: parentPresetId,
+          );
 
-      if (isFloor) {
-        _floor = choice;
-      } else {
-        _spot = choice;
+    if (preset == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      final choice = _ParkingLocationChoice(
+        presetId: preset.id,
+        text: preset.name,
+      );
+
+      switch (presetType) {
+        case _parkingPresetTypeBuilding:
+          _building = choice;
+          _floor = null;
+          _detail = null;
+        case _parkingPresetTypeFloor:
+          _floor = choice;
+        default:
+          _detail = choice;
       }
     });
   }
 
-  void _submit() {
-    final floor = _floor;
-    final spot = _spot;
+  Future<ParkingLocationPreset?> _createPreset({
+    required String presetType,
+    required String name,
+    String? parentPresetId,
+  }) async {
+    setState(() {
+      _message = null;
+      _isCreatingPreset = true;
+    });
 
-    if (floor == null || spot == null) {
+    try {
+      final preset = await widget.onCreatePreset(
+        presetType: presetType,
+        name: name,
+        parentPresetId: parentPresetId,
+      );
+
+      if (mounted) {
+        setState(() {
+          _presets.add(preset);
+        });
+      }
+
+      return preset;
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+
+      return null;
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isCreatingPreset = false;
+        });
+      }
+    }
+  }
+
+  void _submit() {
+    final building = _building;
+    final floor = _floor;
+    final detail = _detail;
+
+    if (building == null || floor == null || detail == null) {
       return;
     }
 
     Navigator.of(context).pop(
       _ParkingLocationInput(
+        buildingPresetId: building.presetId,
         floorPresetId: floor.presetId,
-        spotPresetId: spot.presetId,
+        detailPresetId: detail.presetId,
+        buildingText: building.text,
         floorText: floor.text,
-        spotText: spot.text,
+        detailText: detail.text,
       ),
     );
   }
@@ -1245,10 +1672,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     required String title,
     required String presetType,
     required _ParkingLocationChoice? selected,
+    String? parentPresetId,
     required ValueChanged<_ParkingLocationChoice> onSelected,
   }) {
-    final choices = _choicesFor(presetType);
-    final isFloor = presetType == _parkingPresetTypeFloor;
+    final choices = _choicesFor(presetType, parentPresetId: parentPresetId);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1281,7 +1708,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                   selected?.presetId == null &&
                   selected != null &&
                   !choices.any((choice) => choice.text == selected.text),
-              onPressed: () => _openDirectInput(isFloor: isFloor),
+              onPressed: () => _openDirectInput(presetType: presetType),
             ),
           ],
         ),
@@ -1291,73 +1718,105 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final canSubmit = _floor != null && _spot != null;
+    final canSubmit = _building != null && _floor != null && _detail != null;
 
     return SafeArea(
       top: false,
       child: CupertinoPopupSurface(
         child: Container(
           width: double.infinity,
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.sizeOf(context).height * 0.78,
+          ),
           padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
           color: CupertinoColors.systemBackground.resolveFrom(context),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Expanded(
-                    child: Text(
-                      '주차 위치 등록',
-                      style: TextStyle(
-                        color: AppColors.darkTextPrimary,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        '주차 위치 등록',
+                        style: TextStyle(
+                          color: AppColors.darkTextPrimary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
+                        ),
                       ),
                     ),
-                  ),
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(34, 34),
-                    onPressed: () => Navigator.of(context).pop(),
-                    child: const Icon(CupertinoIcons.xmark_circle_fill),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(34, 34),
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Icon(CupertinoIcons.xmark_circle_fill),
+                    ),
+                  ],
+                ),
+                if (_message != null) ...[
+                  const SizedBox(height: 10),
+                  _InlineMessage(message: _message!),
+                ],
+                const SizedBox(height: 16),
+                _buildChoiceSection(
+                  title: '건물',
+                  presetType: _parkingPresetTypeBuilding,
+                  selected: _building,
+                  onSelected: (choice) => setState(() {
+                    _building = choice;
+                    _floor = null;
+                    _detail = null;
+                  }),
+                ),
+                if (_building != null) ...[
+                  const SizedBox(height: 18),
+                  _buildChoiceSection(
+                    title: '층',
+                    presetType: _parkingPresetTypeFloor,
+                    parentPresetId: _building?.presetId,
+                    selected: _floor,
+                    onSelected: (choice) => setState(() {
+                      _floor = choice;
+                    }),
                   ),
                 ],
-              ),
-              const SizedBox(height: 16),
-              _buildChoiceSection(
-                title: '층',
-                presetType: _parkingPresetTypeFloor,
-                selected: _floor,
-                onSelected: (choice) => setState(() => _floor = choice),
-              ),
-              const SizedBox(height: 18),
-              _buildChoiceSection(
-                title: '위치',
-                presetType: _parkingPresetTypeSpot,
-                selected: _spot,
-                onSelected: (choice) => setState(() => _spot = choice),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                height: 46,
-                child: CupertinoButton.filled(
-                  borderRadius: BorderRadius.circular(12),
-                  onPressed: canSubmit ? _submit : null,
-                  child: const Text(
-                    '등록',
-                    style: TextStyle(
-                      fontSize: 15,
-                      height: 1.1,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
+                if (_building != null) ...[
+                  const SizedBox(height: 18),
+                  _buildChoiceSection(
+                    title: '상세위치',
+                    presetType: _parkingPresetTypeDetail,
+                    parentPresetId: _building?.presetId,
+                    selected: _detail,
+                    onSelected: (choice) => setState(() => _detail = choice),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: CupertinoButton.filled(
+                    borderRadius: BorderRadius.circular(12),
+                    onPressed: canSubmit && !_isCreatingPreset ? _submit : null,
+                    child: _isCreatingPreset
+                        ? const CupertinoActivityIndicator(
+                            color: CupertinoColors.white,
+                          )
+                        : const Text(
+                            '등록',
+                            style: TextStyle(
+                              fontSize: 15,
+                              height: 1.1,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0,
+                            ),
+                          ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -1499,7 +1958,7 @@ class _PresetDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return _TextInputDialog(
       title: preset == null ? '즐겨찾기 추가' : '즐겨찾기 수정',
-      placeholder: '예: 지하1층',
+      placeholder: '즐겨찾기 이름',
       initialValue: preset?.name,
       maxLength: 40,
     );
@@ -1707,16 +2166,20 @@ class _VehicleInput {
 
 class _ParkingLocationInput {
   const _ParkingLocationInput({
+    this.buildingPresetId,
     this.floorPresetId,
-    this.spotPresetId,
+    this.detailPresetId,
+    required this.buildingText,
     required this.floorText,
-    required this.spotText,
+    required this.detailText,
   });
 
+  final String? buildingPresetId;
   final String? floorPresetId;
-  final String? spotPresetId;
+  final String? detailPresetId;
+  final String buildingText;
   final String floorText;
-  final String spotText;
+  final String detailText;
 }
 
 class _ParkingLocationChoice {

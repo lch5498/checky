@@ -79,13 +79,14 @@ create table public.vehicles (
 create table public.parking_location_presets (
   id uuid primary key default gen_random_uuid(),
   family_id uuid not null references public.families(id) on delete cascade,
+  parent_preset_id uuid references public.parking_location_presets(id) on delete cascade,
   preset_type text not null,
   name text not null,
   sort_order integer not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint parking_location_presets_type_check check (
-    preset_type in ('floor', 'spot')
+    preset_type in ('building', 'floor', 'detail')
   )
 );
 
@@ -93,10 +94,12 @@ create table public.parking_records (
   id uuid primary key default gen_random_uuid(),
   family_id uuid not null references public.families(id) on delete cascade,
   vehicle_id uuid not null references public.vehicles(id) on delete cascade,
+  building_preset_id uuid references public.parking_location_presets(id) on delete set null,
   floor_preset_id uuid references public.parking_location_presets(id) on delete set null,
-  spot_preset_id uuid references public.parking_location_presets(id) on delete set null,
+  detail_preset_id uuid references public.parking_location_presets(id) on delete set null,
+  building_text text not null,
   floor_text text not null,
-  spot_text text not null,
+  detail_text text not null,
   location_text text not null,
   created_by_user_id uuid references public.users(id) on delete set null,
   parked_at timestamptz not null default now(),
@@ -172,6 +175,9 @@ create index vehicles_family_id_idx
 
 create index parking_location_presets_family_id_idx
   on public.parking_location_presets (family_id);
+
+create index parking_location_presets_parent_id_idx
+  on public.parking_location_presets (parent_preset_id);
 
 create index parking_location_presets_family_type_sort_idx
   on public.parking_location_presets (
@@ -260,10 +266,12 @@ returns table (
   id uuid,
   family_id uuid,
   vehicle_id uuid,
+  building_preset_id uuid,
   floor_preset_id uuid,
-  spot_preset_id uuid,
+  detail_preset_id uuid,
+  building_text text,
   floor_text text,
-  spot_text text,
+  detail_text text,
   location_text text,
   created_by_user_id uuid,
   parked_at timestamptz,
@@ -280,10 +288,12 @@ as $$
     record.id,
     record.family_id,
     record.vehicle_id,
+    record.building_preset_id,
     record.floor_preset_id,
-    record.spot_preset_id,
+    record.detail_preset_id,
+    record.building_text,
     record.floor_text,
-    record.spot_text,
+    record.detail_text,
     record.location_text,
     record.created_by_user_id,
     record.parked_at,
