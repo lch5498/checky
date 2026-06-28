@@ -87,6 +87,12 @@ class AppTheme {
           surface: tokens.surface,
           error: tokens.danger,
         ).copyWith(
+          secondary: brightness == Brightness.dark
+              ? AppColors.darkCoralValue
+              : AppColors.lightCoral,
+          tertiary: brightness == Brightness.dark
+              ? AppColors.darkLavenderValue
+              : AppColors.lightLavender,
           onPrimary: brightness == Brightness.dark
               ? AppColors.darkBackgroundValue
               : AppColors.lightSurface,

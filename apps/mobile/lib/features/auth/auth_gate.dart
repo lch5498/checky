@@ -461,13 +461,13 @@ class _AppMark extends StatelessWidget {
         alignment: Alignment.center,
         clipBehavior: Clip.antiAlias,
         child: Image.asset(
-          'assets/branding/favis-icon-calendar-source.png',
+          'assets/branding/checky-icon-source.png',
           width: 64,
           height: 64,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
             return Text(
-              'F',
+              'C',
               style: TextStyle(
                 color: AppColors.darkTextPrimary,
                 fontSize: 30,
@@ -490,7 +490,7 @@ class _LoginTitle extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '파비스',
+          '체키',
           style: TextStyle(
             color: AppColors.darkTextPrimary,
             fontSize: 38,
@@ -501,7 +501,7 @@ class _LoginTitle extends StatelessWidget {
         ),
         SizedBox(height: 12),
         Text(
-          '우리 가족의 작은 비서',
+          '까먹지 마, 체키 있잖아',
           style: TextStyle(
             color: AppColors.darkTextPrimary,
             fontSize: 24,
@@ -512,7 +512,7 @@ class _LoginTitle extends StatelessWidget {
         ),
         SizedBox(height: 12),
         Text(
-          '아이 일정, 학교와 학원 반복 일정, 주차 위치까지 가족 기준으로 차곡차곡 정리해요.',
+          '가족 일정과 주차 자리, 오늘 챙길 일을 체키 하나로 가볍게 확인해요.',
           style: TextStyle(
             color: AppColors.darkTextSecondary,
             fontSize: 17,
@@ -523,9 +523,9 @@ class _LoginTitle extends StatelessWidget {
         ),
         SizedBox(height: 18),
         Text(
-          'Family + Javis, 파비스',
+          'Checky, 우리 가족 체크 비서',
           style: TextStyle(
-            color: CupertinoColors.systemTeal,
+            color: AppColors.brandCoral,
             fontSize: 14,
             height: 1.25,
             fontWeight: FontWeight.w800,

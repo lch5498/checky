@@ -379,7 +379,7 @@ class _HomeTitle extends StatelessWidget {
     final family = this.family;
 
     if (family == null) {
-      return Text('파비스');
+      return Text('체키');
     }
 
     if (!canSwitch) {
@@ -611,7 +611,7 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
                   child: Text(
                     '브리핑 새로고침',
                     style: TextStyle(
-                      color: CupertinoColors.systemTeal,
+                      color: AppColors.darkPrimary,
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0,
@@ -741,7 +741,7 @@ class _BriefingSection extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: CupertinoColors.systemTeal, size: 21),
+                Icon(icon, color: AppColors.darkPrimary, size: 21),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -872,9 +872,9 @@ class _ParkingBriefingTile extends StatelessWidget {
               color: AppColors.darkPrimarySoft,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(
+            child: Icon(
               CupertinoIcons.location_solid,
-              color: CupertinoColors.systemTeal,
+              color: AppColors.darkPrimary,
               size: 18,
             ),
           ),
@@ -959,15 +959,15 @@ class _FamilyRequiredIntro extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(
-            CupertinoIcons.person_2_fill,
-            color: CupertinoColors.systemTeal,
+          child: Icon(
+            CupertinoIcons.check_mark_circled_solid,
+            color: AppColors.darkPrimary,
             size: 34,
           ),
         ),
         const SizedBox(height: 22),
         Text(
-          '$userNickname님,\n파비스를 시작해 볼까요?',
+          '$userNickname님,\n체키를 시작해 볼까요?',
           style: TextStyle(
             color: AppColors.darkTextPrimary,
             fontSize: 28,
@@ -978,7 +978,7 @@ class _FamilyRequiredIntro extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          '파비스는 Family + Javis에서 온 이름이에요. 아이 일정과 주차 위치를 가족이 함께 관리하는 작은 비서입니다.',
+          '체키는 가족의 하루를 함께 체크하는 작은 비서예요. 아이 일정과 주차 위치를 가족 기준으로 예쁘게 챙겨요.',
           style: TextStyle(
             color: AppColors.darkTextSecondary,
             fontSize: 16,
@@ -1004,7 +1004,7 @@ class _FamilyRequiredIntro extends StatelessWidget {
                 icon: CupertinoIcons.car_detailed,
                 title: '주차 관리',
                 description: '차량별 주차 위치를 빠르게 공유',
-                color: AppColors.darkSuccess,
+                color: AppColors.brandCoral,
               ),
             ),
           ],
@@ -1052,11 +1052,11 @@ class _FamilyRequiredIntro extends StatelessWidget {
             color: AppColors.darkSurfaceElevated,
             borderRadius: BorderRadius.circular(14),
             onPressed: onReloadFamilies,
-            child: const Center(
+            child: Center(
               child: Text(
                 '가족 목록 새로고침',
                 style: TextStyle(
-                  color: CupertinoColors.systemTeal,
+                  color: AppColors.darkPrimary,
                   fontSize: 16,
                   fontWeight: FontWeight.w800,
                   height: 1,

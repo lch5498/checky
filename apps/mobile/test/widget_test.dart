@@ -24,10 +24,10 @@ void main() {
   });
 
   testWidgets('auth gate shows kakao login entry', (tester) async {
-    await tester.pumpWidget(const FavisApp());
+    await tester.pumpWidget(const CheckyApp());
     await tester.pump();
 
-    expect(find.text('파비스'), findsOneWidget);
+    expect(find.text('체키'), findsOneWidget);
     expect(find.text('카카오로 계속하기'), findsOneWidget);
   });
 }

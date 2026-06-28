@@ -213,7 +213,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 10),
             Text(
-              '카카오 계정 이름과 별개로 파비스 안에서만 사용하는 이름입니다.',
+              '카카오 계정 이름과 별개로 체키 안에서만 사용하는 이름입니다.',
               style: TextStyle(
                 color: AppColors.darkTextSecondary,
                 fontSize: 16,

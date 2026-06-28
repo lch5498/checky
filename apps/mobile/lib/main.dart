@@ -17,17 +17,17 @@ void main() async {
     KakaoSdk.init(nativeAppKey: ApiConfig.kakaoNativeAppKey);
   }
 
-  runApp(const FavisApp());
+  runApp(const CheckyApp());
 }
 
-class FavisApp extends StatefulWidget {
-  const FavisApp({super.key});
+class CheckyApp extends StatefulWidget {
+  const CheckyApp({super.key});
 
   @override
-  State<FavisApp> createState() => _FavisAppState();
+  State<CheckyApp> createState() => _CheckyAppState();
 }
 
-class _FavisAppState extends State<FavisApp> {
+class _CheckyAppState extends State<CheckyApp> {
   late final ThemePreferenceController _themePreferenceController;
 
   @override
@@ -51,7 +51,7 @@ class _FavisAppState extends State<FavisApp> {
         animation: _themePreferenceController,
         builder: (context, _) {
           return MaterialApp(
-            title: '파비스',
+            title: '체키',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,

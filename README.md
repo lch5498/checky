@@ -1,6 +1,6 @@
-# 파비스 (Favis)
+# 체키 (Checky)
 
-가족만 사용하는 Favis 앱입니다. Flutter 앱은 iOS와 Android에서 하단 탭으로 홈, 일정, 주차를 구분합니다.
+가족만 사용하는 Checky 앱입니다. Flutter 앱은 iOS와 Android에서 하단 탭으로 홈, 일정, 주차를 구분합니다.
 
 - 홈: 오늘 일정과 현재 주차 위치 브리핑
 - 일정: 가족 구성원별 학원 일정 관리
@@ -77,13 +77,13 @@ harness/
 현재 Production API 주소는 아래와 같습니다.
 
 ```text
-https://api-one-ruby-46.vercel.app
+https://favis.vercel.app
 ```
 
 health check:
 
 ```bash
-curl https://api-one-ruby-46.vercel.app/api/health
+curl https://favis.vercel.app/api/health
 ```
 
 ## 빠르게 앱만 실행해보기
@@ -161,7 +161,7 @@ Vercel에 배포된 API를 바라보게 하려면 아래처럼 실행합니다.
 ```bash
 flutter run -d "iPhone 17 Pro" \
   --dart-define=KAKAO_NATIVE_APP_KEY=여기에_카카오_NATIVE_APP_KEY \
-  --dart-define=API_BASE_URL=https://api-one-ruby-46.vercel.app
+  --dart-define=API_BASE_URL=https://favis.vercel.app
 ```
 
 앱 첫 화면에서 `카카오로 계속하기`를 누르면 카카오 로그인 후 SDK가 받은 access token을 Next.js `/api/mobile/auth/kakao`로 전달합니다. 서버는 `users`와 `authentications`를 생성 또는 갱신하고 자체 session token을 반환합니다.
@@ -227,7 +227,7 @@ Xcode에서 아래 설정을 확인합니다.
 ```bash
 flutter run -d "iPhone 이름 또는 device id" \
   --dart-define=KAKAO_NATIVE_APP_KEY=여기에_카카오_NATIVE_APP_KEY \
-  --dart-define=API_BASE_URL=https://api-one-ruby-46.vercel.app
+  --dart-define=API_BASE_URL=https://favis.vercel.app
 ```
 
 처음 설치한 뒤 iPhone에서 개발자 인증서를 신뢰해야 할 수 있습니다.
@@ -286,18 +286,96 @@ flutter run -d <android-device-id> \
 ```bash
 flutter run -d <android-device-id> \
   --dart-define=KAKAO_NATIVE_APP_KEY=여기에_카카오_NATIVE_APP_KEY \
-  --dart-define=API_BASE_URL=https://api-one-ruby-46.vercel.app
+  --dart-define=API_BASE_URL=https://favis.vercel.app
 ```
 
-Android debug APK만 빌드하려면 아래 명령을 사용합니다.
+Android 빌드는 루트 스크립트를 사용하는 것을 권장합니다.
 
 ```bash
-flutter build apk --debug \
-  --dart-define=KAKAO_NATIVE_APP_KEY=여기에_카카오_NATIVE_APP_KEY \
-  --dart-define=API_BASE_URL=https://api-one-ruby-46.vercel.app
+cd /Users/changhwanlee/Documents/project/favis
+scripts/build-android.sh
 ```
 
-빌드 결과물은 아래에 생성됩니다.
+기본값은 Play Console 업로드에 사용하는 release app bundle입니다.
+
+```text
+apps/mobile/build/app/outputs/bundle/release/app-release.aab
+```
+
+debug APK만 빌드하려면:
+
+```bash
+scripts/build-android.sh --format apk --mode debug
+```
+
+또는 npm script로도 실행할 수 있습니다.
+
+```bash
+npm run mobile:build:android
+```
+
+주요 옵션:
+
+```bash
+scripts/build-android.sh \
+  --format appbundle \
+  --mode release \
+  --build-name 1.0.0 \
+  --build-number 2 \
+  --kakao-native-app-key 여기에_카카오_NATIVE_APP_KEY \
+  --api-base-url https://favis.vercel.app
+```
+
+### Android release 서명 준비
+
+Play Console에 업로드할 `release` 빌드는 debug key가 아니라 upload keystore로 서명해야 합니다.
+
+먼저 upload keystore를 만듭니다.
+
+```bash
+cd /Users/changhwanlee/Documents/project/favis/apps/mobile/android
+keytool -genkey -v \
+  -keystore favis-upload-key.jks \
+  -keyalg RSA \
+  -keysize 2048 \
+  -validity 10000 \
+  -alias favis-upload
+```
+
+그 다음 `key.properties`를 만듭니다.
+
+```bash
+cp key.properties.example key.properties
+```
+
+`apps/mobile/android/key.properties` 값을 실제 비밀번호와 파일명으로 채웁니다.
+
+```properties
+storePassword=업로드키_비밀번호
+keyPassword=업로드키_비밀번호
+keyAlias=favis-upload
+storeFile=favis-upload-key.jks
+```
+
+`key.properties`와 `*.jks` 파일은 비밀 파일이라 git에 커밋하지 않습니다.
+
+설정 후 Play Console용 AAB를 다시 빌드합니다.
+
+```bash
+cd /Users/changhwanlee/Documents/project/favis
+scripts/build-android.sh --format appbundle --mode release
+```
+
+release 키 해시는 아래처럼 확인해 카카오 Developers Android 플랫폼에 추가합니다.
+
+```bash
+cd /Users/changhwanlee/Documents/project/favis/apps/mobile/android
+keytool -exportcert -alias favis-upload \
+  -keystore favis-upload-key.jks \
+  | openssl sha1 -binary | openssl base64
+```
+
+debug APK 결과물은 아래에 생성됩니다.
 
 ```text
 apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
@@ -306,7 +384,7 @@ apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
 현재 Android 앱 설정:
 
 - Application ID: `com.family.favis.mobile`
-- 앱 이름: `파비스`
+- 앱 이름: `체키`
 - 카카오 redirect scheme: `kakao{KAKAO_NATIVE_APP_KEY}`
 - Android manifest는 `--dart-define=KAKAO_NATIVE_APP_KEY=...` 값을 읽어 카카오 콜백 scheme에 반영합니다.
 
@@ -507,7 +585,7 @@ content-type: application/json
 ```json
 {
   "tokenType": "Bearer",
-  "accessToken": "<Favis session token>",
+  "accessToken": "<Checky session token>",
   "expiresIn": 2592000,
   "isNewUser": true,
   "user": {
@@ -546,21 +624,21 @@ content-type: application/json
 
 ```http
 GET /api/mobile/auth/me
-authorization: Bearer <Favis session token>
+authorization: Bearer <Checky session token>
 ```
 
 로그아웃:
 
 ```http
 POST /api/mobile/auth/logout
-authorization: Bearer <Favis session token>
+authorization: Bearer <Checky session token>
 ```
 
 로그아웃 API는 서버 세션 저장소를 아직 쓰지 않으므로 `{ "ok": true }`만 반환합니다. Flutter 앱에서는 secure storage에 저장한 session token을 삭제하면 됩니다.
 
 ## 가족 관리 API
 
-모든 가족 관리 API는 `authorization: Bearer <Favis session token>` 헤더가 필요합니다.
+모든 가족 관리 API는 `authorization: Bearer <Checky session token>` 헤더가 필요합니다.
 
 가족 목록:
 
@@ -651,7 +729,7 @@ DELETE /api/mobile/families/<familyId>/members/<memberId>
 
 ## 주차 관리 API
 
-모든 주차 관리 API는 `authorization: Bearer <Favis session token>` 헤더가 필요합니다.
+모든 주차 관리 API는 `authorization: Bearer <Checky session token>` 헤더가 필요합니다.
 
 주차 대시보드 조회:
 
@@ -720,7 +798,7 @@ content-type: application/json
 
 ## 일정 관리 API
 
-모든 일정 관리 API는 `authorization: Bearer <Favis session token>` 헤더가 필요합니다.
+모든 일정 관리 API는 `authorization: Bearer <Checky session token>` 헤더가 필요합니다.
 
 일정 대시보드 조회:
 
@@ -827,7 +905,7 @@ Vercel Dashboard 또는 CLI로 아래 환경변수를 등록합니다.
 Production 배포용 카카오 Redirect URI는 카카오 개발자 콘솔에도 동일하게 등록해야 합니다.
 
 ```text
-https://api-one-ruby-46.vercel.app/api/auth/kakao/callback
+https://favis.vercel.app/api/auth/kakao/callback
 ```
 
 등록 후 로컬 env를 다시 내려받습니다.
@@ -858,7 +936,7 @@ npx vercel --prod --yes
 배포 후 health check로 확인합니다.
 
 ```bash
-curl https://api-one-ruby-46.vercel.app/api/health
+curl https://favis.vercel.app/api/health
 ```
 
 ## 개발 역할
