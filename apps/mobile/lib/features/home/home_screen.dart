@@ -1,7 +1,9 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
+import '../../core/theme_preference.dart';
 import '../../design_system/app_colors.dart';
 import '../education/education_screen.dart';
 import '../family/family_screen.dart';
@@ -233,6 +235,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ThemePreferenceScope.of(context);
+    AppColors.useBrightness(Theme.of(context).brightness);
+
     final selectedFamily = _selectedFamily;
 
     if (!_isLoadingFamilies && selectedFamily != null) {
