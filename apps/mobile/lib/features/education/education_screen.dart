@@ -9,6 +9,9 @@ import '../../shared/refreshable_scroll_view.dart';
 const _weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 const _weekdayPickerOrder = [1, 2, 3, 4, 5, 6, 0];
 const _weekOfMonthLabels = {1: '첫째주', 2: '둘째주', 3: '셋째주', 4: '넷째주'};
+const _phoneContactLabelOptions = ['선생님', '데스크', '직접입력'];
+const _phoneChannel = MethodChannel('checky/phone');
+const _contactChannel = MethodChannel('checky/contacts');
 
 class EducationScreen extends StatefulWidget {
   const EducationScreen({
@@ -145,6 +148,26 @@ class _EducationScreenState extends State<EducationScreen> {
     }
   }
 
+  Future<void> _callPhoneNumber(EducationProgramPhoneContact contact) async {
+    final phoneNumber = contact.phoneNumber.trim();
+
+    if (phoneNumber.isEmpty) {
+      return;
+    }
+
+    try {
+      await _phoneChannel.invokeMethod<void>('dial', {
+        'phoneNumber': phoneNumber,
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = '전화 앱을 열 수 없습니다. 번호를 확인해 주세요.';
+        });
+      }
+    }
+  }
+
   Future<void> _switchFamily() async {
     if (widget.families.length < 2) {
       return;
@@ -230,7 +253,8 @@ class _EducationScreenState extends State<EducationScreen> {
     }
 
     await _runTask(() async {
-      final shouldShowCalendarOverlay = program != null;
+      final shouldShowCalendarOverlay =
+          program != null && formResult.affectsCalendar;
 
       if (shouldShowCalendarOverlay && mounted) {
         setState(() {
@@ -258,7 +282,9 @@ class _EducationScreenState extends State<EducationScreen> {
 
         if (mounted) {
           setState(() {
-            _message = '${result.generatedScheduleCount}개 일정이 캘린더에 반영되었습니다.';
+            _message = result.generatedScheduleCount == 0
+                ? '학교/학원 정보가 저장되었습니다.'
+                : '${result.generatedScheduleCount}개 일정이 캘린더에 반영되었습니다.';
           });
         }
       } finally {
@@ -372,6 +398,7 @@ class _EducationScreenState extends State<EducationScreen> {
                       memberColor: _programMemberColor(program, memberColors),
                       canManage: dashboard?.canManage ?? false,
                       onEdit: () => _openProgramForm(program: program),
+                      onCallPhone: _callPhoneNumber,
                     ),
                   ),
               ],
@@ -444,12 +471,14 @@ class _EducationProgramCard extends StatelessWidget {
     required this.memberColor,
     required this.canManage,
     required this.onEdit,
+    required this.onCallPhone,
   });
 
   final EducationProgram program;
   final MemberFilterColor memberColor;
   final bool canManage;
   final VoidCallback onEdit;
+  final ValueChanged<EducationProgramPhoneContact> onCallPhone;
 
   @override
   Widget build(BuildContext context) {
@@ -493,6 +522,13 @@ class _EducationProgramCard extends StatelessWidget {
                 '${_dateText(program.startsOn)} - ${_dateText(program.endsOn)}',
             scheduleSummaries: scheduleSummaries,
           ),
+          if (program.phoneContacts.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _EducationPhoneContactWrap(
+              contacts: program.phoneContacts,
+              onCallPhone: onCallPhone,
+            ),
+          ],
         ],
       ),
     );
@@ -647,6 +683,60 @@ class _EducationScheduleChip extends StatelessWidget {
   }
 }
 
+class _EducationPhoneContactWrap extends StatelessWidget {
+  const _EducationPhoneContactWrap({
+    required this.contacts,
+    required this.onCallPhone,
+  });
+
+  final List<EducationProgramPhoneContact> contacts;
+  final ValueChanged<EducationProgramPhoneContact> onCallPhone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 7,
+      runSpacing: 7,
+      children: [
+        for (final contact in contacts)
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minimumSize: Size.zero,
+            onPressed: () => onCallPhone(contact),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: AppColors.darkSurfaceElevated,
+                borderRadius: BorderRadius.circular(999),
+                border: Border.all(color: AppColors.darkBorder),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    CupertinoIcons.phone_fill,
+                    size: 13,
+                    color: AppColors.darkPrimary,
+                  ),
+                  const SizedBox(width: 5),
+                  Text(
+                    '${contact.label} ${contact.phoneNumber}',
+                    style: TextStyle(
+                      color: AppColors.darkTextPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
 class _EducationFilterCard extends StatelessWidget {
   const _EducationFilterCard({
     required this.members,
@@ -681,21 +771,64 @@ class _EducationProgramFormResult {
   const _EducationProgramFormResult._({
     this.input,
     required this.calendarApplyScope,
+    required this.affectsCalendar,
     this.shouldDelete = false,
   });
 
   const _EducationProgramFormResult.save(
     EducationProgramInput input,
-    CalendarApplyScope calendarApplyScope,
-  ) : this._(input: input, calendarApplyScope: calendarApplyScope);
+    CalendarApplyScope calendarApplyScope, {
+    required bool affectsCalendar,
+  }) : this._(
+         input: input,
+         calendarApplyScope: calendarApplyScope,
+         affectsCalendar: affectsCalendar,
+       );
 
   const _EducationProgramFormResult.delete(
     CalendarApplyScope calendarApplyScope,
-  ) : this._(shouldDelete: true, calendarApplyScope: calendarApplyScope);
+  ) : this._(
+        shouldDelete: true,
+        calendarApplyScope: calendarApplyScope,
+        affectsCalendar: true,
+      );
 
   final EducationProgramInput? input;
   final CalendarApplyScope calendarApplyScope;
+  final bool affectsCalendar;
   final bool shouldDelete;
+}
+
+enum _PhoneContactAddMode { contact, manual }
+
+class _PhoneContactDraft {
+  _PhoneContactDraft({
+    required this.label,
+    String phoneNumber = '',
+    String customLabel = '',
+  }) : phoneController = TextEditingController(text: phoneNumber),
+       customLabelController = TextEditingController(text: customLabel);
+
+  factory _PhoneContactDraft.fromContact(EducationProgramPhoneContact contact) {
+    final hasDefaultLabel = _phoneContactLabelOptions
+        .where((label) => label != '직접입력')
+        .contains(contact.label);
+
+    return _PhoneContactDraft(
+      label: hasDefaultLabel ? contact.label : '직접입력',
+      phoneNumber: contact.phoneNumber,
+      customLabel: hasDefaultLabel ? '' : contact.label,
+    );
+  }
+
+  String label;
+  final TextEditingController phoneController;
+  final TextEditingController customLabelController;
+
+  void dispose() {
+    phoneController.dispose();
+    customLabelController.dispose();
+  }
 }
 
 class _EducationProgramFormScreen extends StatefulWidget {
@@ -721,6 +854,7 @@ class _EducationProgramFormScreenState
   late EducationRecurrenceType _recurrenceType;
   late final Map<int, _DayRule> _dayRules;
   late final Map<int, _MonthlyRule> _monthlyRules;
+  late final List<_PhoneContactDraft> _phoneContacts;
   String? _message;
 
   @override
@@ -754,6 +888,10 @@ class _EducationProgramFormScreenState
           vehicleDropoffTime: null,
         ),
     };
+    _phoneContacts = [
+      for (final contact in program?.phoneContacts ?? const [])
+        _PhoneContactDraft.fromContact(contact),
+    ];
 
     for (final schedule in program?.weeklySchedules ?? const []) {
       _dayRules[schedule.weekday] = _DayRule(
@@ -780,6 +918,9 @@ class _EducationProgramFormScreenState
   @override
   void dispose() {
     _nameController.dispose();
+    for (final contact in _phoneContacts) {
+      contact.dispose();
+    }
     super.dispose();
   }
 
@@ -809,6 +950,140 @@ class _EducationProgramFormScreenState
         _familyMemberId = selectedId;
       });
     }
+  }
+
+  Future<void> _addPhoneContact() async {
+    if (!_canAddPhoneContact()) {
+      return;
+    }
+
+    final mode = await showCupertinoModalPopup<_PhoneContactAddMode>(
+      context: context,
+      builder: (popupContext) => CupertinoActionSheet(
+        title: Text('전화번호 추가'),
+        actions: [
+          CupertinoActionSheetAction(
+            onPressed: () =>
+                Navigator.of(popupContext).pop(_PhoneContactAddMode.contact),
+            child: Text('연락처 불러오기'),
+          ),
+          CupertinoActionSheetAction(
+            isDefaultAction: true,
+            onPressed: () =>
+                Navigator.of(popupContext).pop(_PhoneContactAddMode.manual),
+            child: Text('직접입력'),
+          ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(popupContext).pop(),
+          child: Text('취소'),
+        ),
+      ),
+    );
+
+    if (!mounted || mode == null) {
+      return;
+    }
+
+    switch (mode) {
+      case _PhoneContactAddMode.contact:
+        await _importPhoneContact();
+      case _PhoneContactAddMode.manual:
+        setState(() {
+          _phoneContacts.add(_PhoneContactDraft(label: '선생님'));
+        });
+    }
+  }
+
+  bool _canAddPhoneContact() {
+    if (_phoneContacts.length < 10) {
+      return true;
+    }
+
+    setState(() {
+      _message = '전화번호는 최대 10개까지 등록할 수 있습니다.';
+    });
+    return false;
+  }
+
+  Future<void> _importPhoneContact() async {
+    if (!_canAddPhoneContact()) {
+      return;
+    }
+
+    try {
+      final result = await _contactChannel.invokeMapMethod<String, Object?>(
+        'pickPhoneContact',
+      );
+
+      if (!mounted || result == null) {
+        return;
+      }
+
+      final phoneNumber = (result['phoneNumber'] as String? ?? '').trim();
+      if (phoneNumber.isEmpty) {
+        setState(() {
+          _message = '선택한 연락처에 전화번호가 없습니다.';
+        });
+        return;
+      }
+
+      setState(() {
+        _phoneContacts.add(
+          _PhoneContactDraft(label: '선생님', phoneNumber: phoneNumber),
+        );
+      });
+    } on PlatformException catch (error) {
+      if (mounted && error.code != 'cancelled') {
+        setState(() {
+          _message = '연락처를 불러올 수 없습니다. 직접 입력해 주세요.';
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() {
+          _message = '연락처를 불러올 수 없습니다. 직접 입력해 주세요.';
+        });
+      }
+    }
+  }
+
+  void _removePhoneContact(int index) {
+    setState(() {
+      final removed = _phoneContacts.removeAt(index);
+      removed.dispose();
+    });
+  }
+
+  Future<void> _pickPhoneContactLabel(int index) async {
+    final contact = _phoneContacts[index];
+    final selected = await showCupertinoModalPopup<String>(
+      context: context,
+      builder: (popupContext) => CupertinoActionSheet(
+        title: Text('전화번호 구분'),
+        actions: _phoneContactLabelOptions
+            .map(
+              (label) => CupertinoActionSheetAction(
+                isDefaultAction: label == contact.label,
+                onPressed: () => Navigator.of(popupContext).pop(label),
+                child: Text(label),
+              ),
+            )
+            .toList(),
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(popupContext).pop(),
+          child: Text('취소'),
+        ),
+      ),
+    );
+
+    if (selected == null) {
+      return;
+    }
+
+    setState(() {
+      contact.label = selected;
+    });
   }
 
   Future<void> _pickMonthlyWeekday(int weekOfMonth) async {
@@ -1133,12 +1408,42 @@ class _EducationProgramFormScreenState
       }
     }
 
-    final calendarApplyScope = await _pickCalendarApplyScope(
-      title: '캘린더 반영 범위',
-      message: '학교/학원 일정을 캘린더에 어느 범위로 반영할까요?',
-      allLabel: '전체 기간에 반영',
-      futureLabel: '오늘 이후 일정에 반영',
+    final phoneContacts = _normalizedPhoneContacts();
+    if (phoneContacts == null) {
+      return;
+    }
+
+    final input = EducationProgramInput(
+      familyMemberId: _familyMemberId,
+      name: name,
+      startsOn: _startsOn,
+      endsOn: _endsOn,
+      recurrenceType: _recurrenceType,
+      weeklySchedules: _recurrenceType == EducationRecurrenceType.weekly
+          ? weeklySchedules
+          : const [],
+      monthlySchedules: _recurrenceType == EducationRecurrenceType.monthly
+          ? monthlySchedules
+          : const [],
+      phoneContacts: phoneContacts,
     );
+
+    if (!_hasAnyChanges(input)) {
+      setState(() {
+        _message = '변경된 내용이 없습니다.';
+      });
+      return;
+    }
+
+    final needsCalendarApplyScope = _hasScheduleImpactingChanges(input);
+    final calendarApplyScope = needsCalendarApplyScope
+        ? await _pickCalendarApplyScope(
+            title: '캘린더 반영 범위',
+            message: '학교/학원 일정을 캘린더에 어느 범위로 반영할까요?',
+            allLabel: '전체 기간에 반영',
+            futureLabel: '오늘 이후 일정에 반영',
+          )
+        : CalendarApplyScope.future;
 
     if (!mounted || calendarApplyScope == null) {
       return;
@@ -1146,22 +1451,75 @@ class _EducationProgramFormScreenState
 
     Navigator.of(context).pop(
       _EducationProgramFormResult.save(
-        EducationProgramInput(
-          familyMemberId: _familyMemberId,
-          name: name,
-          startsOn: _startsOn,
-          endsOn: _endsOn,
-          recurrenceType: _recurrenceType,
-          weeklySchedules: _recurrenceType == EducationRecurrenceType.weekly
-              ? weeklySchedules
-              : const [],
-          monthlySchedules: _recurrenceType == EducationRecurrenceType.monthly
-              ? monthlySchedules
-              : const [],
-        ),
+        input,
         calendarApplyScope,
+        affectsCalendar: needsCalendarApplyScope,
       ),
     );
+  }
+
+  List<EducationProgramPhoneContact>? _normalizedPhoneContacts() {
+    final contacts = <EducationProgramPhoneContact>[];
+
+    for (final contact in _phoneContacts) {
+      final phoneNumber = contact.phoneController.text.trim();
+      final customLabel = contact.customLabelController.text.trim();
+      final label = contact.label == '직접입력' ? customLabel : contact.label;
+
+      if (phoneNumber.isEmpty && label.isEmpty) {
+        continue;
+      }
+
+      if (phoneNumber.isEmpty) {
+        setState(() {
+          _message = '전화번호를 입력해 주세요.';
+        });
+        return null;
+      }
+
+      if (label.isEmpty) {
+        setState(() {
+          _message = '전화번호 구분을 입력해 주세요.';
+        });
+        return null;
+      }
+
+      contacts.add(
+        EducationProgramPhoneContact(label: label, phoneNumber: phoneNumber),
+      );
+    }
+
+    return contacts;
+  }
+
+  bool _hasAnyChanges(EducationProgramInput input) {
+    final program = widget.program;
+
+    if (program == null) {
+      return true;
+    }
+
+    return _hasScheduleImpactingChanges(input) ||
+        !_samePhoneContacts(program.phoneContacts, input.phoneContacts);
+  }
+
+  bool _hasScheduleImpactingChanges(EducationProgramInput input) {
+    final program = widget.program;
+
+    if (program == null) {
+      return true;
+    }
+
+    return program.familyMemberId != input.familyMemberId ||
+        program.name != input.name ||
+        !_isSameDate(program.startsOn, input.startsOn) ||
+        !_isSameDate(program.endsOn, input.endsOn) ||
+        program.recurrenceType != input.recurrenceType ||
+        !_sameWeeklySchedules(program.weeklySchedules, input.weeklySchedules) ||
+        !_sameMonthlySchedules(
+          program.monthlySchedules,
+          input.monthlySchedules,
+        );
   }
 
   Future<CalendarApplyScope?> _pickCalendarApplyScope({
@@ -1291,6 +1649,18 @@ class _EducationProgramFormScreenState
                   onPickStart: () => _pickDate(isStart: true),
                   onPickEnd: () => _pickDate(isStart: false),
                 ),
+              ],
+            ),
+            const SizedBox(height: 14),
+            _FormSection(
+              children: [
+                _PhoneContactsHeader(onAdd: _addPhoneContact),
+                for (var index = 0; index < _phoneContacts.length; index++)
+                  _PhoneContactInputRow(
+                    contact: _phoneContacts[index],
+                    onPickLabel: () => _pickPhoneContactLabel(index),
+                    onRemove: () => _removePhoneContact(index),
+                  ),
               ],
             ),
             const SizedBox(height: 14),
@@ -1896,6 +2266,227 @@ class _PickerRow extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _PhoneContactsHeader extends StatelessWidget {
+  const _PhoneContactsHeader({required this.onAdd});
+
+  final VoidCallback onAdd;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '전화번호',
+              style: TextStyle(
+                color: AppColors.darkTextPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+          CupertinoButton(
+            padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+            minimumSize: Size.zero,
+            color: AppColors.darkPrimarySoft,
+            borderRadius: BorderRadius.circular(999),
+            onPressed: onAdd,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  CupertinoIcons.plus,
+                  size: 13,
+                  color: AppColors.darkPrimary,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '전화번호 추가',
+                  style: TextStyle(
+                    color: AppColors.darkPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PhoneContactInputRow extends StatelessWidget {
+  const _PhoneContactInputRow({
+    required this.contact,
+    required this.onPickLabel,
+    required this.onRemove,
+  });
+
+  final _PhoneContactDraft contact;
+  final VoidCallback onPickLabel;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 10, 12),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              SizedBox(
+                width: 112,
+                child: contact.label == '직접입력'
+                    ? _PhoneContactCustomLabelField(
+                        controller: contact.customLabelController,
+                        onPickLabel: onPickLabel,
+                      )
+                    : _PhoneContactLabelButton(
+                        label: contact.label,
+                        onPressed: onPickLabel,
+                      ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _PhoneNumberTextField(
+                  controller: contact.phoneController,
+                ),
+              ),
+              const SizedBox(width: 6),
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(30, 30),
+                onPressed: onRemove,
+                child: Icon(
+                  CupertinoIcons.minus_circle_fill,
+                  size: 20,
+                  color: AppColors.darkDanger,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PhoneContactLabelButton extends StatelessWidget {
+  const _PhoneContactLabelButton({
+    required this.label,
+    required this.onPressed,
+  });
+
+  final String label;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      minimumSize: Size.zero,
+      color: AppColors.darkBackground,
+      borderRadius: BorderRadius.circular(10),
+      onPressed: onPressed,
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.darkTextPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+          Icon(
+            CupertinoIcons.chevron_down,
+            size: 13,
+            color: AppColors.darkTextSecondary,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PhoneContactCustomLabelField extends StatelessWidget {
+  const _PhoneContactCustomLabelField({
+    required this.controller,
+    required this.onPickLabel,
+  });
+
+  final TextEditingController controller;
+  final VoidCallback onPickLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoTextField(
+      controller: controller,
+      placeholder: '구분',
+      padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
+      style: TextStyle(
+        color: AppColors.darkTextPrimary,
+        fontSize: 14,
+        fontWeight: FontWeight.w800,
+        letterSpacing: 0,
+      ),
+      suffix: CupertinoButton(
+        padding: EdgeInsets.zero,
+        minimumSize: const Size(26, 26),
+        onPressed: onPickLabel,
+        child: Icon(
+          CupertinoIcons.chevron_down,
+          size: 13,
+          color: AppColors.darkTextSecondary,
+        ),
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.darkBackground,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.darkPrimary),
+      ),
+    );
+  }
+}
+
+class _PhoneNumberTextField extends StatelessWidget {
+  const _PhoneNumberTextField({required this.controller});
+
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoTextField(
+      controller: controller,
+      placeholder: '전화번호',
+      keyboardType: TextInputType.phone,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      style: TextStyle(
+        color: AppColors.darkTextPrimary,
+        fontSize: 15,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.darkBackground,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppColors.darkBorder),
       ),
     );
   }
@@ -2704,6 +3295,112 @@ bool _isInEducationProgramDateRange(DateTime value) {
   final maximumDate = _maximumEducationProgramDate();
 
   return !date.isBefore(minimumDate) && !date.isAfter(maximumDate);
+}
+
+bool _isSameDate(DateTime left, DateTime right) {
+  return left.year == right.year &&
+      left.month == right.month &&
+      left.day == right.day;
+}
+
+bool _sameWeeklySchedules(
+  List<EducationWeeklySchedule> left,
+  List<EducationWeeklySchedule> right,
+) {
+  final sortedLeft = [...left]..sort((a, b) => a.weekday.compareTo(b.weekday));
+  final sortedRight = [...right]
+    ..sort((a, b) => a.weekday.compareTo(b.weekday));
+
+  if (sortedLeft.length != sortedRight.length) {
+    return false;
+  }
+
+  for (var index = 0; index < sortedLeft.length; index++) {
+    final leftSchedule = sortedLeft[index];
+    final rightSchedule = sortedRight[index];
+
+    if (leftSchedule.weekday != rightSchedule.weekday ||
+        !_sameTimeOfDay(leftSchedule.startsAt, rightSchedule.startsAt) ||
+        !_sameTimeOfDay(leftSchedule.endsAt, rightSchedule.endsAt) ||
+        !_sameOptionalTimeOfDay(
+          leftSchedule.vehicleBoardingTime,
+          rightSchedule.vehicleBoardingTime,
+        ) ||
+        !_sameOptionalTimeOfDay(
+          leftSchedule.vehicleDropoffTime,
+          rightSchedule.vehicleDropoffTime,
+        )) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool _sameMonthlySchedules(
+  List<EducationMonthlySchedule> left,
+  List<EducationMonthlySchedule> right,
+) {
+  final sortedLeft = [...left]
+    ..sort((a, b) => a.weekOfMonth.compareTo(b.weekOfMonth));
+  final sortedRight = [...right]
+    ..sort((a, b) => a.weekOfMonth.compareTo(b.weekOfMonth));
+
+  if (sortedLeft.length != sortedRight.length) {
+    return false;
+  }
+
+  for (var index = 0; index < sortedLeft.length; index++) {
+    final leftSchedule = sortedLeft[index];
+    final rightSchedule = sortedRight[index];
+
+    if (leftSchedule.weekOfMonth != rightSchedule.weekOfMonth ||
+        leftSchedule.weekday != rightSchedule.weekday ||
+        !_sameTimeOfDay(leftSchedule.startsAt, rightSchedule.startsAt) ||
+        !_sameTimeOfDay(leftSchedule.endsAt, rightSchedule.endsAt) ||
+        !_sameOptionalTimeOfDay(
+          leftSchedule.vehicleBoardingTime,
+          rightSchedule.vehicleBoardingTime,
+        ) ||
+        !_sameOptionalTimeOfDay(
+          leftSchedule.vehicleDropoffTime,
+          rightSchedule.vehicleDropoffTime,
+        )) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool _samePhoneContacts(
+  List<EducationProgramPhoneContact> left,
+  List<EducationProgramPhoneContact> right,
+) {
+  if (left.length != right.length) {
+    return false;
+  }
+
+  for (var index = 0; index < left.length; index++) {
+    if (left[index].label.trim() != right[index].label.trim() ||
+        left[index].phoneNumber.trim() != right[index].phoneNumber.trim()) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool _sameOptionalTimeOfDay(TimeOfDayValue? left, TimeOfDayValue? right) {
+  if (left == null || right == null) {
+    return left == null && right == null;
+  }
+
+  return _sameTimeOfDay(left, right);
+}
+
+bool _sameTimeOfDay(TimeOfDayValue left, TimeOfDayValue right) {
+  return left.hour == right.hour && left.minute == right.minute;
 }
 
 DateTime _clampDate(

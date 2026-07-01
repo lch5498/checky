@@ -8,6 +8,7 @@ import { getSupabaseAdmin } from './supabase';
 
 const MAX_GENERATED_SCHEDULES = 370;
 const EDUCATION_PROGRAM_DATE_WINDOW_YEARS = 1;
+const MAX_PHONE_CONTACTS = 10;
 
 export type EducationWeeklySchedule = {
   weekday: number;
@@ -28,6 +29,11 @@ export type EducationMonthlySchedule = {
   vehicleDropoffTime: string | null;
 };
 
+export type EducationProgramPhoneContact = {
+  label: string;
+  phoneNumber: string;
+};
+
 export type EducationProgram = {
   id: string;
   family_id: string;
@@ -38,6 +44,7 @@ export type EducationProgram = {
   recurrence_type: EducationRecurrenceType;
   weekly_schedules: EducationWeeklySchedule[];
   monthly_schedules: EducationMonthlySchedule[];
+  phone_contacts: EducationProgramPhoneContact[];
   created_by_user_id: string | null;
   created_at: string;
   updated_at: string;
@@ -61,6 +68,7 @@ export type EducationProgramInput = {
   recurrenceType?: EducationRecurrenceType;
   weeklySchedules?: EducationWeeklySchedule[];
   monthlySchedules?: EducationMonthlySchedule[];
+  phoneContacts?: EducationProgramPhoneContact[];
   timeZoneOffsetMinutes?: number;
 };
 
@@ -78,6 +86,7 @@ type NormalizedEducationProgramInput = {
   recurrenceType: EducationRecurrenceType;
   weeklySchedules: EducationWeeklySchedule[];
   monthlySchedules: EducationMonthlySchedule[];
+  phoneContacts: EducationProgramPhoneContact[];
   timeZoneOffsetMinutes: number;
 };
 
@@ -141,6 +150,7 @@ export async function createEducationProgram(
       recurrence_type: normalized.recurrenceType,
       weekly_schedules: normalized.weeklySchedules,
       monthly_schedules: normalized.monthlySchedules,
+      phone_contacts: normalized.phoneContacts,
       created_by_user_id: userId,
     })
     .select(programSelect)
@@ -179,6 +189,27 @@ export async function updateEducationProgram(
   await requireFamilyManager(userId, familyId);
   const normalized = await normalizeEducationProgramInput(familyId, input);
   const supabase = getSupabaseAdmin();
+  const { data: existingData, error: existingError } = await supabase
+    .from('education_programs')
+    .select(programSelect)
+    .eq('id', programId)
+    .eq('family_id', familyId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw existingError;
+  }
+
+  if (!existingData) {
+    throw new HttpError(404, { error: 'education_program_not_found' });
+  }
+
+  const existingProgram = existingData as unknown as EducationProgram;
+  const hasCalendarChanges = hasScheduleImpactingChanges(
+    existingProgram,
+    normalized,
+  );
+
   const { data, error } = await supabase
     .from('education_programs')
     .update({
@@ -189,6 +220,7 @@ export async function updateEducationProgram(
       recurrence_type: normalized.recurrenceType,
       weekly_schedules: normalized.weeklySchedules,
       monthly_schedules: normalized.monthlySchedules,
+      phone_contacts: normalized.phoneContacts,
     })
     .eq('id', programId)
     .eq('family_id', familyId)
@@ -203,13 +235,15 @@ export async function updateEducationProgram(
     throw new HttpError(404, { error: 'education_program_not_found' });
   }
 
-  const generatedScheduleCount = await replaceGeneratedSchedules(
-    userId,
-    familyId,
-    programId,
-    normalized,
-    { futureOnly: options.calendarApplyScope !== 'all' },
-  );
+  const generatedScheduleCount = hasCalendarChanges
+    ? await replaceGeneratedSchedules(
+        userId,
+        familyId,
+        programId,
+        normalized,
+        { futureOnly: options.calendarApplyScope !== 'all' },
+      )
+    : 0;
 
   return {
     program: data as unknown as EducationProgram,
@@ -407,6 +441,7 @@ async function normalizeEducationProgramInput(
     recurrenceType,
     weeklySchedules,
     monthlySchedules,
+    phoneContacts: normalizePhoneContacts(input.phoneContacts),
     timeZoneOffsetMinutes,
   };
 }
@@ -518,6 +553,46 @@ function normalizeMonthlySchedules(value: EducationMonthlySchedule[] | undefined
       };
     })
     .sort((left, right) => left.weekOfMonth - right.weekOfMonth);
+}
+
+function normalizePhoneContacts(value: EducationProgramPhoneContact[] | undefined) {
+  if (value === undefined || value === null) {
+    return [];
+  }
+
+  if (!Array.isArray(value) || value.length > MAX_PHONE_CONTACTS) {
+    throw new HttpError(400, { error: 'invalid_payload', field: 'phoneContacts' });
+  }
+
+  return value.map((contact) => {
+    if (typeof contact !== 'object' || contact === null) {
+      throw new HttpError(400, { error: 'invalid_payload', field: 'phoneContacts' });
+    }
+
+    return {
+      label: normalizeText(contact.label, 'phoneContacts.label', 30),
+      phoneNumber: normalizeText(contact.phoneNumber, 'phoneContacts.phoneNumber', 40),
+    };
+  });
+}
+
+function hasScheduleImpactingChanges(
+  existing: EducationProgram,
+  input: NormalizedEducationProgramInput,
+) {
+  return (
+    existing.family_member_id !== input.familyMemberId ||
+    existing.name !== input.name ||
+    existing.starts_on !== input.startsOn ||
+    existing.ends_on !== input.endsOn ||
+    existing.recurrence_type !== input.recurrenceType ||
+    stableJson(existing.weekly_schedules ?? []) !== stableJson(input.weeklySchedules) ||
+    stableJson(existing.monthly_schedules ?? []) !== stableJson(input.monthlySchedules)
+  );
+}
+
+function stableJson(value: unknown) {
+  return JSON.stringify(value);
 }
 
 async function getFamilyMemberOrThrow(familyId: string, familyMemberId: string) {

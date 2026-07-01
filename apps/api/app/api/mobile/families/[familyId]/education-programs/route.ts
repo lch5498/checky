@@ -45,6 +45,7 @@ export async function POST(request: Request, context: RouteContext) {
         recurrenceType: optionalRecurrenceType(payload),
         weeklySchedules: optionalList(payload, 'weeklySchedules'),
         monthlySchedules: optionalList(payload, 'monthlySchedules'),
+        phoneContacts: optionalList(payload, 'phoneContacts'),
         timeZoneOffsetMinutes: optionalNumber(payload, 'timeZoneOffsetMinutes'),
       },
       {

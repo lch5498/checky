@@ -1,16 +1,21 @@
 package com.family.checky.mobile
 
+import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.provider.ContactsContract
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private val pendingDeepLinkKey = "pendingDeepLink"
+    private val contactPickerRequestCode = 4017
     private var initialDeepLink: String? = null
     private var latestDeepLink: String? = null
     private var deepLinkChannel: MethodChannel? = null
+    private var pendingContactResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -43,6 +48,39 @@ class MainActivity : FlutterActivity() {
             }
         }
 
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "checky/phone"
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "dial" -> {
+                    val phoneNumber = call.argument<String>("phoneNumber")
+
+                    if (phoneNumber.isNullOrBlank()) {
+                        result.error("invalid_arguments", "phoneNumber is required", null)
+                        return@setMethodCallHandler
+                    }
+
+                    val dialIntent = Intent(Intent.ACTION_DIAL).apply {
+                        data = Uri.parse("tel:${Uri.encode(phoneNumber)}")
+                    }
+                    startActivity(dialIntent)
+                    result.success(null)
+                }
+                else -> result.notImplemented()
+            }
+        }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "checky/contacts"
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "pickPhoneContact" -> pickPhoneContact(result)
+                else -> result.notImplemented()
+            }
+        }
+
         deepLinkChannel = MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             "checky/deep_links"
@@ -67,6 +105,80 @@ class MainActivity : FlutterActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         captureDeepLink(intent, isInitial = false)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+
+        if (requestCode != contactPickerRequestCode) {
+            return
+        }
+
+        val result = pendingContactResult ?: return
+        pendingContactResult = null
+
+        if (resultCode != Activity.RESULT_OK || data?.data == null) {
+            result.error("cancelled", "Contact pick was cancelled", null)
+            return
+        }
+
+        val picked = readPickedPhoneContact(data.data!!)
+        if (picked == null) {
+            result.error("phone_number_unavailable", "Phone number is unavailable", null)
+            return
+        }
+
+        result.success(picked)
+    }
+
+    private fun pickPhoneContact(result: MethodChannel.Result) {
+        if (pendingContactResult != null) {
+            result.error("pick_in_progress", "Contact picker is already open", null)
+            return
+        }
+
+        pendingContactResult = result
+        val intent = Intent(
+            Intent.ACTION_PICK,
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+        )
+
+        try {
+            startActivityForResult(intent, contactPickerRequestCode)
+        } catch (error: Exception) {
+            pendingContactResult = null
+            result.error("contact_picker_unavailable", "Contact picker is unavailable", null)
+        }
+    }
+
+    private fun readPickedPhoneContact(uri: Uri): Map<String, String>? {
+        val projection = arrayOf(
+            ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+            ContactsContract.CommonDataKinds.Phone.NUMBER
+        )
+
+        contentResolver.query(uri, projection, null, null, null)?.use { cursor ->
+            if (!cursor.moveToFirst()) {
+                return null
+            }
+
+            val nameIndex = cursor.getColumnIndex(
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+            )
+            val numberIndex = cursor.getColumnIndex(
+                ContactsContract.CommonDataKinds.Phone.NUMBER
+            )
+            val name = if (nameIndex >= 0) cursor.getString(nameIndex) ?: "" else ""
+            val phoneNumber = if (numberIndex >= 0) cursor.getString(numberIndex) ?: "" else ""
+
+            if (phoneNumber.isBlank()) {
+                return null
+            }
+
+            return mapOf("name" to name, "phoneNumber" to phoneNumber)
+        }
+
+        return null
     }
 
     private fun captureDeepLink(intent: Intent?, isInitial: Boolean) {

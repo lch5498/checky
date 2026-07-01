@@ -1114,6 +1114,7 @@ class EducationProgramInput {
     required this.recurrenceType,
     required this.weeklySchedules,
     required this.monthlySchedules,
+    required this.phoneContacts,
   });
 
   final String familyMemberId;
@@ -1123,6 +1124,7 @@ class EducationProgramInput {
   final EducationRecurrenceType recurrenceType;
   final List<EducationWeeklySchedule> weeklySchedules;
   final List<EducationMonthlySchedule> monthlySchedules;
+  final List<EducationProgramPhoneContact> phoneContacts;
 
   Map<String, Object?> toJson() {
     return {
@@ -1136,6 +1138,9 @@ class EducationProgramInput {
           .toList(),
       'monthlySchedules': monthlySchedules
           .map((schedule) => schedule.toJson())
+          .toList(),
+      'phoneContacts': phoneContacts
+          .map((contact) => contact.toJson())
           .toList(),
       'timeZoneOffsetMinutes': DateTime.now().timeZoneOffset.inMinutes,
     };
@@ -1153,6 +1158,7 @@ class EducationProgram {
     required this.recurrenceType,
     required this.weeklySchedules,
     required this.monthlySchedules,
+    required this.phoneContacts,
     required this.memberNickname,
     required this.createdAt,
     required this.updatedAt,
@@ -1167,6 +1173,7 @@ class EducationProgram {
   final EducationRecurrenceType recurrenceType;
   final List<EducationWeeklySchedule> weeklySchedules;
   final List<EducationMonthlySchedule> monthlySchedules;
+  final List<EducationProgramPhoneContact> phoneContacts;
   final String memberNickname;
   final String createdAt;
   final String updatedAt;
@@ -1179,6 +1186,7 @@ class EducationProgram {
         json['weekly_schedules'] as List<Object?>? ?? const [];
     final monthlySchedules =
         json['monthly_schedules'] as List<Object?>? ?? const [];
+    final phoneContacts = json['phone_contacts'] as List<Object?>? ?? const [];
 
     return EducationProgram(
       id: json['id'] as String,
@@ -1202,11 +1210,39 @@ class EducationProgram {
             ),
           )
           .toList(),
+      phoneContacts: phoneContacts
+          .map(
+            (contact) => EducationProgramPhoneContact.fromJson(
+              contact as Map<String, Object?>,
+            ),
+          )
+          .toList(),
       memberNickname:
           user?['nickname'] as String? ?? memberNickname ?? '담당자 없음',
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String,
     );
+  }
+}
+
+class EducationProgramPhoneContact {
+  const EducationProgramPhoneContact({
+    required this.label,
+    required this.phoneNumber,
+  });
+
+  final String label;
+  final String phoneNumber;
+
+  factory EducationProgramPhoneContact.fromJson(Map<String, Object?> json) {
+    return EducationProgramPhoneContact(
+      label: json['label'] as String? ?? '전화',
+      phoneNumber: json['phoneNumber'] as String? ?? '',
+    );
+  }
+
+  Map<String, Object?> toJson() {
+    return {'label': label, 'phoneNumber': phoneNumber};
   }
 }
 

@@ -1,12 +1,14 @@
+import ContactsUI
 import Flutter
 import UIKit
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, CNContactPickerDelegate {
   let pendingDeepLinkKey = "checky.pendingDeepLink"
   var initialDeepLink: String?
   var latestDeepLink: String?
   var deepLinkChannel: FlutterMethodChannel?
+  var pendingContactResult: FlutterResult?
 
   override func application(
     _ application: UIApplication,
@@ -18,6 +20,8 @@ import UIKit
 
     if let controller = window?.rootViewController as? FlutterViewController {
       configureShareChannel(controller: controller)
+      configurePhoneChannel(controller: controller)
+      configureContactChannel(controller: controller)
       let preferencesChannel = FlutterMethodChannel(
         name: "checky/preferences",
         binaryMessenger: controller.binaryMessenger
@@ -143,6 +147,135 @@ import UIKit
         result(nil)
       }
     }
+  }
+
+  func configurePhoneChannel(controller: FlutterViewController) {
+    let phoneChannel = FlutterMethodChannel(
+      name: "checky/phone",
+      binaryMessenger: controller.binaryMessenger
+    )
+
+    phoneChannel.setMethodCallHandler { call, result in
+      guard call.method == "dial" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+
+      guard
+        let arguments = call.arguments as? [String: Any],
+        let phoneNumber = arguments["phoneNumber"] as? String,
+        !phoneNumber.isEmpty,
+        let encoded = phoneNumber.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
+        let url = URL(string: "tel://\(encoded)")
+      else {
+        result(
+          FlutterError(
+            code: "invalid_arguments",
+            message: "phoneNumber is required",
+            details: nil
+          )
+        )
+        return
+      }
+
+      UIApplication.shared.open(url, options: [:]) { success in
+        if success {
+          result(nil)
+        } else {
+          result(
+            FlutterError(
+              code: "dial_failed",
+              message: "Could not open phone app",
+              details: nil
+            )
+          )
+        }
+      }
+    }
+  }
+
+  func configureContactChannel(controller: FlutterViewController) {
+    let contactChannel = FlutterMethodChannel(
+      name: "checky/contacts",
+      binaryMessenger: controller.binaryMessenger
+    )
+
+    contactChannel.setMethodCallHandler { [weak self, weak controller] call, result in
+      guard call.method == "pickPhoneContact" else {
+        result(FlutterMethodNotImplemented)
+        return
+      }
+
+      guard let self, let controller else {
+        result(
+          FlutterError(
+            code: "view_controller_unavailable",
+            message: "Flutter view controller is unavailable",
+            details: nil
+          )
+        )
+        return
+      }
+
+      guard self.pendingContactResult == nil else {
+        result(
+          FlutterError(
+            code: "pick_in_progress",
+            message: "Contact picker is already open",
+            details: nil
+          )
+        )
+        return
+      }
+
+      self.pendingContactResult = result
+      let picker = CNContactPickerViewController()
+      picker.delegate = self
+      picker.displayedPropertyKeys = [CNContactPhoneNumbersKey]
+      self.topViewController(from: controller).present(picker, animated: true)
+    }
+  }
+
+  func contactPicker(_ picker: CNContactPickerViewController, didSelect contact: CNContact) {
+    guard let phoneNumber = contact.phoneNumbers.first?.value.stringValue, !phoneNumber.isEmpty else {
+      finishContactPick(errorCode: "phone_number_unavailable")
+      return
+    }
+
+    finishContactPick(name: CNContactFormatter.string(from: contact, style: .fullName) ?? "", phoneNumber: phoneNumber)
+  }
+
+  func contactPicker(_ picker: CNContactPickerViewController, didSelect contactProperty: CNContactProperty) {
+    guard let phoneNumber = contactProperty.value as? CNPhoneNumber else {
+      finishContactPick(errorCode: "phone_number_unavailable")
+      return
+    }
+
+    let name = CNContactFormatter.string(from: contactProperty.contact, style: .fullName) ?? ""
+    finishContactPick(name: name, phoneNumber: phoneNumber.stringValue)
+  }
+
+  func contactPickerDidCancel(_ picker: CNContactPickerViewController) {
+    finishContactPick(errorCode: "cancelled")
+  }
+
+  private func finishContactPick(name: String, phoneNumber: String) {
+    pendingContactResult?([
+      "name": name,
+      "phoneNumber": phoneNumber,
+    ])
+    pendingContactResult = nil
+  }
+
+  private func finishContactPick(errorCode: String) {
+    pendingContactResult?(
+      FlutterError(
+        code: errorCode,
+        message: "Contact pick failed",
+        details: nil
+      )
+    )
+    pendingContactResult = nil
   }
 
   override func application(
