@@ -1239,7 +1239,7 @@ class _FamilyRequiredIntro extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          '체키는 가족의 하루를 함께 체크하는 작은 비서예요. 아이 일정과 주차 위치를 가족 기준으로 예쁘게 챙겨요.',
+          '체키는 우리의 하루를 함께 체크하는 작은 비서예요. 우리의 일정과 주차 위치를 예쁘게 챙겨요.',
           style: TextStyle(
             color: AppColors.darkTextSecondary,
             fontSize: 16,

@@ -1,5 +1,5 @@
 import { createParkingRecord } from '../../../../../../../src/parking';
-import { jsonFromError } from '../../../../../../../src/http';
+import { HttpError, jsonFromError } from '../../../../../../../src/http';
 import { authenticateMobileRequest } from '../../../../../../../src/mobile-auth';
 import {
   optionalString,
@@ -28,7 +28,7 @@ export async function POST(request: Request, context: RouteContext) {
       maxLength: 40,
     });
     const floorText = requiredString(payload, 'floorText', { maxLength: 40 });
-    const detailText = requiredString(payload, 'detailText', { maxLength: 40 });
+    const detailText = optionalText(payload, 'detailText', { maxLength: 40 });
     const record = await createParkingRecord(userId, familyId, {
       vehicleId,
       buildingPresetId,
@@ -43,4 +43,28 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     return jsonFromError(error, 'parking_record_create_failed');
   }
+}
+
+function optionalText(
+  payload: Record<string, unknown>,
+  key: string,
+  options: { maxLength?: number } = {},
+) {
+  const value = payload[key];
+
+  if (value === undefined || value === null) {
+    return '';
+  }
+
+  if (typeof value !== 'string') {
+    throw new HttpError(400, { error: 'invalid_payload', field: key });
+  }
+
+  const normalized = value.trim();
+
+  if (options.maxLength && normalized.length > options.maxLength) {
+    throw new HttpError(400, { error: 'invalid_payload', field: key });
+  }
+
+  return normalized;
 }

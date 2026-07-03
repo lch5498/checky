@@ -447,7 +447,7 @@ class _StartupSplashScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               const Text(
-                '가족의 하루를 준비하는 중',
+                '우리의 하루를 준비하는 중',
                 style: TextStyle(
                   color: Color(0xFF55706F),
                   fontSize: 15,

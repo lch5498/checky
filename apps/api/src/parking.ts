@@ -302,7 +302,7 @@ export async function createParkingRecord(
 
   const buildingText = normalizeText(input.buildingText, 'buildingText', 40);
   const floorText = normalizeText(input.floorText, 'floorText', 40);
-  const detailText = normalizeText(input.detailText, 'detailText', 40);
+  const detailText = normalizeOptionalText(input.detailText, 'detailText', 40);
   const [vehicle, buildingPreset, floorPreset, detailPreset] =
     await Promise.all([
       getVehicleOrThrow(familyId, input.vehicleId),
@@ -324,7 +324,9 @@ export async function createParkingRecord(
       building_text: buildingText,
       floor_text: floorText,
       detail_text: detailText,
-      location_text: `${buildingText} / ${floorText} / ${detailText}`,
+      location_text: [buildingText, floorText, detailText]
+        .filter(Boolean)
+        .join(' / '),
       created_by_user_id: userId,
     })
     .select(parkingRecordSelect)
@@ -508,6 +510,16 @@ function normalizeText(value: string, field: string, maxLength: number) {
   if (!normalized) {
     throw new HttpError(400, { error: 'invalid_payload', field });
   }
+
+  if (normalized.length > maxLength) {
+    throw new HttpError(400, { error: 'invalid_payload', field });
+  }
+
+  return normalized;
+}
+
+function normalizeOptionalText(value: string, field: string, maxLength: number) {
+  const normalized = value.trim();
 
   if (normalized.length > maxLength) {
     throw new HttpError(400, { error: 'invalid_payload', field });

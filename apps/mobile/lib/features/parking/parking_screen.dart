@@ -1622,7 +1622,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     final floor = _floor;
     final detail = _detail;
 
-    if (building == null || floor == null || detail == null) {
+    if (building == null || floor == null) {
       return;
     }
 
@@ -1630,10 +1630,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       _ParkingLocationInput(
         buildingPresetId: building.presetId,
         floorPresetId: floor.presetId,
-        detailPresetId: detail.presetId,
+        detailPresetId: detail?.presetId,
         buildingText: building.text,
         floorText: floor.text,
-        detailText: detail.text,
+        detailText: detail?.text ?? '',
       ),
     );
   }
@@ -1644,6 +1644,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     required _ParkingLocationChoice? selected,
     String? parentPresetId,
     required ValueChanged<_ParkingLocationChoice> onSelected,
+    VoidCallback? onClear,
   }) {
     final choices = _choicesFor(presetType, parentPresetId: parentPresetId);
 
@@ -1664,6 +1665,12 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
           spacing: 8,
           runSpacing: 8,
           children: [
+            if (onClear != null)
+              _LocationChoiceButton(
+                label: '선택 안함',
+                isSelected: selected == null,
+                onPressed: onClear,
+              ),
             for (final choice in choices)
               _LocationChoiceButton(
                 label: choice.text,
@@ -1688,7 +1695,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final canSubmit = _building != null && _floor != null && _detail != null;
+    final canSubmit = _building != null && _floor != null;
 
     return SafeArea(
       top: false,
@@ -1756,11 +1763,12 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                 if (_building != null) ...[
                   const SizedBox(height: 18),
                   _buildChoiceSection(
-                    title: '상세위치',
+                    title: '상세위치 (선택)',
                     presetType: _parkingPresetTypeDetail,
                     parentPresetId: _building?.presetId,
                     selected: _detail,
                     onSelected: (choice) => setState(() => _detail = choice),
+                    onClear: () => setState(() => _detail = null),
                   ),
                 ],
                 const SizedBox(height: 20),
