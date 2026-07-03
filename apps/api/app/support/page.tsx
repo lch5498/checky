@@ -98,6 +98,13 @@ export default function SupportPage() {
               계정과 관련 데이터가 삭제되며 복구되지 않습니다.
             </p>
           </article>
+          <article className="support-item">
+            <h3>개인정보 처리방침</h3>
+            <p>
+              체키의 개인정보 수집, 이용, 보관, 삭제 기준은{' '}
+              <a href="/privacy">개인정보 처리방침</a>에서 확인할 수 있습니다.
+            </p>
+          </article>
         </div>
       </section>
     </main>

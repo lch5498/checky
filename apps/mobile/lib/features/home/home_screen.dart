@@ -703,11 +703,14 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
   ParkingDashboard? _parkingDashboard;
   String? _message;
   bool _isLoading = true;
+  bool _isScheduleLoading = false;
   int _briefingLoadToken = 0;
+  late DateTime _scheduleDate;
 
   @override
   void initState() {
     super.initState();
+    _scheduleDate = _dateOnly(DateTime.now());
     final canUseInitialDashboard =
         widget.initialDashboardFamilyId == widget.family.id;
     _scheduleDashboard = canUseInitialDashboard
@@ -733,7 +736,9 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
       setState(() {
         _scheduleDashboard = null;
         _parkingDashboard = null;
+        _scheduleDate = _dateOnly(DateTime.now());
         _isLoading = true;
+        _isScheduleLoading = false;
         _message = null;
       });
       _loadBriefing();
@@ -746,11 +751,11 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
 
     setState(() {
       _isLoading = true;
+      _isScheduleLoading = false;
       _message = null;
     });
 
-    final now = DateTime.now();
-    final dayStart = DateTime(now.year, now.month, now.day);
+    final dayStart = _scheduleDate;
     final dayEnd = dayStart.add(const Duration(days: 1));
 
     try {
@@ -786,6 +791,52 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
         });
       }
     }
+  }
+
+  Future<void> _loadScheduleBriefing(DateTime date) async {
+    final loadToken = ++_briefingLoadToken;
+    final familyId = widget.family.id;
+    final dayStart = _dateOnly(date);
+    final dayEnd = dayStart.add(const Duration(days: 1));
+
+    setState(() {
+      _scheduleDate = dayStart;
+      _isScheduleLoading = true;
+      _message = null;
+    });
+
+    try {
+      final schedules = await _apiClient.getScheduleDashboard(
+        widget.sessionToken,
+        familyId: familyId,
+        rangeStart: dayStart,
+        rangeEnd: dayEnd,
+      );
+
+      if (!mounted || loadToken != _briefingLoadToken) {
+        return;
+      }
+
+      setState(() {
+        _scheduleDashboard = schedules;
+      });
+    } catch (error) {
+      if (mounted && loadToken == _briefingLoadToken) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    } finally {
+      if (mounted && loadToken == _briefingLoadToken) {
+        setState(() {
+          _isScheduleLoading = false;
+        });
+      }
+    }
+  }
+
+  void _changeScheduleDate(int dayOffset) {
+    _loadScheduleBriefing(_scheduleDate.add(Duration(days: dayOffset)));
   }
 
   @override
@@ -852,6 +903,10 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
               _ScheduleBriefingSection(
                 schedules: _scheduleDashboard?.schedules ?? const [],
                 members: _scheduleDashboard?.members ?? const [],
+                selectedDate: _scheduleDate,
+                isLoading: _isScheduleLoading,
+                onPreviousDate: () => _changeScheduleDate(-1),
+                onNextDate: () => _changeScheduleDate(1),
                 onPressed: widget.onOpenSchedule,
               ),
               _ParkingBriefingSection(
@@ -866,40 +921,125 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
   }
 }
 
-class _ScheduleBriefingSection extends StatelessWidget {
+class _ScheduleBriefingSection extends StatefulWidget {
   const _ScheduleBriefingSection({
     required this.schedules,
     required this.members,
+    required this.selectedDate,
+    required this.isLoading,
+    required this.onPreviousDate,
+    required this.onNextDate,
     required this.onPressed,
   });
 
   final List<AppSchedule> schedules;
   final List<FamilyMember> members;
+  final DateTime selectedDate;
+  final bool isLoading;
+  final VoidCallback onPreviousDate;
+  final VoidCallback onNextDate;
+  final VoidCallback onPressed;
+
+  @override
+  State<_ScheduleBriefingSection> createState() =>
+      _ScheduleBriefingSectionState();
+}
+
+class _ScheduleBriefingSectionState extends State<_ScheduleBriefingSection> {
+  bool _isExpanded = false;
+
+  @override
+  void didUpdateWidget(covariant _ScheduleBriefingSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.schedules.length != widget.schedules.length ||
+        !_isSameDate(oldWidget.selectedDate, widget.selectedDate)) {
+      _isExpanded = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final orderedSchedules = [...widget.schedules]
+      ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+    final memberColors = _homeMemberColors(widget.members);
+    final visibleSchedules = _isExpanded
+        ? orderedSchedules
+        : orderedSchedules.take(5);
+    final hiddenScheduleCount = orderedSchedules.length - 5;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onHorizontalDragEnd: (details) {
+        final velocity = details.primaryVelocity ?? 0;
+        if (velocity < -250) {
+          widget.onNextDate();
+        } else if (velocity > 250) {
+          widget.onPreviousDate();
+        }
+      },
+      child: _BriefingSection(
+        icon: CupertinoIcons.calendar,
+        title: _homeScheduleTitle(widget.selectedDate),
+        emptyText: '등록된 일정이 없습니다.',
+        isEmpty: !widget.isLoading && orderedSchedules.isEmpty,
+        onPressed: widget.onPressed,
+        children: [
+          if (widget.isLoading)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Center(child: CupertinoActivityIndicator()),
+            )
+          else ...[
+            for (final schedule in visibleSchedules)
+              _ScheduleBriefingTile(
+                schedule: schedule,
+                memberColor:
+                    memberColors[schedule.familyMemberId] ??
+                    MemberFilterColor.gray,
+              ),
+            if (!_isExpanded && hiddenScheduleCount > 0)
+              _MoreSchedulesLink(
+                hiddenCount: hiddenScheduleCount,
+                onPressed: () {
+                  setState(() {
+                    _isExpanded = true;
+                  });
+                },
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _MoreSchedulesLink extends StatelessWidget {
+  const _MoreSchedulesLink({
+    required this.hiddenCount,
+    required this.onPressed,
+  });
+
+  final int hiddenCount;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
-    final orderedSchedules = [...schedules]
-      ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
-    final memberColors = _homeMemberColors(members);
-
-    return _BriefingSection(
-      icon: CupertinoIcons.calendar,
-      title: '오늘 일정',
-      emptyText: '오늘 등록된 일정이 없습니다.',
-      isEmpty: orderedSchedules.isEmpty,
-      onPressed: onPressed,
-      children: orderedSchedules
-          .take(4)
-          .map(
-            (schedule) => _ScheduleBriefingTile(
-              schedule: schedule,
-              memberColor:
-                  memberColors[schedule.familyMemberId] ??
-                  MemberFilterColor.gray,
-            ),
-          )
-          .toList(),
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onPressed,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 2, bottom: 8),
+        child: Text(
+          '더보기 +$hiddenCount개',
+          style: TextStyle(
+            color: AppColors.darkPrimary,
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -959,18 +1099,19 @@ class _BriefingSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return CupertinoButton(
-      padding: EdgeInsets.zero,
-      onPressed: onPressed,
-      child: Container(
-        padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return Container(
+      padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minimumSize: Size.zero,
+            onPressed: onPressed,
+            child: Row(
               children: [
                 Icon(icon, color: AppColors.darkPrimary, size: 21),
                 const SizedBox(width: 8),
@@ -994,24 +1135,34 @@ class _BriefingSection extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            if (isEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8),
-                child: Text(
-                  emptyText,
-                  style: TextStyle(
-                    color: AppColors.darkTextSecondary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
-                  ),
-                ),
-              )
-            else
-              ...children,
-          ],
-        ),
+          ),
+          const SizedBox(height: 12),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Text(
+                      emptyText,
+                      style: TextStyle(
+                        color: AppColors.darkTextSecondary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  )
+                else
+                  ...children,
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1174,6 +1325,39 @@ Map<String, MemberFilterColor> _homeMemberColors(List<FamilyMember> members) {
           MemberFilterColor.fromValue(members[index].color) ??
           MemberFilterColor.values[index % MemberFilterColor.values.length],
   };
+}
+
+DateTime _dateOnly(DateTime value) {
+  return DateTime(value.year, value.month, value.day);
+}
+
+bool _isSameDate(DateTime a, DateTime b) {
+  return a.year == b.year && a.month == b.month && a.day == b.day;
+}
+
+String _homeScheduleTitle(DateTime date) {
+  final today = _dateOnly(DateTime.now());
+  final target = _dateOnly(date);
+  final dayDiff = target.difference(today).inDays;
+
+  if (dayDiff == -1) {
+    return '어제 일정';
+  }
+  if (dayDiff == 0) {
+    return '오늘 일정';
+  }
+  if (dayDiff == 1) {
+    return '내일 일정';
+  }
+  if (dayDiff == 2) {
+    return '모레 일정';
+  }
+
+  return '${target.year}.${_twoDigits(target.month)}.${_twoDigits(target.day)} 일정';
+}
+
+String _twoDigits(int value) {
+  return value.toString().padLeft(2, '0');
 }
 
 String _koreanTimeText(DateTime value) {
