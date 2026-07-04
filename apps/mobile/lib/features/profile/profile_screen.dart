@@ -89,7 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (dialogContext) {
         return CupertinoAlertDialog(
           title: Text('로그아웃할까요?'),
-          content: Text('다시 사용하려면 카카오 로그인이 필요합니다.'),
+          content: Text('다시 사용하려면 재로그인이 필요합니다.'),
           actions: [
             CupertinoDialogAction(
               onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -213,7 +213,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
             const SizedBox(height: 10),
             Text(
-              '카카오 계정 이름과 별개로 체키 안에서만 사용하는 이름입니다.',
+              '로그인 계정 이름과 별개로 체키 안에서만 사용하는 이름입니다.',
               style: TextStyle(
                 color: AppColors.darkTextSecondary,
                 fontSize: 16,

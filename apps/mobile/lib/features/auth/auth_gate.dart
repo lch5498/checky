@@ -1,4 +1,5 @@
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -41,6 +42,10 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   Future<void> _loadAppleSignInAvailability() async {
+    if (defaultTargetPlatform != TargetPlatform.iOS) {
+      return;
+    }
+
     final isAvailable = await SignInWithApple.isAvailable();
 
     if (!mounted) {
@@ -197,7 +202,7 @@ class _AuthGateState extends State<AuthGate> {
   Future<void> _loginWithKakaoSdk() async {
     if (ApiConfig.kakaoNativeAppKey.isEmpty) {
       setState(() {
-        _message = '카카오 네이티브 앱 키가 설정되지 않았습니다.';
+        _message = '카카오 로그인을 사용할 수 없습니다. 앱 설정을 확인해 주세요.';
       });
       return;
     }
@@ -205,10 +210,24 @@ class _AuthGateState extends State<AuthGate> {
     await _run(() async {
       final OAuthToken token;
 
-      if (await isKakaoTalkInstalled()) {
-        token = await UserApi.instance.loginWithKakaoTalk();
-      } else {
-        token = await UserApi.instance.loginWithKakaoAccount();
+      try {
+        if (await isKakaoTalkInstalled()) {
+          token = await UserApi.instance.loginWithKakaoTalk();
+        } else {
+          token = await UserApi.instance.loginWithKakaoAccount();
+        }
+      } on PlatformException catch (error) {
+        if (error.code == 'CANCELED') {
+          throw const ApiConnectionException('로그인이 취소되었습니다.');
+        }
+
+        rethrow;
+      } on KakaoClientException catch (error) {
+        if (error.reason == ClientErrorCause.cancelled) {
+          throw const ApiConnectionException('로그인이 취소되었습니다.');
+        }
+
+        rethrow;
       }
 
       await _completeKakaoLogin(token.accessToken);
@@ -233,10 +252,36 @@ class _AuthGateState extends State<AuthGate> {
         await _completeAppleLogin(identityToken);
       } on SignInWithAppleAuthorizationException catch (error) {
         if (error.code == AuthorizationErrorCode.canceled) {
-          return;
+          throw const ApiConnectionException('로그인이 취소되었습니다.');
         }
 
-        rethrow;
+        if (error.code == AuthorizationErrorCode.failed ||
+            error.code == AuthorizationErrorCode.notHandled ||
+            error.code == AuthorizationErrorCode.notInteractive) {
+          throw const ApiConnectionException(
+            '기기의 Apple 계정 로그인 상태를 확인한 뒤 다시 시도해 주세요.',
+          );
+        }
+
+        if (error.code == AuthorizationErrorCode.invalidResponse) {
+          throw const ApiConnectionException(
+            'Apple 로그인 응답을 확인할 수 없습니다. 다시 시도해 주세요.',
+          );
+        }
+
+        throw const ApiConnectionException(
+          'Apple 로그인을 완료할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+        );
+      } on SignInWithAppleNotSupportedException {
+        throw const ApiConnectionException('이 기기에서는 Apple 로그인을 사용할 수 없습니다.');
+      } on SignInWithAppleCredentialsException {
+        throw const ApiConnectionException(
+          'Apple 로그인 정보를 확인할 수 없습니다. 다시 시도해 주세요.',
+        );
+      } on UnknownSignInWithAppleException {
+        throw const ApiConnectionException(
+          'Apple 로그인을 완료할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+        );
       }
     });
   }
