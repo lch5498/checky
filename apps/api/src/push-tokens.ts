@@ -3,6 +3,12 @@ import { getSupabaseAdmin } from './supabase';
 
 export type PushPlatform = 'ios' | 'android';
 
+export type PushTokenRecord = {
+  id: string;
+  token: string;
+  platform: PushPlatform;
+};
+
 export function normalizePushPlatform(platform: string): PushPlatform {
   if (platform === 'ios' || platform === 'android') return platform;
   throw new HttpError(400, { error: 'unsupported_push_platform' });
@@ -42,4 +48,20 @@ export async function deletePushToken(userId: string, token: string) {
   if (error) {
     throw new HttpError(500, { error: 'push_token_delete_failed' });
   }
+}
+
+export async function listPushTokensForUser(userId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('push_tokens')
+    .select('id, token, platform')
+    .eq('user_id', userId)
+    .eq('enabled', true)
+    .order('last_seen_at', { ascending: false });
+
+  if (error) {
+    throw new HttpError(500, { error: 'push_token_list_failed' });
+  }
+
+  return (data ?? []) as PushTokenRecord[];
 }
