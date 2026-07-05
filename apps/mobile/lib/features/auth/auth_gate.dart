@@ -553,7 +553,7 @@ String? _appleDisplayName({String? givenName, String? familyName}) {
       .whereType<String>()
       .map((value) => value.trim())
       .where((value) => value.isNotEmpty)
-      .join('');
+      .join(' ');
 
   return displayName.isEmpty ? null : displayName;
 }
