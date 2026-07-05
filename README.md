@@ -21,6 +21,7 @@ supabase/
 docs/
   product-plan.md
   harness-engineering.md
+  supabase-cron.md
 harness/
   app-developer.md
   backend-developer.md
@@ -417,6 +418,7 @@ KAKAO_CLIENT_SECRET=
 KAKAO_REDIRECT_URI=http://localhost:3000/api/auth/kakao/callback
 SESSION_SECRET=
 WEB_INVITE_BASE_URL=https://favis.vercel.app/invite
+CRON_SECRET=
 ```
 
 중요한 규칙:
@@ -429,6 +431,7 @@ WEB_INVITE_BASE_URL=https://favis.vercel.app/invite
 - `KAKAO_CLIENT_SECRET`은 카카오 개발자 콘솔에서 client secret이 활성화된 경우 넣습니다.
 - `SESSION_SECRET`은 모바일 앱용 자체 세션 토큰 서명에 사용합니다. 충분히 긴 랜덤 문자열을 사용합니다.
 - `WEB_INVITE_BASE_URL`은 가족 초대 공유용 HTTPS 링크 생성에 사용합니다. 미설정 시 Vercel 도메인 기반 `/invite` 경로를 사용합니다. 카카오톡 공유 안정성을 위해 `checky://...` 같은 커스텀 scheme을 직접 공유하지 않습니다.
+- `CRON_SECRET`은 Supabase Cron이 일정 알림 발송 API를 호출할 때 사용하는 Bearer token입니다. Vercel과 Supabase Cron 설정에 같은 값을 넣고, repo에는 커밋하지 않습니다.
 
 로컬에서 직접 `.env.local`을 만들려면:
 
@@ -898,8 +901,11 @@ Vercel Dashboard 또는 CLI로 아래 환경변수를 등록합니다.
 - `KAKAO_REDIRECT_URI`
 - `SESSION_SECRET`
 - `WEB_INVITE_BASE_URL`
+- `CRON_SECRET`
 
 현재 서버 코드는 Supabase 서버용 secret key만 사용하므로 `SUPABASE_PUBLISHABLE_KEY`는 필수값이 아닙니다.
+
+일정 알림 발송은 Vercel Cron 대신 Supabase Cron으로 매분 `/api/cron/schedule-alerts`를 호출합니다. 설정 방법은 [docs/supabase-cron.md](docs/supabase-cron.md)를 참고합니다.
 
 Production 배포용 카카오 Redirect URI는 카카오 개발자 콘솔에도 동일하게 등록해야 합니다.
 
