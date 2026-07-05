@@ -38,16 +38,21 @@ export async function findOrCreateUserFromApple(
   appleUser: { sub: string },
   options: { nickname?: string } = {},
 ): Promise<OAuthLoginResult> {
-  return findOrCreateUserFromProvider(APPLE_PROVIDER, appleUser.sub, options);
+  return findOrCreateUserFromProvider(APPLE_PROVIDER, appleUser.sub, {
+    ...options,
+    defaultNickname: '체키 사용자',
+  });
 }
 
 async function findOrCreateUserFromProvider(
   provider: OAuthProvider,
   providerId: string,
-  options: { nickname?: string } = {},
+  options: { nickname?: string; defaultNickname?: string } = {},
 ): Promise<OAuthLoginResult> {
   const supabase = getSupabaseAdmin();
-  const nickname = normalizeNickname(options.nickname);
+  const nickname =
+    normalizeNickname(options.nickname) ??
+    normalizeNickname(options.defaultNickname);
   const now = new Date().toISOString();
 
   const { data: authentication, error: authenticationError } = await supabase
