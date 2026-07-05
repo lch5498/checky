@@ -77,6 +77,7 @@ export async function getAnniversaryDashboard(userId: string, familyId: string) 
         ...anniversary,
         nextOccurrenceDate: nextOccurrence?.date ?? null,
         nextOccurrenceOrdinal: nextOccurrence?.ordinal ?? null,
+        elapsedDays: elapsedDaysForAnniversary(anniversary),
         recentSchedules:
           recentSchedulesByAnniversaryId.get(anniversary.id) ?? [],
       };
@@ -431,7 +432,36 @@ function nextOccurrencePayload(anniversary: Anniversary) {
   return {
     nextOccurrenceDate: nextOccurrence?.date ?? null,
     nextOccurrenceOrdinal: nextOccurrence?.ordinal ?? null,
+    elapsedDays: elapsedDaysForAnniversary(anniversary),
   };
+}
+
+function elapsedDaysForAnniversary(anniversary: Anniversary) {
+  if (!anniversary.year) {
+    return null;
+  }
+
+  const today = dateOnlyInTimeZone(new Date(), 540);
+  const startedAt = occurrenceDateForYear(
+    {
+      category: anniversary.category,
+      title: anniversary.title,
+      calendarType: anniversary.calendar_type,
+      month: anniversary.month,
+      day: anniversary.day,
+      isLunarLeap: anniversary.is_lunar_leap,
+      year: anniversary.year,
+      alertOffsetMinutes: anniversary.alert_offset_minutes,
+      timeZoneOffsetMinutes: 540,
+    },
+    anniversary.year,
+  );
+
+  if (!startedAt || startedAt.getTime() > today.getTime()) {
+    return null;
+  }
+
+  return Math.floor((today.getTime() - startedAt.getTime()) / 86400000);
 }
 
 function normalizeAnniversaryInput(

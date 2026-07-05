@@ -1341,6 +1341,7 @@ class Anniversary {
     required this.alertOffsetMinutes,
     required this.nextOccurrenceDate,
     required this.nextOccurrenceOrdinal,
+    required this.elapsedDays,
     required this.recentSchedules,
     required this.createdAt,
     required this.updatedAt,
@@ -1358,6 +1359,7 @@ class Anniversary {
   final int? alertOffsetMinutes;
   final DateTime? nextOccurrenceDate;
   final int? nextOccurrenceOrdinal;
+  final int? elapsedDays;
   final List<AnniversaryScheduleOccurrence> recentSchedules;
   final String createdAt;
   final String updatedAt;
@@ -1381,6 +1383,7 @@ class Anniversary {
           ? null
           : DateTime.parse(nextOccurrenceDate),
       nextOccurrenceOrdinal: json['nextOccurrenceOrdinal'] as int?,
+      elapsedDays: json['elapsedDays'] as int?,
       recentSchedules: recentSchedules
           .map(
             (schedule) => AnniversaryScheduleOccurrence.fromJson(
