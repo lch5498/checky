@@ -387,30 +387,11 @@ function formatAnniversaryAlertOffset(minutes: number) {
     }
 
     const daysBefore = Math.ceil(minutes / (60 * 24));
-    const hourMinutes = daysBefore * 60 * 24 - minutes;
 
-    if (hourMinutes >= 0) {
-      const hour = Math.floor(hourMinutes / 60);
-      const minute = hourMinutes % 60;
-
-      if (hour >= 0 && hour <= 23) {
-        const period = hour < 12 ? '오전' : '오후';
-        const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-
-        if (minute === 0) {
-          return `${daysBefore}일전 ${period} ${displayHour}시`;
-        }
-
-        return `${daysBefore}일전 ${period} ${displayHour}시 ${two(minute)}분`;
-      }
-    }
+    return `${daysBefore}일전`;
   }
 
   return formatScheduleAlertOffset(minutes);
-}
-
-function two(value: number) {
-  return String(value).padStart(2, '0');
 }
 
 function summarizeErrors(results: FcmSendResult[]) {
