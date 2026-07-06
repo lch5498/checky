@@ -4,7 +4,11 @@ import {
 } from '../../../../../../../src/anniversaries';
 import { HttpError, jsonFromError } from '../../../../../../../src/http';
 import { authenticateMobileRequest } from '../../../../../../../src/mobile-auth';
-import { readJsonObject, requiredString } from '../../../../../../../src/validation';
+import {
+  optionalString,
+  readJsonObject,
+  requiredString,
+} from '../../../../../../../src/validation';
 
 export const runtime = 'nodejs';
 
@@ -22,6 +26,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     const payload = await readJsonObject(request);
     const result = await updateAnniversary(userId, familyId, anniversaryId, {
       category: requiredCategory(payload),
+      customCategoryLabel: optionalString(payload, 'customCategoryLabel', {
+        maxLength: 40,
+      }),
       title: requiredString(payload, 'title', { maxLength: 80 }),
       calendarType: requiredCalendarType(payload),
       month: requiredNumber(payload, 'month'),

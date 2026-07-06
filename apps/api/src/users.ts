@@ -142,7 +142,11 @@ export async function getUserById(userId: string) {
   return data as AppUser | null;
 }
 
-export async function updateUserNickname(userId: string, nickname: string) {
+export async function updateUserNickname(
+  userId: string,
+  nickname: string,
+  options: { updateFamilyMemberNicknames?: boolean } = {},
+) {
   const supabase = getSupabaseAdmin();
   const normalizedNickname = normalizeNickname(nickname);
 
@@ -159,6 +163,17 @@ export async function updateUserNickname(userId: string, nickname: string) {
 
   if (error) {
     throw error;
+  }
+
+  if (options.updateFamilyMemberNicknames) {
+    const { error: membersError } = await supabase
+      .from('family_members')
+      .update({ nickname: normalizedNickname })
+      .eq('user_id', userId);
+
+    if (membersError) {
+      throw membersError;
+    }
   }
 
   return data as AppUser;

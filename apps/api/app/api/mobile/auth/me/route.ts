@@ -37,7 +37,10 @@ export async function PATCH(request: Request) {
     const session = authenticateRequest(request);
     const payload = await readJsonObject(request);
     const nickname = requiredString(payload, 'nickname', { maxLength: 30 });
-    const user = await updateUserNickname(session.sub, nickname);
+    const user = await updateUserNickname(session.sub, nickname, {
+      updateFamilyMemberNicknames:
+        payload.updateFamilyMemberNicknames === true,
+    });
 
     return Response.json({ user });
   } catch (error) {

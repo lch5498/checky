@@ -7,7 +7,7 @@ import { jsonFromError } from '../../../../../../../src/http';
 import { authenticateMobileRequest } from '../../../../../../../src/mobile-auth';
 import {
   readJsonObject,
-  requiredString,
+  optionalString,
 } from '../../../../../../../src/validation';
 
 export const runtime = 'nodejs';
@@ -24,10 +24,15 @@ export async function PATCH(request: Request, context: RouteContext) {
     const userId = authenticateMobileRequest(request);
     const { familyId, memberId } = await context.params;
     const payload = await readJsonObject(request);
-    const color = requiredString(payload, 'color', { maxLength: 20 });
-    assertFamilyMemberColor(color);
+    const nickname = optionalString(payload, 'nickname', { maxLength: 40 });
+    const color = optionalString(payload, 'color', { maxLength: 20 });
+
+    if (color !== undefined) {
+      assertFamilyMemberColor(color);
+    }
 
     const member = await updateFamilyMember(userId, familyId, memberId, {
+      nickname,
       color,
     });
 

@@ -67,12 +67,16 @@ class ApiClient {
   Future<AppUser> updateMyProfile(
     String sessionToken, {
     required String nickname,
+    required bool updateFamilyMemberNicknames,
   }) async {
     final json = await _requestJson(
       'PATCH',
       '/api/mobile/auth/me',
       bearerToken: sessionToken,
-      body: {'nickname': nickname},
+      body: {
+        'nickname': nickname,
+        'updateFamilyMemberNicknames': updateFamilyMemberNicknames,
+      },
     );
 
     return AppUser.fromJson(json['user'] as Map<String, Object?>);
@@ -221,6 +225,22 @@ class ApiClient {
       '/api/mobile/families/$familyId/members/$memberId',
       bearerToken: sessionToken,
       body: {'color': color},
+    );
+
+    return FamilyMember.fromJson(json['member'] as Map<String, Object?>);
+  }
+
+  Future<FamilyMember> updateFamilyMemberName(
+    String sessionToken, {
+    required String familyId,
+    required String memberId,
+    required String nickname,
+  }) async {
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/members/$memberId',
+      bearerToken: sessionToken,
+      body: {'nickname': nickname},
     );
 
     return FamilyMember.fromJson(json['member'] as Map<String, Object?>);
@@ -879,7 +899,6 @@ class FamilyMember {
   bool get isLinked => userId != null;
 
   factory FamilyMember.fromJson(Map<String, Object?> json) {
-    final user = json['user'] as Map<String, Object?>?;
     final nickname = json['nickname'] as String? ?? '이름 없음';
 
     return FamilyMember(
@@ -890,7 +909,7 @@ class FamilyMember {
       role: json['role'] as String,
       color: json['color'] as String?,
       createdAt: json['created_at'] as String,
-      userNickname: user?['nickname'] as String? ?? nickname,
+      userNickname: nickname,
     );
   }
 }
@@ -1254,6 +1273,7 @@ enum AnniversaryCalendarType {
 class AnniversaryInput {
   const AnniversaryInput({
     required this.category,
+    required this.customCategoryLabel,
     required this.title,
     required this.calendarType,
     required this.month,
@@ -1264,6 +1284,7 @@ class AnniversaryInput {
   });
 
   final AnniversaryCategory category;
+  final String? customCategoryLabel;
   final String title;
   final AnniversaryCalendarType calendarType;
   final int month;
@@ -1275,6 +1296,7 @@ class AnniversaryInput {
   Map<String, Object?> toJson() {
     return {
       'category': category.toApiString(),
+      'customCategoryLabel': customCategoryLabel,
       'title': title,
       'calendarType': calendarType.toApiString(),
       'month': month,
@@ -1332,6 +1354,7 @@ class Anniversary {
     required this.id,
     required this.familyId,
     required this.category,
+    required this.customCategoryLabel,
     required this.title,
     required this.calendarType,
     required this.month,
@@ -1350,6 +1373,7 @@ class Anniversary {
   final String id;
   final String familyId;
   final AnniversaryCategory category;
+  final String? customCategoryLabel;
   final String title;
   final AnniversaryCalendarType calendarType;
   final int month;
@@ -1372,6 +1396,7 @@ class Anniversary {
       id: json['id'] as String,
       familyId: json['family_id'] as String,
       category: AnniversaryCategory.fromJson(json['category']),
+      customCategoryLabel: json['custom_category_label'] as String?,
       title: json['title'] as String,
       calendarType: AnniversaryCalendarType.fromJson(json['calendar_type']),
       month: json['month'] as int,
@@ -1514,7 +1539,6 @@ class EducationProgram {
 
   factory EducationProgram.fromJson(Map<String, Object?> json) {
     final familyMember = json['family_member'] as Map<String, Object?>?;
-    final user = familyMember?['user'] as Map<String, Object?>?;
     final memberNickname = familyMember?['nickname'] as String?;
     final weeklySchedules =
         json['weekly_schedules'] as List<Object?>? ?? const [];
@@ -1552,8 +1576,7 @@ class EducationProgram {
           )
           .toList(),
       alertOffsetMinutes: json['alert_offset_minutes'] as int?,
-      memberNickname:
-          user?['nickname'] as String? ?? memberNickname ?? '담당자 없음',
+      memberNickname: memberNickname ?? '담당자 없음',
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String,
     );
@@ -1722,7 +1745,6 @@ class AppSchedule {
 
   factory AppSchedule.fromJson(Map<String, Object?> json) {
     final familyMember = json['family_member'] as Map<String, Object?>?;
-    final user = familyMember?['user'] as Map<String, Object?>?;
     final memberNickname = familyMember?['nickname'] as String?;
     final educationProgram = json['education_program'] as Map<String, Object?>?;
     final phoneContacts = educationProgram?['phone_contacts'] as List<Object?>?;
@@ -1759,8 +1781,7 @@ class AppSchedule {
           ? null
           : AnniversaryCategory.fromJson(anniversary['category']),
       alertOffsetMinutes: json['alert_offset_minutes'] as int?,
-      memberNickname:
-          user?['nickname'] as String? ?? memberNickname ?? '담당자 없음',
+      memberNickname: memberNickname ?? '담당자 없음',
     );
   }
 }

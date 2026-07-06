@@ -14,6 +14,7 @@ export type Anniversary = {
   id: string;
   family_id: string;
   category: AnniversaryCategory;
+  custom_category_label: string | null;
   title: string;
   calendar_type: AnniversaryCalendarType;
   month: number;
@@ -36,6 +37,7 @@ type AnniversarySchedule = {
 
 export type AnniversaryInput = {
   category: AnniversaryCategory;
+  customCategoryLabel?: string | null;
   title: string;
   calendarType: AnniversaryCalendarType;
   month: number;
@@ -48,6 +50,7 @@ export type AnniversaryInput = {
 
 type NormalizedAnniversaryInput = {
   category: AnniversaryCategory;
+  customCategoryLabel: string | null;
   title: string;
   calendarType: AnniversaryCalendarType;
   month: number;
@@ -121,6 +124,7 @@ export async function createAnniversary(
     .insert({
       family_id: familyId,
       category: normalized.category,
+      custom_category_label: normalized.customCategoryLabel,
       title: normalized.title,
       calendar_type: normalized.calendarType,
       month: normalized.month,
@@ -175,6 +179,7 @@ export async function updateAnniversary(
     .from('anniversaries')
     .update({
       category: normalized.category,
+      custom_category_label: normalized.customCategoryLabel,
       title: normalized.title,
       calendar_type: normalized.calendarType,
       month: normalized.month,
@@ -359,7 +364,7 @@ function generateSchedules(
       family_member_id: null,
       anniversary_id: anniversaryId,
       title: input.title,
-      content: categoryLabel(input.category),
+      content: categoryLabel(input.category, input.customCategoryLabel),
       starts_at: zonedDateTimeIso(occurrence, '00:00', input.timeZoneOffsetMinutes),
       ends_at: zonedDateTimeIso(
         addDays(occurrence, 1),
@@ -396,6 +401,7 @@ function nextOccurrenceForAnniversary(anniversary: Anniversary) {
   const today = dateOnlyInTimeZone(new Date(), 540);
   const input: NormalizedAnniversaryInput = {
     category: anniversary.category,
+    customCategoryLabel: anniversary.custom_category_label,
     title: anniversary.title,
     calendarType: anniversary.calendar_type,
     month: anniversary.month,
@@ -445,6 +451,7 @@ function elapsedDaysForAnniversary(anniversary: Anniversary) {
   const startedAt = occurrenceDateForYear(
     {
       category: anniversary.category,
+      customCategoryLabel: anniversary.custom_category_label,
       title: anniversary.title,
       calendarType: anniversary.calendar_type,
       month: anniversary.month,
@@ -468,6 +475,10 @@ function normalizeAnniversaryInput(
   input: AnniversaryInput,
 ): NormalizedAnniversaryInput {
   const category = normalizeCategory(input.category);
+  const customCategoryLabel =
+    category === 'custom'
+      ? normalizeText(input.customCategoryLabel ?? '', 'customCategoryLabel', 40)
+      : null;
   const calendarType = normalizeCalendarType(input.calendarType);
   const month = normalizeInteger(input.month, 'month', 1, 12);
   const day = normalizeInteger(input.day, 'day', 1, 31);
@@ -475,6 +486,7 @@ function normalizeAnniversaryInput(
   const year = normalizeOptionalYear(input.year);
   const normalized: NormalizedAnniversaryInput = {
     category,
+    customCategoryLabel,
     title: normalizeText(input.title, 'title', 80),
     calendarType,
     month,
@@ -581,11 +593,17 @@ function normalizeTimeZoneOffset(value: number | undefined) {
   return value;
 }
 
-function categoryLabel(category: AnniversaryCategory) {
+function categoryLabel(
+  category: AnniversaryCategory,
+  customCategoryLabel: string | null,
+) {
+  if (category === 'custom') {
+    return customCategoryLabel ?? '기념일';
+  }
+
   return {
     birthday: '생일',
     wedding: '결혼기념일',
-    custom: '기념일',
   }[category];
 }
 

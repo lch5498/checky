@@ -960,7 +960,7 @@ class _EducationProgramFormScreenState
               (member) => CupertinoActionSheetAction(
                 isDefaultAction: member.id == _familyMemberId,
                 onPressed: () => Navigator.of(popupContext).pop(member.id),
-                child: Text(member.userNickname),
+                child: Text(member.nickname),
               ),
             )
             .toList(),
@@ -1011,7 +1011,7 @@ class _EducationProgramFormScreenState
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        member.userNickname,
+                        member.nickname,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
@@ -1053,10 +1053,10 @@ class _EducationProgramFormScreenState
     }
 
     if (selectedMembers.length == 1) {
-      return selectedMembers.first.userNickname;
+      return selectedMembers.first.nickname;
     }
 
-    return selectedMembers.map((member) => member.userNickname).join(', ');
+    return selectedMembers.map((member) => member.nickname).join(', ');
   }
 
   Future<void> _addPhoneContact() async {
@@ -1756,7 +1756,7 @@ class _EducationProgramFormScreenState
     );
     final memberValue = widget.program == null
         ? _selectedMemberLabel()
-        : selectedMember.userNickname;
+        : selectedMember.nickname;
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(

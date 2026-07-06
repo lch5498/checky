@@ -260,17 +260,40 @@ export async function updateFamilyMember(
   userId: string,
   familyId: string,
   memberId: string,
-  input: { color: FamilyMemberColor },
+  input: { nickname?: string; color?: FamilyMemberColor },
 ) {
-  await requireFamilyManager(userId, familyId);
-  assertFamilyMemberColor(input.color);
-
   const supabase = getSupabaseAdmin();
+  const membership = await requireMembership(userId, familyId);
+  const member = await getFamilyMemberOrThrow(familyId, memberId);
+  const patch: {
+    nickname?: string;
+    color?: FamilyMemberColor;
+  } = {};
+
+  if (input.nickname !== undefined) {
+    if (member.user_id !== userId && !canManage(membership.role)) {
+      throw new HttpError(403, { error: 'family_member_edit_forbidden' });
+    }
+
+    patch.nickname = normalizeNickname(input.nickname);
+  }
+
+  if (input.color !== undefined) {
+    if (!canManage(membership.role)) {
+      throw new HttpError(403, { error: 'family_member_edit_forbidden' });
+    }
+
+    assertFamilyMemberColor(input.color);
+    patch.color = input.color;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    throw new HttpError(400, { error: 'invalid_payload' });
+  }
+
   const { data, error } = await supabase
     .from('family_members')
-    .update({
-      color: input.color,
-    })
+    .update(patch)
     .eq('id', memberId)
     .eq('family_id', familyId)
     .select(

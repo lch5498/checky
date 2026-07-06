@@ -4,17 +4,25 @@ import '../../core/api_client.dart';
 import '../../core/theme_preference.dart';
 import '../../design_system/app_colors.dart';
 
+typedef ProfileSaveCallback =
+    Future<AppUser> Function(
+      String nickname, {
+      required bool updateFamilyMemberNicknames,
+    });
+
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({
     super.key,
     required this.user,
+    required this.familyCount,
     required this.onSave,
     required this.onDeleteAccount,
     this.onLogout,
   });
 
   final AppUser user;
-  final Future<AppUser> Function(String nickname) onSave;
+  final int familyCount;
+  final ProfileSaveCallback onSave;
   final Future<void> Function() onDeleteAccount;
   final Future<void> Function()? onLogout;
 
@@ -63,7 +71,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     });
 
     try {
-      await widget.onSave(nickname);
+      final shouldUpdateFamilyMemberNicknames =
+          await _shouldUpdateFamilyMemberNicknames();
+
+      if (shouldUpdateFamilyMemberNicknames == null) {
+        if (mounted) {
+          setState(() {
+            _isSaving = false;
+          });
+        }
+        return;
+      }
+
+      await widget.onSave(
+        nickname,
+        updateFamilyMemberNicknames: shouldUpdateFamilyMemberNicknames,
+      );
 
       if (mounted) {
         Navigator.of(context).pop();
@@ -81,6 +104,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
         });
       }
     }
+  }
+
+  Future<bool?> _shouldUpdateFamilyMemberNicknames() async {
+    if (widget.familyCount <= 0) {
+      return false;
+    }
+
+    if (widget.familyCount == 1) {
+      return true;
+    }
+
+    return showCupertinoDialog<bool>(
+      context: context,
+      builder: (dialogContext) {
+        return CupertinoAlertDialog(
+          title: Text('구성원 이름도 바꿀까요?'),
+          content: Text('여러 모임에 속해 있습니다. 연결된 구성원 이름도 모두 같은 이름으로 변경할까요?'),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(dialogContext).pop(null),
+              child: Text('취소'),
+            ),
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(dialogContext).pop(false),
+              child: Text('프로필만 변경'),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () => Navigator.of(dialogContext).pop(true),
+              child: Text('구성원 이름도 변경'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _confirmLogout() async {

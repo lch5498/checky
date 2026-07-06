@@ -2258,7 +2258,7 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
               (member) => CupertinoActionSheetAction(
                 isDefaultAction: member.id == _familyMemberId,
                 onPressed: () => Navigator.of(popupContext).pop(member.id),
-                child: Text(member.userNickname),
+                child: Text(member.nickname),
               ),
             )
             .toList(),
@@ -2480,7 +2480,7 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
               children: [
                 _PickerRow(
                   label: '구성원',
-                  value: selectedMember.userNickname,
+                  value: selectedMember.nickname,
                   onPressed: _pickMember,
                 ),
                 if (selectedMemberEducationPrograms.isNotEmpty) ...[

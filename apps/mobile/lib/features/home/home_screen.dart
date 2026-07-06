@@ -18,6 +18,12 @@ const _preferencesChannel = MethodChannel('checky/preferences');
 const _deepLinkChannel = MethodChannel('checky/deep_links');
 const _selectedFamilyPreferenceKey = 'selectedFamilyId';
 
+typedef ProfileUpdateCallback =
+    Future<AppUser> Function(
+      String nickname, {
+      required bool updateFamilyMemberNicknames,
+    });
+
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
@@ -34,7 +40,7 @@ class HomeScreen extends StatefulWidget {
 
   final AppUser user;
   final String sessionToken;
-  final Future<AppUser> Function(String nickname) onUpdateProfile;
+  final ProfileUpdateCallback onUpdateProfile;
   final Future<void> Function() onDeleteAccount;
   final List<FamilySummary>? initialFamilies;
   final String? initialSelectedFamilyId;
@@ -533,6 +539,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ),
         trailing: _HomeNavigationTrailing(
           user: widget.user,
+          familyCount: _families.length,
           onUpdateProfile: widget.onUpdateProfile,
           onDeleteAccount: widget.onDeleteAccount,
           onLogout: widget.onLogout,
@@ -623,13 +630,15 @@ class _HomeTitle extends StatelessWidget {
 class _HomeNavigationTrailing extends StatelessWidget {
   const _HomeNavigationTrailing({
     required this.user,
+    required this.familyCount,
     required this.onUpdateProfile,
     required this.onDeleteAccount,
     required this.onLogout,
   });
 
   final AppUser user;
-  final Future<AppUser> Function(String nickname) onUpdateProfile;
+  final int familyCount;
+  final ProfileUpdateCallback onUpdateProfile;
   final Future<void> Function() onDeleteAccount;
   final Future<void> Function()? onLogout;
 
@@ -643,6 +652,7 @@ class _HomeNavigationTrailing extends StatelessWidget {
           CupertinoPageRoute<void>(
             builder: (_) => ProfileScreen(
               user: user,
+              familyCount: familyCount,
               onSave: onUpdateProfile,
               onDeleteAccount: onDeleteAccount,
               onLogout: onLogout,
@@ -688,7 +698,7 @@ class _HomeDashboardTab extends StatefulWidget {
   final VoidCallback onSwitchFamily;
   final VoidCallback onOpenSchedule;
   final VoidCallback onOpenParking;
-  final Future<AppUser> Function(String nickname) onUpdateProfile;
+  final ProfileUpdateCallback onUpdateProfile;
   final Future<void> Function() onDeleteAccount;
   final Future<void> Function()? onLogout;
 
@@ -793,6 +803,22 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
     }
   }
 
+  Future<AppUser> _updateProfile(
+    String nickname, {
+    required bool updateFamilyMemberNicknames,
+  }) async {
+    final user = await widget.onUpdateProfile(
+      nickname,
+      updateFamilyMemberNicknames: updateFamilyMemberNicknames,
+    );
+
+    if (updateFamilyMemberNicknames && mounted) {
+      await _loadBriefing();
+    }
+
+    return user;
+  }
+
   Future<void> _loadScheduleBriefing(DateTime date) async {
     final loadToken = ++_briefingLoadToken;
     final familyId = widget.family.id;
@@ -856,7 +882,8 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
         ),
         trailing: _HomeNavigationTrailing(
           user: widget.user,
-          onUpdateProfile: widget.onUpdateProfile,
+          familyCount: widget.families.length,
+          onUpdateProfile: _updateProfile,
           onDeleteAccount: widget.onDeleteAccount,
           onLogout: widget.onLogout,
         ),

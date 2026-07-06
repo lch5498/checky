@@ -71,7 +71,7 @@ class MemberFilterBar extends StatelessWidget {
       children: [
         for (var index = 0; index < members.length; index++)
           _MemberFilterButton(
-            label: members[index].userNickname,
+            label: members[index].nickname,
             isActive: !hiddenMemberIds.contains(members[index].id),
             color: _colorForMember(members[index], index),
             onPressed: () => onToggleMember(members[index].id),

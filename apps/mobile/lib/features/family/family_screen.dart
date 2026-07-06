@@ -386,6 +386,33 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
     });
   }
 
+  Future<void> _renameMember(FamilyMember member) async {
+    final detail = _detail;
+
+    if (detail == null) {
+      return;
+    }
+
+    final nickname = await showCupertinoDialog<String>(
+      context: context,
+      builder: (_) => _MemberNameDialog(initialName: member.nickname),
+    );
+
+    if (nickname == null || nickname == member.nickname) {
+      return;
+    }
+
+    await _runDetailTask(() async {
+      await _apiClient.updateFamilyMemberName(
+        widget.sessionToken,
+        familyId: detail.family.id,
+        memberId: member.id,
+        nickname: nickname,
+      );
+      await _loadFamily();
+    });
+  }
+
   Future<void> _createInvitation(FamilyMember member) async {
     final detail = _detail;
 
@@ -418,7 +445,7 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
 
     final confirmed = await _confirm(
       title: '구성원 삭제',
-      message: '${member.userNickname}님을 ${detail.family.name} 가족에서 삭제할까요?',
+      message: '${member.nickname}님을 ${detail.family.name} 가족에서 삭제할까요?',
       actionText: '삭제',
       destructive: true,
     );
@@ -462,6 +489,26 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
       );
       await _loadFamily();
     });
+  }
+
+  bool _canEditMemberName(FamilyDetail detail, FamilyMember member) {
+    final isSelf = member.userId == widget.currentUserId;
+
+    if (isSelf) {
+      return true;
+    }
+
+    return detail.canManage;
+  }
+
+  bool _canEditMemberColor(FamilyDetail detail, FamilyMember member) {
+    return detail.canManage;
+  }
+
+  bool _canDeleteMember(FamilyDetail detail, FamilyMember member) {
+    final isSelf = member.userId == widget.currentUserId;
+
+    return detail.canManage && !isSelf;
   }
 
   Future<void> _runDetailTask(Future<void> Function() task) async {
@@ -575,11 +622,11 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
                   child: _MemberTile(
                     member: entry.value,
                     index: entry.key,
-                    canEditColor: detail.canManage,
-                    canDelete:
-                        detail.canManage &&
-                        entry.value.userId != widget.currentUserId,
+                    canEditName: _canEditMemberName(detail, entry.value),
+                    canEditColor: _canEditMemberColor(detail, entry.value),
+                    canDelete: _canDeleteMember(detail, entry.value),
                     canInvite: detail.canManage && !entry.value.isLinked,
+                    onEditName: () => _renameMember(entry.value),
                     onChangeColor: () => _changeMemberColor(entry.value),
                     onInvite: () => _createInvitation(entry.value),
                     onDelete: () => _removeMember(entry.value),
@@ -715,9 +762,11 @@ class _MemberTile extends StatelessWidget {
   const _MemberTile({
     required this.member,
     required this.index,
+    required this.canEditName,
     required this.canEditColor,
     required this.canDelete,
     required this.canInvite,
+    required this.onEditName,
     required this.onChangeColor,
     required this.onInvite,
     required this.onDelete,
@@ -725,9 +774,11 @@ class _MemberTile extends StatelessWidget {
 
   final FamilyMember member;
   final int index;
+  final bool canEditName;
   final bool canEditColor;
   final bool canDelete;
   final bool canInvite;
+  final VoidCallback onEditName;
   final VoidCallback onChangeColor;
   final VoidCallback onInvite;
   final VoidCallback onDelete;
@@ -739,6 +790,32 @@ class _MemberTile extends StatelessWidget {
         MemberFilterColor.selectable[index %
             MemberFilterColor.selectable.length];
     final colorStyle = MemberFilterColorStyle.from(memberColor);
+    final actions = [
+      if (canEditName)
+        _MemberActionButton(
+          onPressed: onEditName,
+          child: const Icon(CupertinoIcons.pencil_circle, size: 24),
+        ),
+      if (canEditColor)
+        _MemberActionButton(
+          onPressed: onChangeColor,
+          child: _ColorSwatchAction(style: colorStyle),
+        ),
+      if (canDelete)
+        _MemberActionButton(
+          onPressed: onDelete,
+          child: const Icon(
+            CupertinoIcons.minus_circle,
+            color: CupertinoColors.destructiveRed,
+            size: 24,
+          ),
+        ),
+      if (canInvite)
+        _MemberActionButton(
+          onPressed: onInvite,
+          child: const _InviteActionIcon(),
+        ),
+    ];
 
     return Container(
       padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
@@ -769,7 +846,7 @@ class _MemberTile extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  member.userNickname,
+                  member.nickname,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
@@ -792,31 +869,36 @@ class _MemberTile extends StatelessWidget {
               ],
             ),
           ),
-          if (canEditColor)
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              minimumSize: const Size(40, 40),
-              onPressed: onChangeColor,
-              child: _ColorSwatchAction(style: colorStyle),
-            ),
-          if (canInvite)
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              minimumSize: const Size(40, 40),
-              onPressed: onInvite,
-              child: const _InviteActionIcon(),
-            ),
-          if (canDelete)
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              minimumSize: const Size(40, 40),
-              onPressed: onDelete,
-              child: const Icon(
-                CupertinoIcons.minus_circle,
-                color: CupertinoColors.destructiveRed,
-              ),
+          if (actions.isNotEmpty)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: actions,
             ),
         ],
+      ),
+    );
+  }
+}
+
+class _MemberActionButton extends StatelessWidget {
+  const _MemberActionButton({required this.onPressed, required this.child});
+
+  final VoidCallback onPressed;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 38,
+      height: 40,
+      child: Center(
+        child: CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(40, 40),
+          onPressed: onPressed,
+          child: Center(child: child),
+        ),
       ),
     );
   }
@@ -830,8 +912,8 @@ class _ColorSwatchAction extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 34,
-      height: 34,
+      width: 32,
+      height: 32,
       decoration: BoxDecoration(
         color: AppColors.darkSurfaceElevated,
         borderRadius: BorderRadius.circular(11),
@@ -842,8 +924,8 @@ class _ColorSwatchAction extends StatelessWidget {
         children: [
           Center(
             child: Container(
-              width: 22,
-              height: 22,
+              width: 21,
+              height: 21,
               decoration: BoxDecoration(
                 color: style.background,
                 shape: BoxShape.circle,
@@ -859,8 +941,8 @@ class _ColorSwatchAction extends StatelessWidget {
             ),
           ),
           Positioned(
-            right: 2,
-            bottom: 2,
+            right: 1,
+            bottom: 1,
             child: Container(
               width: 14,
               height: 14,
@@ -1203,6 +1285,90 @@ class _MemberDialog extends StatefulWidget {
 
   @override
   State<_MemberDialog> createState() => _MemberDialogState();
+}
+
+class _MemberNameDialog extends StatefulWidget {
+  const _MemberNameDialog({required this.initialName});
+
+  final String initialName;
+
+  @override
+  State<_MemberNameDialog> createState() => _MemberNameDialogState();
+}
+
+class _MemberNameDialogState extends State<_MemberNameDialog> {
+  late final TextEditingController _nicknameController;
+  String? _message;
+
+  @override
+  void initState() {
+    super.initState();
+    _nicknameController = TextEditingController(text: widget.initialName);
+  }
+
+  @override
+  void dispose() {
+    _nicknameController.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final nickname = _nicknameController.text.trim();
+
+    if (nickname.isEmpty) {
+      setState(() {
+        _message = '구성원 이름을 입력해 주세요.';
+      });
+      return;
+    }
+
+    if (nickname.length > 40) {
+      setState(() {
+        _message = '구성원 이름은 40자 이하로 입력해 주세요.';
+      });
+      return;
+    }
+
+    Navigator.of(context).pop(nickname);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoAlertDialog(
+      title: Text('구성원 이름 수정'),
+      content: Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: Column(
+          children: [
+            CupertinoTextField(
+              controller: _nicknameController,
+              autofocus: true,
+              placeholder: '이름',
+              maxLength: 40,
+              onSubmitted: (_) => _submit(),
+            ),
+            if (_message != null) ...[
+              const SizedBox(height: 8),
+              Text(
+                _message!,
+                style: TextStyle(
+                  color: CupertinoColors.destructiveRed,
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        CupertinoDialogAction(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('취소'),
+        ),
+        CupertinoDialogAction(onPressed: _submit, child: Text('저장')),
+      ],
+    );
+  }
 }
 
 class _MemberDialogState extends State<_MemberDialog> {

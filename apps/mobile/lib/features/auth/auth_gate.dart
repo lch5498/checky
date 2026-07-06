@@ -387,7 +387,10 @@ class _AuthGateState extends State<AuthGate> {
     );
   }
 
-  Future<AppUser> _updateProfile(String nickname) async {
+  Future<AppUser> _updateProfile(
+    String nickname, {
+    required bool updateFamilyMemberNicknames,
+  }) async {
     final auth = _auth;
 
     if (auth == null) {
@@ -397,6 +400,7 @@ class _AuthGateState extends State<AuthGate> {
     final user = await _apiClient.updateMyProfile(
       auth.accessToken,
       nickname: nickname,
+      updateFamilyMemberNicknames: updateFamilyMemberNicknames,
     );
     final updatedAuth = auth.copyWith(user: user);
 

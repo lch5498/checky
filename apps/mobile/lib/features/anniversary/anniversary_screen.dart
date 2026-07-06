@@ -422,6 +422,7 @@ class _AnniversaryFormScreen extends StatefulWidget {
 }
 
 class _AnniversaryFormScreenState extends State<_AnniversaryFormScreen> {
+  late final TextEditingController _customCategoryController;
   late final TextEditingController _titleController;
   late final TextEditingController _monthController;
   late final TextEditingController _dayController;
@@ -440,6 +441,9 @@ class _AnniversaryFormScreenState extends State<_AnniversaryFormScreen> {
     _calendarType = anniversary?.calendarType ?? AnniversaryCalendarType.solar;
     _isLunarLeap = anniversary?.isLunarLeap ?? false;
     _alertOffsetMinutes = anniversary?.alertOffsetMinutes;
+    _customCategoryController = TextEditingController(
+      text: anniversary?.customCategoryLabel ?? '',
+    );
     _titleController = TextEditingController(text: anniversary?.title ?? '');
     _monthController = TextEditingController(
       text: anniversary == null ? '' : '${anniversary.month}',
@@ -454,6 +458,7 @@ class _AnniversaryFormScreenState extends State<_AnniversaryFormScreen> {
 
   @override
   void dispose() {
+    _customCategoryController.dispose();
     _titleController.dispose();
     _monthController.dispose();
     _dayController.dispose();
@@ -485,7 +490,7 @@ class _AnniversaryFormScreenState extends State<_AnniversaryFormScreen> {
     if (selected != null) {
       setState(() {
         _category = selected;
-        if (selected != AnniversaryCategory.birthday) {
+        if (selected == AnniversaryCategory.wedding) {
           _calendarType = AnniversaryCalendarType.solar;
           _isLunarLeap = false;
         }
@@ -540,11 +545,24 @@ class _AnniversaryFormScreenState extends State<_AnniversaryFormScreen> {
   }
 
   void _submit() {
+    final customCategoryLabel = _customCategoryController.text.trim();
     final title = _titleController.text.trim();
     final month = int.tryParse(_monthController.text.trim());
     final day = int.tryParse(_dayController.text.trim());
     final yearText = _yearController.text.trim();
     final year = yearText.isEmpty ? null : int.tryParse(yearText);
+
+    if (_category == AnniversaryCategory.custom) {
+      if (customCategoryLabel.isEmpty) {
+        setState(() => _message = '직접입력 카테고리를 입력해 주세요.');
+        return;
+      }
+
+      if (customCategoryLabel.length > 40) {
+        setState(() => _message = '직접입력 카테고리는 40자 이하로 입력해 주세요.');
+        return;
+      }
+    }
 
     if (title.isEmpty) {
       setState(() => _message = '기념일 제목을 입력해 주세요.');
@@ -572,14 +590,17 @@ class _AnniversaryFormScreenState extends State<_AnniversaryFormScreen> {
       _AnniversaryFormResult.save(
         AnniversaryInput(
           category: _category,
+          customCategoryLabel: _category == AnniversaryCategory.custom
+              ? customCategoryLabel
+              : null,
           title: title,
-          calendarType: _category == AnniversaryCategory.birthday
+          calendarType: _allowsCalendarTypeSelection(_category)
               ? _calendarType
               : AnniversaryCalendarType.solar,
           month: month,
           day: day,
           isLunarLeap:
-              _category == AnniversaryCategory.birthday &&
+              _allowsCalendarTypeSelection(_category) &&
               _calendarType == AnniversaryCalendarType.lunar &&
               _isLunarLeap,
           year: year,
@@ -620,10 +641,10 @@ class _AnniversaryFormScreenState extends State<_AnniversaryFormScreen> {
             ],
             _FormSection(
               children: [
-                _PickerRow(
-                  label: '카테고리',
-                  value: _categoryLabel(_category),
-                  onPressed: _pickCategory,
+                _CategoryRow(
+                  category: _category,
+                  customCategoryController: _customCategoryController,
+                  onPickCategory: _pickCategory,
                 ),
                 _TextFieldRow(
                   label: '제목',
@@ -635,31 +656,23 @@ class _AnniversaryFormScreenState extends State<_AnniversaryFormScreen> {
                   monthController: _monthController,
                   dayController: _dayController,
                 ),
-                _PickerRow(
-                  label: '알림',
-                  value: alertOffsetLabel(_alertOffsetMinutes),
-                  onPressed: _pickAlertOffset,
-                ),
-              ],
-            ),
-            if (_category == AnniversaryCategory.birthday) ...[
-              const SizedBox(height: 14),
-              _FormSection(
-                children: [
+                if (_allowsCalendarTypeSelection(_category)) ...[
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
-                    child:
+                    padding: const EdgeInsets.fromLTRB(14, 4, 14, 8),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 70),
                         CupertinoSlidingSegmentedControl<
                           AnniversaryCalendarType
                         >(
                           groupValue: _calendarType,
                           children: const {
                             AnniversaryCalendarType.solar: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 14),
+                              padding: EdgeInsets.symmetric(horizontal: 13),
                               child: Text('양력'),
                             ),
                             AnniversaryCalendarType.lunar: Padding(
-                              padding: EdgeInsets.symmetric(horizontal: 14),
+                              padding: EdgeInsets.symmetric(horizontal: 13),
                               child: Text('음력'),
                             ),
                           },
@@ -674,18 +687,40 @@ class _AnniversaryFormScreenState extends State<_AnniversaryFormScreen> {
                             }
                           },
                         ),
-                  ),
-                  if (_calendarType == AnniversaryCalendarType.lunar)
-                    _SwitchRow(
-                      label: '윤달',
-                      value: _isLunarLeap,
-                      onChanged: (value) {
-                        setState(() => _isLunarLeap = value);
-                      },
+                        const Spacer(),
+                        if (_calendarType == AnniversaryCalendarType.lunar) ...[
+                          Text(
+                            '윤달',
+                            style: TextStyle(
+                              color: AppColors.darkTextSecondary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Transform.scale(
+                            scale: 0.78,
+                            child: CupertinoSwitch(
+                              value: _isLunarLeap,
+                              activeTrackColor: AppColors.darkPrimary,
+                              onChanged: (value) {
+                                setState(() => _isLunarLeap = value);
+                              },
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
+                  ),
                 ],
-              ),
-            ],
+                _PickerRow(
+                  label: '알림',
+                  value: alertOffsetLabel(_alertOffsetMinutes),
+                  onPressed: _pickAlertOffset,
+                ),
+              ],
+            ),
             if (isEditing) ...[
               const SizedBox(height: 18),
               _RecentSchedulesSection(
@@ -963,6 +998,74 @@ class _TextFieldRow extends StatelessWidget {
   }
 }
 
+class _CategoryRow extends StatelessWidget {
+  const _CategoryRow({
+    required this.category,
+    required this.customCategoryController,
+    required this.onPickCategory,
+  });
+
+  final AnniversaryCategory category;
+  final TextEditingController customCategoryController;
+  final VoidCallback onPickCategory;
+
+  @override
+  Widget build(BuildContext context) {
+    if (category != AnniversaryCategory.custom) {
+      return _PickerRow(
+        label: '카테고리',
+        value: _categoryLabel(category),
+        onPressed: onPickCategory,
+      );
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+      child: Row(
+        children: [
+          SizedBox(width: 82, child: Text('카테고리', style: _rowLabelStyle)),
+          CupertinoButton(
+            padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+            minimumSize: const Size(62, 34),
+            onPressed: onPickCategory,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _categoryLabel(category),
+                  style: TextStyle(
+                    color: AppColors.darkPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(width: 3),
+                Icon(
+                  CupertinoIcons.chevron_down,
+                  color: AppColors.darkPrimary,
+                  size: 13,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: CupertinoTextField(
+              controller: customCategoryController,
+              placeholder: '예: 첫 만남',
+              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 10),
+              decoration: const BoxDecoration(),
+              style: const TextStyle(fontSize: 16, letterSpacing: 0),
+              textInputAction: TextInputAction.next,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PickerRow extends StatelessWidget {
   const _PickerRow({
     required this.label,
@@ -996,32 +1099,6 @@ class _PickerRow extends StatelessWidget {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SwitchRow extends StatelessWidget {
-  const _SwitchRow({
-    required this.label,
-    required this.value,
-    required this.onChanged,
-  });
-
-  final String label;
-  final bool value;
-  final ValueChanged<bool> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
-      child: Row(
-        children: [
-          SizedBox(width: 82, child: Text(label, style: _rowLabelStyle)),
-          const Spacer(),
-          CupertinoSwitch(value: value, onChanged: onChanged),
         ],
       ),
     );
@@ -1215,6 +1292,22 @@ String _categoryLabel(AnniversaryCategory category) {
   };
 }
 
+String _anniversaryCategoryLabel(Anniversary anniversary) {
+  if (anniversary.category == AnniversaryCategory.custom) {
+    final customLabel = anniversary.customCategoryLabel?.trim();
+    if (customLabel != null && customLabel.isNotEmpty) {
+      return customLabel;
+    }
+  }
+
+  return _categoryLabel(anniversary.category);
+}
+
+bool _allowsCalendarTypeSelection(AnniversaryCategory category) {
+  return category == AnniversaryCategory.birthday ||
+      category == AnniversaryCategory.custom;
+}
+
 String _calendarLabel(AnniversaryCalendarType type) {
   return switch (type) {
     AnniversaryCalendarType.solar => '양력',
@@ -1230,7 +1323,7 @@ String _anniversaryDateLabel(Anniversary anniversary) {
       ? ' 윤달'
       : '';
 
-  return '${_categoryLabel(anniversary.category)} · $calendarLabel$lunarLeapLabel ${anniversary.month}월 ${anniversary.day}일';
+  return '${_anniversaryCategoryLabel(anniversary)} · $calendarLabel$lunarLeapLabel ${anniversary.month}월 ${anniversary.day}일';
 }
 
 IconData _categoryIcon(AnniversaryCategory category) {
