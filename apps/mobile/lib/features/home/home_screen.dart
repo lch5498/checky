@@ -1220,7 +1220,7 @@ class _ScheduleBriefingTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final timeText =
-        '${_koreanTimeText(schedule.startsAt)}~${_koreanTimeText(schedule.endsAt)}';
+        '${_briefTimeText(schedule.startsAt)}~${_briefTimeText(schedule.endsAt)}';
     final memberColorStyle = MemberFilterColorStyle.from(memberColor);
 
     return Padding(
@@ -1228,18 +1228,32 @@ class _ScheduleBriefingTile extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 132,
-            child: Text(
-              timeText,
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+          Container(
+            constraints: const BoxConstraints(minWidth: 74, maxWidth: 96),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.darkPrimarySoft,
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: AppColors.darkPrimary.withValues(alpha: 0.22),
+              ),
+            ),
+            child: Center(
+              child: Text(
+                timeText,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.darkPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  height: 1.1,
+                  letterSpacing: 0,
+                ),
               ),
             ),
           ),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1400,15 +1414,11 @@ String _twoDigits(int value) {
   return value.toString().padLeft(2, '0');
 }
 
-String _koreanTimeText(DateTime value) {
+String _briefTimeText(DateTime value) {
   final hour = value.hour % 12 == 0 ? 12 : value.hour % 12;
-  final minute = value.minute;
+  final minute = value.minute.toString().padLeft(2, '0');
 
-  if (minute == 0) {
-    return '$hour시';
-  }
-
-  return '$hour시$minute분';
+  return '$hour:$minute';
 }
 
 class _FamilyRequiredIntro extends StatelessWidget {
