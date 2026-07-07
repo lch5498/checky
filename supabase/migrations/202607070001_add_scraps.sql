@@ -2,6 +2,7 @@ create table if not exists public.scrap_channels (
   id uuid primary key default gen_random_uuid(),
   family_id uuid not null references public.families(id) on delete cascade,
   name text not null,
+  sort_order integer,
   created_by_user_id uuid references public.users(id) on delete set null,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -43,6 +44,9 @@ create table if not exists public.scrap_comments (
 
 create index if not exists scrap_channels_family_id_created_at_idx
   on public.scrap_channels (family_id, created_at desc);
+
+create index if not exists scrap_channels_family_id_sort_order_idx
+  on public.scrap_channels (family_id, sort_order);
 
 create index if not exists scrap_posts_channel_id_created_at_idx
   on public.scrap_posts (channel_id, created_at desc);

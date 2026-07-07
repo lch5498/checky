@@ -678,6 +678,49 @@ class ApiClient {
     return ScrapChannel.fromJson(json);
   }
 
+  Future<ScrapDashboard> reorderScrapChannels(
+    String sessionToken, {
+    required String familyId,
+    required List<String> channelIds,
+  }) async {
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/scraps',
+      bearerToken: sessionToken,
+      body: {'channelIds': channelIds},
+    );
+
+    return ScrapDashboard.fromJson(json);
+  }
+
+  Future<ScrapChannel> updateScrapChannel(
+    String sessionToken, {
+    required String familyId,
+    required String channelId,
+    required String name,
+  }) async {
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/scraps/$channelId',
+      bearerToken: sessionToken,
+      body: {'name': name},
+    );
+
+    return ScrapChannel.fromJson(json);
+  }
+
+  Future<void> deleteScrapChannel(
+    String sessionToken, {
+    required String familyId,
+    required String channelId,
+  }) async {
+    await _requestJson(
+      'DELETE',
+      '/api/mobile/families/$familyId/scraps/$channelId',
+      bearerToken: sessionToken,
+    );
+  }
+
   Future<ScrapLinkPreview?> previewScrapLink(
     String sessionToken, {
     required String familyId,
@@ -729,6 +772,23 @@ class ApiClient {
     return ScrapPost.fromJson(json);
   }
 
+  Future<ScrapPost> updateScrapPost(
+    String sessionToken, {
+    required String familyId,
+    required String channelId,
+    required String postId,
+    required String content,
+  }) async {
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/scraps/$channelId/posts/$postId',
+      bearerToken: sessionToken,
+      body: {'content': content},
+    );
+
+    return ScrapPost.fromJson(json);
+  }
+
   Future<ScrapComment> createScrapComment(
     String sessionToken, {
     required String familyId,
@@ -739,6 +799,24 @@ class ApiClient {
     final json = await _requestJson(
       'POST',
       '/api/mobile/families/$familyId/scraps/$channelId/posts/$postId/comments',
+      bearerToken: sessionToken,
+      body: {'content': content},
+    );
+
+    return ScrapComment.fromJson(json);
+  }
+
+  Future<ScrapComment> updateScrapComment(
+    String sessionToken, {
+    required String familyId,
+    required String channelId,
+    required String postId,
+    required String commentId,
+    required String content,
+  }) async {
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/scraps/$channelId/posts/$postId/comments/$commentId',
       bearerToken: sessionToken,
       body: {'content': content},
     );
@@ -1471,7 +1549,10 @@ class ScrapChannel {
     required this.id,
     required this.familyId,
     required this.name,
+    required this.sortOrder,
     required this.authorNickname,
+    required this.canEdit,
+    required this.canDelete,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -1479,7 +1560,10 @@ class ScrapChannel {
   final String id;
   final String familyId;
   final String name;
+  final int? sortOrder;
   final String authorNickname;
+  final bool canEdit;
+  final bool canDelete;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -1488,7 +1572,10 @@ class ScrapChannel {
       id: json['id'] as String,
       familyId: json['family_id'] as String,
       name: json['name'] as String,
+      sortOrder: json['sort_order'] as int?,
       authorNickname: json['authorNickname'] as String? ?? '알 수 없음',
+      canEdit: json['canEdit'] as bool? ?? false,
+      canDelete: json['canDelete'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
       updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
     );
@@ -1503,6 +1590,7 @@ class ScrapPost {
     required this.content,
     required this.linkPreview,
     required this.authorNickname,
+    required this.canEdit,
     required this.canDelete,
     required this.createdAt,
     required this.updatedAt,
@@ -1515,6 +1603,7 @@ class ScrapPost {
   final String content;
   final ScrapLinkPreview? linkPreview;
   final String authorNickname;
+  final bool canEdit;
   final bool canDelete;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -1533,6 +1622,7 @@ class ScrapPost {
           ? null
           : ScrapLinkPreview.fromJson(json, linkUrl: linkUrl),
       authorNickname: json['authorNickname'] as String? ?? '알 수 없음',
+      canEdit: json['canEdit'] as bool? ?? false,
       canDelete: json['canDelete'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
       updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
@@ -1550,6 +1640,7 @@ class ScrapComment {
     required this.postId,
     required this.content,
     required this.authorNickname,
+    required this.canEdit,
     required this.canDelete,
     required this.createdAt,
     required this.updatedAt,
@@ -1560,6 +1651,7 @@ class ScrapComment {
   final String postId;
   final String content;
   final String authorNickname;
+  final bool canEdit;
   final bool canDelete;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -1571,6 +1663,7 @@ class ScrapComment {
       postId: json['post_id'] as String,
       content: json['content'] as String,
       authorNickname: json['authorNickname'] as String? ?? '알 수 없음',
+      canEdit: json['canEdit'] as bool? ?? false,
       canDelete: json['canDelete'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
       updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),

@@ -8,10 +8,13 @@ export type ScrapChannel = {
   id: string;
   family_id: string;
   name: string;
+  sort_order: number | null;
   created_by_user_id: string | null;
   created_at: string;
   updated_at: string;
   authorNickname?: string;
+  canEdit?: boolean;
+  canDelete?: boolean;
 };
 
 export type ScrapPost = {
@@ -28,6 +31,7 @@ export type ScrapPost = {
   created_at: string;
   updated_at: string;
   authorNickname?: string;
+  canEdit?: boolean;
   canDelete?: boolean;
   comments?: ScrapComment[];
 };
@@ -41,6 +45,7 @@ export type ScrapComment = {
   created_at: string;
   updated_at: string;
   authorNickname?: string;
+  canEdit?: boolean;
   canDelete?: boolean;
 };
 
@@ -50,13 +55,14 @@ type FamilyMemberAuthor = {
 };
 
 export async function getScrapDashboard(userId: string, familyId: string) {
-  await requireMembership(userId, familyId);
+  const membership = await requireMembership(userId, familyId);
 
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
     .from('scrap_channels')
     .select('*')
     .eq('family_id', familyId)
+    .order('sort_order', { ascending: true, nullsFirst: false })
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -64,7 +70,12 @@ export async function getScrapDashboard(userId: string, familyId: string) {
   }
 
   return {
-    channels: await attachAuthorNicknames(familyId, (data ?? []) as ScrapChannel[]),
+    channels: (await attachAuthorNicknames(
+      familyId,
+      (data ?? []) as ScrapChannel[],
+    )).map((channel) =>
+      withChannelManagePermissions(channel, userId, membership.role),
+    ),
   };
 }
 
@@ -76,11 +87,13 @@ export async function createScrapChannel(
   await requireMembership(userId, familyId);
 
   const supabase = getSupabaseAdmin();
+  const sortOrder = await nextChannelSortOrder(familyId);
   const { data, error } = await supabase
     .from('scrap_channels')
     .insert({
       family_id: familyId,
       name: normalizeText(input.name, 60),
+      sort_order: sortOrder,
       created_by_user_id: userId,
     })
     .select('*')
@@ -91,7 +104,104 @@ export async function createScrapChannel(
   }
 
   const [channel] = await attachAuthorNicknames(familyId, [data as ScrapChannel]);
-  return channel;
+  return withChannelManagePermissions(channel, userId, 'owner');
+}
+
+export async function updateScrapChannel(
+  userId: string,
+  familyId: string,
+  channelId: string,
+  input: { name: string },
+) {
+  const membership = await requireMembership(userId, familyId);
+  const channel = await getChannelOrThrow(familyId, channelId);
+  assertCanManageChannel(channel.created_by_user_id, userId, membership.role);
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('scrap_channels')
+    .update({ name: normalizeText(input.name, 60) })
+    .eq('family_id', familyId)
+    .eq('id', channelId)
+    .select('*')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  const [updatedChannel] = await attachAuthorNicknames(familyId, [
+    data as ScrapChannel,
+  ]);
+  return withChannelManagePermissions(updatedChannel, userId, membership.role);
+}
+
+export async function deleteScrapChannel(
+  userId: string,
+  familyId: string,
+  channelId: string,
+) {
+  const membership = await requireMembership(userId, familyId);
+  const channel = await getChannelOrThrow(familyId, channelId);
+  assertCanManageChannel(channel.created_by_user_id, userId, membership.role);
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from('scrap_channels')
+    .delete()
+    .eq('family_id', familyId)
+    .eq('id', channelId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function reorderScrapChannels(
+  userId: string,
+  familyId: string,
+  input: { channelIds: string[] },
+) {
+  await requireMembership(userId, familyId);
+
+  const channelIds = [...new Set(input.channelIds)];
+
+  if (channelIds.length !== input.channelIds.length || channelIds.length === 0) {
+    throw new HttpError(400, { error: 'invalid_payload', field: 'channelIds' });
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data: channels, error: channelsError } = await supabase
+    .from('scrap_channels')
+    .select('id')
+    .eq('family_id', familyId)
+    .in('id', channelIds);
+
+  if (channelsError) {
+    throw channelsError;
+  }
+
+  if ((channels ?? []).length !== channelIds.length) {
+    throw new HttpError(400, { error: 'invalid_payload', field: 'channelIds' });
+  }
+
+  const updateResults = await Promise.all(
+    channelIds.map((channelId, index) =>
+      supabase
+        .from('scrap_channels')
+        .update({ sort_order: index + 1 })
+        .eq('family_id', familyId)
+        .eq('id', channelId),
+    ),
+  );
+
+  const updateError = updateResults.find((result) => result.error)?.error;
+
+  if (updateError) {
+    throw updateError;
+  }
+
+  return getScrapDashboard(userId, familyId);
 }
 
 export async function previewScrapLink(
@@ -163,10 +273,10 @@ export async function getScrapChannel(
   const postsWithAuthors = await attachAuthorNicknames(familyId, postRows);
 
   return {
-    channel,
+    channel: withChannelManagePermissions(channel, userId, membership.role),
     posts: postsWithAuthors.map((post) => ({
       ...post,
-      canDelete: canDelete(post.created_by_user_id, userId, membership.role),
+      ...manageFlags(post.created_by_user_id, userId, membership.role),
       comments: commentsByPostId.get(post.id) ?? [],
     })),
   };
@@ -207,7 +317,50 @@ export async function createScrapPost(
   const [post] = await attachAuthorNicknames(familyId, [data as ScrapPost]);
   return {
     ...post,
-    canDelete: canDelete(post.created_by_user_id, userId, membership.role),
+    ...manageFlags(post.created_by_user_id, userId, membership.role),
+    comments: [],
+  };
+}
+
+export async function updateScrapPost(
+  userId: string,
+  familyId: string,
+  channelId: string,
+  postId: string,
+  input: { content: string },
+) {
+  const membership = await requireMembership(userId, familyId);
+  const post = await getPostOrThrow(familyId, channelId, postId);
+  assertCanManage(post.created_by_user_id, userId, membership.role);
+
+  const content = normalizeText(input.content, 2000);
+  const linkPreview = await fetchLinkPreview(content);
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('scrap_posts')
+    .update({
+      content,
+      link_url: linkPreview?.url ?? null,
+      link_title: linkPreview?.title ?? null,
+      link_description: linkPreview?.description ?? null,
+      link_image_url: linkPreview?.imageUrl ?? null,
+      link_site_name: linkPreview?.siteName ?? null,
+    })
+    .eq('family_id', familyId)
+    .eq('channel_id', channelId)
+    .eq('id', postId)
+    .select('*')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  const [updatedPost] = await attachAuthorNicknames(familyId, [data as ScrapPost]);
+  return {
+    ...updatedPost,
+    ...manageFlags(updatedPost.created_by_user_id, userId, membership.role),
     comments: [],
   };
 }
@@ -242,6 +395,59 @@ export async function createScrapComment(
   return withDeletePermission(comment, userId, membership.role);
 }
 
+export async function updateScrapComment(
+  userId: string,
+  familyId: string,
+  channelId: string,
+  postId: string,
+  commentId: string,
+  input: { content: string },
+) {
+  const membership = await requireMembership(userId, familyId);
+  await getPostOrThrow(familyId, channelId, postId);
+
+  const supabase = getSupabaseAdmin();
+  const { data: comment, error: commentError } = await supabase
+    .from('scrap_comments')
+    .select('*')
+    .eq('family_id', familyId)
+    .eq('post_id', postId)
+    .eq('id', commentId)
+    .maybeSingle();
+
+  if (commentError) {
+    throw commentError;
+  }
+
+  if (!comment) {
+    throw new HttpError(404, { error: 'scrap_comment_not_found' });
+  }
+
+  assertCanManage(
+    (comment as ScrapComment).created_by_user_id,
+    userId,
+    membership.role,
+  );
+
+  const { data, error } = await supabase
+    .from('scrap_comments')
+    .update({ content: normalizeText(input.content, 1000) })
+    .eq('family_id', familyId)
+    .eq('post_id', postId)
+    .eq('id', commentId)
+    .select('*')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  const [updatedComment] = await attachAuthorNicknames(familyId, [
+    data as ScrapComment,
+  ]);
+  return withDeletePermission(updatedComment, userId, membership.role);
+}
+
 export async function deleteScrapPost(
   userId: string,
   familyId: string,
@@ -251,7 +457,7 @@ export async function deleteScrapPost(
   const membership = await requireMembership(userId, familyId);
   const post = await getPostOrThrow(familyId, channelId, postId);
 
-  assertCanDelete(post.created_by_user_id, userId, membership.role);
+  assertCanManage(post.created_by_user_id, userId, membership.role);
 
   const supabase = getSupabaseAdmin();
   const { error } = await supabase
@@ -293,7 +499,7 @@ export async function deleteScrapComment(
     throw new HttpError(404, { error: 'scrap_comment_not_found' });
   }
 
-  assertCanDelete(
+  assertCanManage(
     (comment as ScrapComment).created_by_user_id,
     userId,
     membership.role,
@@ -415,22 +621,97 @@ function withDeletePermission<T extends { created_by_user_id: string | null }>(
 ) {
   return {
     ...row,
-    canDelete: canDelete(row.created_by_user_id, userId, role),
+    ...manageFlags(row.created_by_user_id, userId, role),
   };
 }
 
-function canDelete(createdByUserId: string | null, userId: string, role: FamilyRole) {
-  return role === 'owner' || createdByUserId === userId;
+function withManagePermissions<T extends { created_by_user_id: string | null }>(
+  row: T,
+  userId: string,
+  role: FamilyRole,
+) {
+  return {
+    ...row,
+    ...manageFlags(row.created_by_user_id, userId, role),
+  };
 }
 
-function assertCanDelete(
+function withChannelManagePermissions<
+  T extends { created_by_user_id: string | null },
+>(row: T, userId: string, role: FamilyRole) {
+  const canManage = canManageChannel(row.created_by_user_id, userId, role);
+
+  return {
+    ...row,
+    canEdit: canManage,
+    canDelete: canManage,
+  };
+}
+
+function manageFlags(
   createdByUserId: string | null,
   userId: string,
   role: FamilyRole,
 ) {
-  if (!canDelete(createdByUserId, userId, role)) {
-    throw new HttpError(403, { error: 'scrap_delete_forbidden' });
+  const canManage = canManageScrap(createdByUserId, userId, role);
+
+  return {
+    canEdit: canManage,
+    canDelete: canManage,
+  };
+}
+
+function canManageScrap(
+  createdByUserId: string | null,
+  userId: string,
+  _role: FamilyRole,
+) {
+  return createdByUserId === userId;
+}
+
+function canManageChannel(
+  createdByUserId: string | null,
+  userId: string,
+  role: FamilyRole,
+) {
+  return role === 'owner' || createdByUserId === userId;
+}
+
+function assertCanManage(
+  createdByUserId: string | null,
+  userId: string,
+  role: FamilyRole,
+) {
+  if (!canManageScrap(createdByUserId, userId, role)) {
+    throw new HttpError(403, { error: 'scrap_manage_forbidden' });
   }
+}
+
+function assertCanManageChannel(
+  createdByUserId: string | null,
+  userId: string,
+  role: FamilyRole,
+) {
+  if (!canManageChannel(createdByUserId, userId, role)) {
+    throw new HttpError(403, { error: 'scrap_channel_manage_forbidden' });
+  }
+}
+
+async function nextChannelSortOrder(familyId: string) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('scrap_channels')
+    .select('sort_order')
+    .eq('family_id', familyId)
+    .order('sort_order', { ascending: false, nullsFirst: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return ((data?.sort_order as number | null) ?? 0) + 1;
 }
 
 type LinkPreview = {

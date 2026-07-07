@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart'
+    show ReorderCallback, ReorderableDragStartListener, ReorderableListView;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
@@ -176,6 +178,44 @@ class _ScrapScreenState extends State<ScrapScreen> {
         .then((_) => _loadScraps());
   }
 
+  Future<void> _reorderChannels(int oldIndex, int newIndex) async {
+    final dashboard = _dashboard;
+
+    if (dashboard == null) {
+      return;
+    }
+
+    final channels = [...dashboard.channels];
+    final movedChannel = channels.removeAt(oldIndex);
+    channels.insert(newIndex, movedChannel);
+
+    setState(() {
+      _dashboard = ScrapDashboard(channels: channels);
+      _message = null;
+    });
+
+    try {
+      final updatedDashboard = await _apiClient.reorderScrapChannels(
+        widget.sessionToken,
+        familyId: _family.id,
+        channelIds: channels.map((channel) => channel.id).toList(),
+      );
+
+      if (mounted) {
+        setState(() {
+          _dashboard = updatedDashboard;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _dashboard = dashboard;
+          _message = error.toString();
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final dashboard = _dashboard;
@@ -226,13 +266,12 @@ class _ScrapScreenState extends State<ScrapScreen> {
                 actionLabel: '새 채널 만들기',
                 onPressed: _createChannel,
               )
-            else ...[
-              for (final channel in dashboard.channels)
-                _ChannelRow(
-                  channel: channel,
-                  onPressed: () => _openChannel(channel),
-                ),
-            ],
+            else
+              _ChannelReorderList(
+                channels: dashboard.channels,
+                onOpen: _openChannel,
+                onReorder: _reorderChannels,
+              ),
           ],
         ),
       ),
@@ -353,6 +392,135 @@ class _ScrapChannelScreenState extends State<ScrapChannelScreen> {
     });
   }
 
+  Future<void> _renameChannel() async {
+    final channel = _detail?.channel ?? widget.channel;
+    final name = await _showTextSheet(
+      context,
+      title: '채널명 수정',
+      placeholder: '채널명을 입력해 주세요',
+      actionLabel: '저장',
+      maxLines: 1,
+      initialValue: channel.name,
+    );
+
+    if (name == null) {
+      return;
+    }
+
+    await _runTask(() async {
+      await _apiClient.updateScrapChannel(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        channelId: widget.channel.id,
+        name: name,
+      );
+      await _loadChannel();
+    });
+  }
+
+  Future<void> _deleteChannel() async {
+    final confirmed = await _confirmDelete(
+      '채널을 삭제할까요?',
+      '채널 안의 글과 댓글이 모두 삭제됩니다.',
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _message = null;
+    });
+
+    try {
+      await _apiClient.deleteScrapChannel(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        channelId: widget.channel.id,
+      );
+
+      if (mounted) {
+        Navigator.of(context).pop(true);
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _showChannelActions() async {
+    final channel = _detail?.channel ?? widget.channel;
+    final action = await showCupertinoModalPopup<_ScrapChannelAction>(
+      context: context,
+      builder: (popupContext) => CupertinoActionSheet(
+        title: Text(channel.name),
+        actions: [
+          if (channel.canEdit)
+            CupertinoActionSheetAction(
+              onPressed: () =>
+                  Navigator.of(popupContext).pop(_ScrapChannelAction.rename),
+              child: const Text('채널명 수정'),
+            ),
+          if (channel.canDelete)
+            CupertinoActionSheetAction(
+              isDestructiveAction: true,
+              onPressed: () =>
+                  Navigator.of(popupContext).pop(_ScrapChannelAction.delete),
+              child: const Text('채널 삭제'),
+            ),
+        ],
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(popupContext).pop(),
+          child: const Text('취소'),
+        ),
+      ),
+    );
+
+    if (!mounted || action == null) {
+      return;
+    }
+
+    switch (action) {
+      case _ScrapChannelAction.rename:
+        await _renameChannel();
+      case _ScrapChannelAction.delete:
+        await _deleteChannel();
+    }
+  }
+
+  Future<void> _editPost(ScrapPost post) async {
+    final content = await _showPostComposerSheet(
+      context,
+      apiClient: _apiClient,
+      sessionToken: widget.sessionToken,
+      familyId: widget.family.id,
+      title: '글 수정',
+      placeholder: '링크나 메모를 남겨 주세요',
+      actionLabel: '저장',
+      initialContent: post.content,
+    );
+
+    if (content == null) {
+      return;
+    }
+
+    await _runTask(() async {
+      await _apiClient.updateScrapPost(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        channelId: widget.channel.id,
+        postId: post.id,
+        content: content,
+      );
+      await _loadChannel();
+    });
+  }
+
   Future<void> _deletePost(ScrapPost post) async {
     final confirmed = await _confirmDelete('글을 삭제할까요?', '댓글도 함께 삭제됩니다.');
 
@@ -385,6 +553,33 @@ class _ScrapChannelScreenState extends State<ScrapChannelScreen> {
         channelId: widget.channel.id,
         postId: post.id,
         commentId: comment.id,
+      );
+      await _loadChannel();
+    });
+  }
+
+  Future<void> _editComment(ScrapPost post, ScrapComment comment) async {
+    final content = await _showTextSheet(
+      context,
+      title: '댓글 수정',
+      placeholder: '댓글을 입력해 주세요',
+      actionLabel: '저장',
+      maxLines: 4,
+      initialValue: comment.content,
+    );
+
+    if (content == null) {
+      return;
+    }
+
+    await _runTask(() async {
+      await _apiClient.updateScrapComment(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        channelId: widget.channel.id,
+        postId: post.id,
+        commentId: comment.id,
+        content: content,
       );
       await _loadChannel();
     });
@@ -442,12 +637,14 @@ class _ScrapChannelScreenState extends State<ScrapChannelScreen> {
   @override
   Widget build(BuildContext context) {
     final detail = _detail;
+    final channel = detail?.channel ?? widget.channel;
+    final canManageChannel = channel.canEdit || channel.canDelete;
 
     return CupertinoPageScaffold(
       backgroundColor: AppColors.darkBackground,
       navigationBar: CupertinoNavigationBar(
         middle: Text(
-          detail?.channel.name ?? widget.channel.name,
+          channel.name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: TextStyle(
@@ -458,11 +655,23 @@ class _ScrapChannelScreenState extends State<ScrapChannelScreen> {
             letterSpacing: 0,
           ),
         ),
-        trailing: CupertinoButton(
-          padding: EdgeInsets.zero,
-          minimumSize: const Size(32, 32),
-          onPressed: _isLoading ? null : _createPost,
-          child: const Icon(CupertinoIcons.plus),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(32, 32),
+              onPressed: _isLoading ? null : _createPost,
+              child: const Icon(CupertinoIcons.plus),
+            ),
+            if (canManageChannel)
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(32, 32),
+                onPressed: _isLoading ? null : _showChannelActions,
+                child: const Icon(CupertinoIcons.ellipsis),
+              ),
+          ],
         ),
       ),
       child: SafeArea(
@@ -500,7 +709,9 @@ class _ScrapChannelScreenState extends State<ScrapChannelScreen> {
                 _PostThread(
                   post: post,
                   onComment: () => _createComment(post),
+                  onEditPost: post.canEdit ? () => _editPost(post) : null,
                   onDeletePost: post.canDelete ? () => _deletePost(post) : null,
+                  onEditComment: (comment) => _editComment(post, comment),
                   onDeleteComment: (comment) => _deleteComment(post, comment),
                 ),
           ],
@@ -509,6 +720,8 @@ class _ScrapChannelScreenState extends State<ScrapChannelScreen> {
     );
   }
 }
+
+enum _ScrapChannelAction { rename, delete }
 
 class _FeatureFamilyTitle extends StatelessWidget {
   const _FeatureFamilyTitle({
@@ -571,10 +784,49 @@ class _FeatureFamilyTitle extends StatelessWidget {
   }
 }
 
+class _ChannelReorderList extends StatelessWidget {
+  const _ChannelReorderList({
+    required this.channels,
+    required this.onOpen,
+    required this.onReorder,
+  });
+
+  final List<ScrapChannel> channels;
+  final void Function(ScrapChannel channel) onOpen;
+  final ReorderCallback onReorder;
+
+  @override
+  Widget build(BuildContext context) {
+    return ReorderableListView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      buildDefaultDragHandles: false,
+      itemCount: channels.length,
+      onReorderItem: onReorder,
+      itemBuilder: (context, index) {
+        final channel = channels[index];
+
+        return _ChannelRow(
+          key: ValueKey(channel.id),
+          channel: channel,
+          dragIndex: index,
+          onPressed: () => onOpen(channel),
+        );
+      },
+    );
+  }
+}
+
 class _ChannelRow extends StatelessWidget {
-  const _ChannelRow({required this.channel, required this.onPressed});
+  const _ChannelRow({
+    super.key,
+    required this.channel,
+    required this.dragIndex,
+    required this.onPressed,
+  });
 
   final ScrapChannel channel;
+  final int dragIndex;
   final VoidCallback onPressed;
 
   @override
@@ -641,6 +893,18 @@ class _ChannelRow extends StatelessWidget {
               color: AppColors.darkTextMuted,
               size: 18,
             ),
+            const SizedBox(width: 8),
+            ReorderableDragStartListener(
+              index: dragIndex,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                child: Icon(
+                  CupertinoIcons.line_horizontal_3,
+                  color: AppColors.darkTextMuted,
+                  size: 19,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -652,13 +916,17 @@ class _PostThread extends StatelessWidget {
   const _PostThread({
     required this.post,
     required this.onComment,
+    required this.onEditPost,
     required this.onDeletePost,
+    required this.onEditComment,
     required this.onDeleteComment,
   });
 
   final ScrapPost post;
   final VoidCallback onComment;
+  final VoidCallback? onEditPost;
   final VoidCallback? onDeletePost;
+  final void Function(ScrapComment comment) onEditComment;
   final void Function(ScrapComment comment) onDeleteComment;
 
   @override
@@ -684,6 +952,7 @@ class _PostThread extends StatelessWidget {
             authorNickname: post.authorNickname,
             createdAt: post.createdAt,
             content: postContent,
+            onEdit: onEditPost,
             onDelete: onDeletePost,
           ),
           if (post.linkPreview != null) ...[
@@ -714,6 +983,7 @@ class _PostThread extends StatelessWidget {
                   authorNickname: comment.authorNickname,
                   createdAt: comment.createdAt,
                   content: comment.content,
+                  onEdit: comment.canEdit ? () => onEditComment(comment) : null,
                   onDelete: comment.canDelete
                       ? () => onDeleteComment(comment)
                       : null,
@@ -731,12 +1001,14 @@ class _MessageBlock extends StatelessWidget {
     required this.authorNickname,
     required this.createdAt,
     required this.content,
+    this.onEdit,
     this.onDelete,
   });
 
   final String authorNickname;
   final DateTime createdAt;
   final String content;
+  final VoidCallback? onEdit;
   final VoidCallback? onDelete;
 
   @override
@@ -770,21 +1042,42 @@ class _MessageBlock extends StatelessWidget {
                 style: const TextStyle(fontSize: 13, letterSpacing: 0),
               ),
             ),
-            if (onDelete != null) ...[
+            if (onEdit != null || onDelete != null) ...[
               const SizedBox(width: 8),
-              CupertinoButton(
-                padding: EdgeInsets.zero,
-                minimumSize: const Size(32, 24),
-                onPressed: onDelete,
-                child: Text(
-                  '삭제',
-                  style: TextStyle(
-                    color: AppColors.darkDanger,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                  ),
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (onEdit != null)
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(32, 24),
+                      onPressed: onEdit,
+                      child: Text(
+                        '수정',
+                        style: TextStyle(
+                          color: AppColors.darkPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ),
+                  if (onDelete != null)
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(32, 24),
+                      onPressed: onDelete,
+                      child: Text(
+                        '삭제',
+                        style: TextStyle(
+                          color: AppColors.darkDanger,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ],
           ],
@@ -807,9 +1100,10 @@ class _MessageBlock extends StatelessWidget {
 }
 
 class _LinkPreviewCard extends StatelessWidget {
-  const _LinkPreviewCard({required this.preview});
+  const _LinkPreviewCard({required this.preview, this.compact = false});
 
   final ScrapLinkPreview preview;
+  final bool compact;
 
   Future<void> _openLink() async {
     final uri = Uri.tryParse(preview.url);
@@ -825,6 +1119,85 @@ class _LinkPreviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = preview.title ?? preview.siteName ?? preview.url;
     final siteName = preview.siteName ?? Uri.tryParse(preview.url)?.host;
+
+    if (compact) {
+      return CupertinoButton(
+        padding: EdgeInsets.zero,
+        onPressed: _openLink,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: AppColors.darkSurfaceElevated,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.darkBorder),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 58,
+                height: 58,
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: AppColors.darkPrimarySoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: preview.imageUrl == null
+                    ? Icon(
+                        CupertinoIcons.link,
+                        color: AppColors.darkPrimary,
+                        size: 22,
+                      )
+                    : Image.network(
+                        preview.imageUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => Icon(
+                          CupertinoIcons.link,
+                          color: AppColors.darkPrimary,
+                          size: 22,
+                        ),
+                      ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (siteName != null) ...[
+                      Text(
+                        siteName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: AppColors.darkPrimary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                    ],
+                    Text(
+                      title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.darkTextPrimary,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                        height: 1.25,
+                        letterSpacing: 0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return CupertinoButton(
       padding: EdgeInsets.zero,
@@ -1041,6 +1414,7 @@ Future<String?> _showTextSheet(
   required String placeholder,
   required String actionLabel,
   required int maxLines,
+  String? initialValue,
 }) {
   return showCupertinoModalPopup<String>(
     context: context,
@@ -1050,6 +1424,7 @@ Future<String?> _showTextSheet(
         placeholder: placeholder,
         actionLabel: actionLabel,
         maxLines: maxLines,
+        initialValue: initialValue,
       ),
     ),
   );
@@ -1063,6 +1438,7 @@ Future<String?> _showPostComposerSheet(
   required String title,
   required String placeholder,
   required String actionLabel,
+  String? initialContent,
 }) {
   return showCupertinoModalPopup<String>(
     context: context,
@@ -1074,6 +1450,7 @@ Future<String?> _showPostComposerSheet(
         title: title,
         placeholder: placeholder,
         actionLabel: actionLabel,
+        initialContent: initialContent,
       ),
     ),
   );
@@ -1125,12 +1502,14 @@ class _TextInputSheet extends StatefulWidget {
     required this.placeholder,
     required this.actionLabel,
     required this.maxLines,
+    required this.initialValue,
   });
 
   final String title;
   final String placeholder;
   final String actionLabel;
   final int maxLines;
+  final String? initialValue;
 
   @override
   State<_TextInputSheet> createState() => _TextInputSheetState();
@@ -1143,7 +1522,9 @@ class _TextInputSheetState extends State<_TextInputSheet> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController()..addListener(_handleChanged);
+    _controller = TextEditingController(text: widget.initialValue)
+      ..addListener(_handleChanged);
+    _canSubmit = _controller.text.trim().isNotEmpty;
   }
 
   @override
@@ -1173,6 +1554,14 @@ class _TextInputSheetState extends State<_TextInputSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isCompactInput = widget.maxLines == 1;
+    final minLines = isCompactInput
+        ? 2
+        : widget.maxLines < 5
+        ? widget.maxLines
+        : 5;
+    final maxLines = isCompactInput ? 2 : widget.maxLines;
+
     return _ComposerScaffold(
       title: widget.title,
       actionLabel: widget.actionLabel,
@@ -1182,8 +1571,8 @@ class _TextInputSheetState extends State<_TextInputSheet> {
       child: CupertinoTextField(
         controller: _controller,
         autofocus: true,
-        minLines: widget.maxLines == 1 ? 2 : 5,
-        maxLines: widget.maxLines == 1 ? 2 : widget.maxLines,
+        minLines: minLines,
+        maxLines: maxLines,
         placeholder: widget.placeholder,
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
@@ -1214,6 +1603,7 @@ class _PostComposerSheet extends StatefulWidget {
     required this.title,
     required this.placeholder,
     required this.actionLabel,
+    required this.initialContent,
   });
 
   final ApiClient apiClient;
@@ -1222,6 +1612,7 @@ class _PostComposerSheet extends StatefulWidget {
   final String title;
   final String placeholder;
   final String actionLabel;
+  final String? initialContent;
 
   @override
   State<_PostComposerSheet> createState() => _PostComposerSheetState();
@@ -1240,7 +1631,10 @@ class _PostComposerSheetState extends State<_PostComposerSheet> {
   @override
   void initState() {
     super.initState();
-    _controller = TextEditingController()..addListener(_handleChanged);
+    _controller = TextEditingController(text: widget.initialContent)
+      ..addListener(_handleChanged);
+    _canSubmit = _controller.text.trim().isNotEmpty;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _handleChanged());
   }
 
   @override
@@ -1382,7 +1776,7 @@ class _PostComposerSheetState extends State<_PostComposerSheet> {
             if (_isPreviewLoading)
               _PreviewLoading(url: _previewUrl)
             else if (_preview != null)
-              _LinkPreviewCard(preview: _preview!)
+              _LinkPreviewCard(preview: _preview!, compact: true)
             else if (_previewMessage != null)
               _PreviewMessage(message: _previewMessage!),
           ],
