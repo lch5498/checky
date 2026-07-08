@@ -940,6 +940,85 @@ class ApiClient {
     String? mapUrl,
     TimeOfDayValue? startsAt,
   }) async {
+    final json = await _requestJson(
+      'POST',
+      '/api/mobile/families/$familyId/travels/$tripId/itineraries',
+      bearerToken: sessionToken,
+      body: _travelItineraryBody(
+        itineraryDate: itineraryDate,
+        title: title,
+        content: content,
+        mapUrl: mapUrl,
+        startsAt: startsAt,
+      ),
+    );
+
+    return TravelItinerary.fromJson(json);
+  }
+
+  Future<TravelItinerary> updateTravelItinerary(
+    String sessionToken, {
+    required String familyId,
+    required String tripId,
+    required String itineraryId,
+    required DateTime itineraryDate,
+    required String title,
+    String? content,
+    String? mapUrl,
+    TimeOfDayValue? startsAt,
+  }) async {
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/travels/$tripId/itineraries/$itineraryId',
+      bearerToken: sessionToken,
+      body: _travelItineraryBody(
+        itineraryDate: itineraryDate,
+        title: title,
+        content: content,
+        mapUrl: mapUrl,
+        startsAt: startsAt,
+      ),
+    );
+
+    return TravelItinerary.fromJson(json);
+  }
+
+  Future<void> deleteTravelItinerary(
+    String sessionToken, {
+    required String familyId,
+    required String tripId,
+    required String itineraryId,
+  }) async {
+    await _requestJson(
+      'DELETE',
+      '/api/mobile/families/$familyId/travels/$tripId/itineraries/$itineraryId',
+      bearerToken: sessionToken,
+    );
+  }
+
+  Future<TravelTripDetail> reorderTravelItineraries(
+    String sessionToken, {
+    required String familyId,
+    required String tripId,
+    required List<TravelItineraryOrderInput> items,
+  }) async {
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/travels/$tripId/itineraries',
+      bearerToken: sessionToken,
+      body: {'items': items.map((item) => item.toJson()).toList()},
+    );
+
+    return TravelTripDetail.fromJson(json);
+  }
+
+  Map<String, Object?> _travelItineraryBody({
+    required DateTime itineraryDate,
+    required String title,
+    String? content,
+    String? mapUrl,
+    TimeOfDayValue? startsAt,
+  }) {
     final body = <String, Object?>{
       'itineraryDate': _dateOnlyString(itineraryDate),
       'title': title,
@@ -951,14 +1030,7 @@ class ApiClient {
       body['startsAt'] = startsAt.toApiString();
     }
 
-    final json = await _requestJson(
-      'POST',
-      '/api/mobile/families/$familyId/travels/$tripId/itineraries',
-      bearerToken: sessionToken,
-      body: body,
-    );
-
-    return TravelItinerary.fromJson(json);
+    return body;
   }
 
   Map<String, Object?> _scheduleBody({
@@ -1981,6 +2053,36 @@ class TravelItinerary {
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
       updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
     );
+  }
+
+  TravelItinerary copyWith({DateTime? itineraryDate, int? sortOrder}) {
+    return TravelItinerary(
+      id: id,
+      familyId: familyId,
+      tripId: tripId,
+      itineraryDate: itineraryDate ?? this.itineraryDate,
+      title: title,
+      content: content,
+      mapUrl: mapUrl,
+      startsAt: startsAt,
+      sortOrder: sortOrder ?? this.sortOrder,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+  }
+}
+
+class TravelItineraryOrderInput {
+  const TravelItineraryOrderInput({
+    required this.id,
+    required this.itineraryDate,
+  });
+
+  final String id;
+  final DateTime itineraryDate;
+
+  Map<String, Object?> toJson() {
+    return {'id': id, 'itineraryDate': _dateOnlyString(itineraryDate)};
   }
 }
 

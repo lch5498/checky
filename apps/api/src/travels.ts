@@ -142,6 +142,149 @@ export async function createTravelItinerary(
   return data as TravelItinerary;
 }
 
+export async function updateTravelItinerary(
+  userId: string,
+  familyId: string,
+  tripId: string,
+  itineraryId: string,
+  input: {
+    itineraryDate: string;
+    title: string;
+    content?: string;
+    mapUrl?: string;
+    startsAt?: string;
+  },
+) {
+  await requireMembership(userId, familyId);
+  const trip = await getTripOrThrow(familyId, tripId);
+  await getItineraryOrThrow(familyId, tripId, itineraryId);
+  const itineraryDate = normalizeDate(input.itineraryDate, 'itineraryDate');
+
+  if (itineraryDate < trip.starts_on || itineraryDate > trip.ends_on) {
+    throw new HttpError(400, {
+      error: 'invalid_payload',
+      field: 'itineraryDate',
+    });
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('travel_itineraries')
+    .update({
+      itinerary_date: itineraryDate,
+      title: normalizeText(input.title, 80, 'title'),
+      content: normalizeOptionalText(input.content, 2000, 'content'),
+      map_url: normalizeOptionalText(input.mapUrl, 1000, 'mapUrl'),
+      starts_at: normalizeOptionalTime(input.startsAt, 'startsAt'),
+    })
+    .eq('family_id', familyId)
+    .eq('trip_id', tripId)
+    .eq('id', itineraryId)
+    .select('*')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  await compactItinerarySortOrders(familyId, tripId);
+
+  return data as TravelItinerary;
+}
+
+export async function deleteTravelItinerary(
+  userId: string,
+  familyId: string,
+  tripId: string,
+  itineraryId: string,
+) {
+  await requireMembership(userId, familyId);
+  await getItineraryOrThrow(familyId, tripId, itineraryId);
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from('travel_itineraries')
+    .delete()
+    .eq('family_id', familyId)
+    .eq('trip_id', tripId)
+    .eq('id', itineraryId);
+
+  if (error) {
+    throw error;
+  }
+
+  await compactItinerarySortOrders(familyId, tripId);
+}
+
+export async function reorderTravelItineraries(
+  userId: string,
+  familyId: string,
+  tripId: string,
+  input: { items: { id: string; itineraryDate: string }[] },
+) {
+  await requireMembership(userId, familyId);
+  const trip = await getTripOrThrow(familyId, tripId);
+  const existing = await listItineraries(familyId, tripId);
+
+  if (existing.length !== input.items.length) {
+    throw new HttpError(400, { error: 'invalid_payload', field: 'items' });
+  }
+
+  const existingIds = new Set(existing.map((item) => item.id));
+  const inputIds = new Set(input.items.map((item) => item.id));
+
+  if (
+    inputIds.size !== input.items.length ||
+    existing.length !== inputIds.size ||
+    [...inputIds].some((id) => !existingIds.has(id))
+  ) {
+    throw new HttpError(400, { error: 'invalid_payload', field: 'items' });
+  }
+
+  const sortOrderByDate = new Map<string, number>();
+  const updates = input.items.map((item) => {
+    const itineraryDate = normalizeDate(item.itineraryDate, 'itineraryDate');
+
+    if (itineraryDate < trip.starts_on || itineraryDate > trip.ends_on) {
+      throw new HttpError(400, {
+        error: 'invalid_payload',
+        field: 'itineraryDate',
+      });
+    }
+
+    const sortOrder = (sortOrderByDate.get(itineraryDate) ?? 0) + 1;
+    sortOrderByDate.set(itineraryDate, sortOrder);
+
+    return {
+      id: item.id,
+      itineraryDate,
+      sortOrder,
+    };
+  });
+
+  const supabase = getSupabaseAdmin();
+  const results = await Promise.all(
+    updates.map((item) =>
+      supabase
+        .from('travel_itineraries')
+        .update({
+          itinerary_date: item.itineraryDate,
+          sort_order: item.sortOrder,
+        })
+        .eq('family_id', familyId)
+        .eq('trip_id', tripId)
+        .eq('id', item.id),
+    ),
+  );
+
+  const updateError = results.find((result) => result.error)?.error;
+  if (updateError) {
+    throw updateError;
+  }
+
+  return getTravelTripDetail(userId, familyId, tripId);
+}
+
 async function getTripOrThrow(familyId: string, tripId: string) {
   const supabase = getSupabaseAdmin();
   const { data, error } = await supabase
@@ -160,6 +303,31 @@ async function getTripOrThrow(familyId: string, tripId: string) {
   }
 
   return data as TravelTrip;
+}
+
+async function getItineraryOrThrow(
+  familyId: string,
+  tripId: string,
+  itineraryId: string,
+) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('travel_itineraries')
+    .select('*')
+    .eq('family_id', familyId)
+    .eq('trip_id', tripId)
+    .eq('id', itineraryId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    throw new HttpError(404, { error: 'travel_itinerary_not_found' });
+  }
+
+  return data as TravelItinerary;
 }
 
 async function listItineraries(familyId: string, tripId: string) {
@@ -201,6 +369,36 @@ async function nextItinerarySortOrder(
 
   const lastSortOrder = (data?.[0]?.sort_order as number | undefined) ?? 0;
   return lastSortOrder + 1;
+}
+
+async function compactItinerarySortOrders(familyId: string, tripId: string) {
+  const itineraries = await listItineraries(familyId, tripId);
+  const sortOrderByDate = new Map<string, number>();
+
+  const supabase = getSupabaseAdmin();
+  const results = await Promise.all(
+    itineraries.map((itinerary) => {
+      const sortOrder =
+        (sortOrderByDate.get(itinerary.itinerary_date) ?? 0) + 1;
+      sortOrderByDate.set(itinerary.itinerary_date, sortOrder);
+
+      if (itinerary.sort_order === sortOrder) {
+        return Promise.resolve({ error: null });
+      }
+
+      return supabase
+        .from('travel_itineraries')
+        .update({ sort_order: sortOrder })
+        .eq('family_id', familyId)
+        .eq('trip_id', tripId)
+        .eq('id', itinerary.id);
+    }),
+  );
+
+  const updateError = results.find((result) => result.error)?.error;
+  if (updateError) {
+    throw updateError;
+  }
 }
 
 function normalizeText(value: string, maxLength: number, field: string) {
