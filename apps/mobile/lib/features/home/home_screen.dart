@@ -10,6 +10,7 @@ import '../parking/parking_screen.dart';
 import '../profile/profile_screen.dart';
 import '../schedule/schedule_hub_screen.dart';
 import '../scrap/scrap_screen.dart';
+import '../travel/travel_screen.dart';
 import '../../shared/member_filter.dart';
 import '../../shared/refreshable_scroll_view.dart';
 
@@ -451,6 +452,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               activeIcon: Icon(CupertinoIcons.bookmark_fill),
               label: '스크랩',
             ),
+            BottomNavigationBarItem(
+              icon: Icon(CupertinoIcons.airplane),
+              activeIcon: Icon(CupertinoIcons.airplane),
+              label: '여행',
+            ),
           ],
         ),
         tabBuilder: (context, index) {
@@ -476,6 +482,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   );
                 case 3:
                   return ScrapScreen(
+                    family: selectedFamily,
+                    families: families,
+                    sessionToken: widget.sessionToken,
+                    onSelectFamily: _selectFamily,
+                  );
+                case 4:
+                  return TravelScreen(
                     family: selectedFamily,
                     families: families,
                     sessionToken: widget.sessionToken,

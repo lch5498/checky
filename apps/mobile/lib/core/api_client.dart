@@ -882,6 +882,85 @@ class ApiClient {
     );
   }
 
+  Future<TravelDashboard> getTravelDashboard(
+    String sessionToken, {
+    required String familyId,
+  }) async {
+    final json = await _requestJson(
+      'GET',
+      '/api/mobile/families/$familyId/travels',
+      bearerToken: sessionToken,
+    );
+
+    return TravelDashboard.fromJson(json);
+  }
+
+  Future<TravelTrip> createTravelTrip(
+    String sessionToken, {
+    required String familyId,
+    required String title,
+    required DateTime startsOn,
+    required DateTime endsOn,
+  }) async {
+    final json = await _requestJson(
+      'POST',
+      '/api/mobile/families/$familyId/travels',
+      bearerToken: sessionToken,
+      body: {
+        'title': title,
+        'startsOn': _dateOnlyString(startsOn),
+        'endsOn': _dateOnlyString(endsOn),
+      },
+    );
+
+    return TravelTrip.fromJson(json);
+  }
+
+  Future<TravelTripDetail> getTravelTripDetail(
+    String sessionToken, {
+    required String familyId,
+    required String tripId,
+  }) async {
+    final json = await _requestJson(
+      'GET',
+      '/api/mobile/families/$familyId/travels/$tripId',
+      bearerToken: sessionToken,
+    );
+
+    return TravelTripDetail.fromJson(json);
+  }
+
+  Future<TravelItinerary> createTravelItinerary(
+    String sessionToken, {
+    required String familyId,
+    required String tripId,
+    required DateTime itineraryDate,
+    required String title,
+    String? content,
+    String? mapUrl,
+    TimeOfDayValue? startsAt,
+  }) async {
+    final body = <String, Object?>{
+      'itineraryDate': _dateOnlyString(itineraryDate),
+      'title': title,
+      'content': content,
+      'mapUrl': mapUrl,
+    };
+
+    if (startsAt != null) {
+      body['startsAt'] = startsAt.toApiString();
+    }
+
+    final json = await _requestJson(
+      'POST',
+      '/api/mobile/families/$familyId/travels/$tripId/itineraries',
+      bearerToken: sessionToken,
+      body: body,
+    );
+
+    return TravelItinerary.fromJson(json);
+  }
+
   Map<String, Object?> _scheduleBody({
     required String familyMemberId,
     required String title,
@@ -1791,6 +1870,116 @@ class ScrapLinkPreview {
       description: json['link_description'] as String?,
       imageUrl: json['link_image_url'] as String?,
       siteName: json['link_site_name'] as String?,
+    );
+  }
+}
+
+class TravelDashboard {
+  const TravelDashboard({required this.trips});
+
+  final List<TravelTrip> trips;
+
+  factory TravelDashboard.fromJson(Map<String, Object?> json) {
+    final trips = json['trips'] as List<Object?>? ?? [];
+
+    return TravelDashboard(
+      trips: trips
+          .map((item) => TravelTrip.fromJson(item as Map<String, Object?>))
+          .toList(),
+    );
+  }
+}
+
+class TravelTripDetail {
+  const TravelTripDetail({required this.trip, required this.itineraries});
+
+  final TravelTrip trip;
+  final List<TravelItinerary> itineraries;
+
+  factory TravelTripDetail.fromJson(Map<String, Object?> json) {
+    final itineraries = json['itineraries'] as List<Object?>? ?? [];
+
+    return TravelTripDetail(
+      trip: TravelTrip.fromJson(json['trip'] as Map<String, Object?>),
+      itineraries: itineraries
+          .map((item) => TravelItinerary.fromJson(item as Map<String, Object?>))
+          .toList(),
+    );
+  }
+}
+
+class TravelTrip {
+  const TravelTrip({
+    required this.id,
+    required this.familyId,
+    required this.title,
+    required this.startsOn,
+    required this.endsOn,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String familyId;
+  final String title;
+  final DateTime startsOn;
+  final DateTime endsOn;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  factory TravelTrip.fromJson(Map<String, Object?> json) {
+    return TravelTrip(
+      id: json['id'] as String,
+      familyId: json['family_id'] as String,
+      title: json['title'] as String,
+      startsOn: DateTime.parse(json['starts_on'] as String),
+      endsOn: DateTime.parse(json['ends_on'] as String),
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+      updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
+    );
+  }
+}
+
+class TravelItinerary {
+  const TravelItinerary({
+    required this.id,
+    required this.familyId,
+    required this.tripId,
+    required this.itineraryDate,
+    required this.title,
+    required this.content,
+    required this.mapUrl,
+    required this.startsAt,
+    required this.sortOrder,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String familyId;
+  final String tripId;
+  final DateTime itineraryDate;
+  final String title;
+  final String? content;
+  final String? mapUrl;
+  final TimeOfDayValue? startsAt;
+  final int sortOrder;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  factory TravelItinerary.fromJson(Map<String, Object?> json) {
+    return TravelItinerary(
+      id: json['id'] as String,
+      familyId: json['family_id'] as String,
+      tripId: json['trip_id'] as String,
+      itineraryDate: DateTime.parse(json['itinerary_date'] as String),
+      title: json['title'] as String,
+      content: json['content'] as String?,
+      mapUrl: json['map_url'] as String?,
+      startsAt: _parseOptionalTimeOfDayValue(json['starts_at'] as String?),
+      sortOrder: json['sort_order'] as int? ?? 1,
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+      updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
     );
   }
 }
