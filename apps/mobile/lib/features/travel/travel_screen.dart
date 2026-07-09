@@ -2847,24 +2847,28 @@ class _DraggableItineraryRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LongPressDraggable<TravelItinerary>(
-      data: itinerary,
-      onDragStarted: onDragStarted,
-      onDragEnd: (_) => onDragEnded(),
-      onDraggableCanceled: (_, _) => onDragEnded(),
-      onDragCompleted: onDragEnded,
-      feedback: SizedBox(
-        width: 280,
-        child: _ItineraryCard(itinerary: itinerary, elevated: true),
-      ),
-      childWhenDragging: IgnorePointer(
-        child: _ItineraryCard(itinerary: itinerary),
-      ),
-      child: CupertinoButton(
-        padding: EdgeInsets.zero,
-        onPressed: isDragging ? null : onTap,
-        child: _ItineraryCard(itinerary: itinerary),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return LongPressDraggable<TravelItinerary>(
+          data: itinerary,
+          onDragStarted: onDragStarted,
+          onDragEnd: (_) => onDragEnded(),
+          onDraggableCanceled: (_, _) => onDragEnded(),
+          onDragCompleted: onDragEnded,
+          feedback: SizedBox(
+            width: constraints.maxWidth,
+            child: _ItineraryCard(itinerary: itinerary, elevated: true),
+          ),
+          childWhenDragging: IgnorePointer(
+            child: _ItineraryCard(itinerary: itinerary),
+          ),
+          child: CupertinoButton(
+            padding: EdgeInsets.zero,
+            onPressed: isDragging ? null : onTap,
+            child: _ItineraryCard(itinerary: itinerary),
+          ),
+        );
+      },
     );
   }
 }
@@ -2889,12 +2893,6 @@ class _ItineraryCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         child: Row(
           children: [
-            Icon(
-              CupertinoIcons.line_horizontal_3,
-              color: AppColors.darkTextMuted,
-              size: 16,
-            ),
-            const SizedBox(width: 8),
             if (itinerary.startsAt != null) ...[
               Text(
                 _formatTime(itinerary.startsAt!),
