@@ -895,6 +895,126 @@ class ApiClient {
     return TravelDashboard.fromJson(json);
   }
 
+  Future<List<TravelTag>> getTravelTags(
+    String sessionToken, {
+    required String familyId,
+  }) async {
+    final json = await _requestJson(
+      'GET',
+      '/api/mobile/families/$familyId/travels/tags',
+      bearerToken: sessionToken,
+    );
+    final tags = json['tags'] as List<Object?>? ?? [];
+
+    return tags
+        .map((item) => TravelTag.fromJson(item as Map<String, Object?>))
+        .toList();
+  }
+
+  Future<TravelTag> createTravelTag(
+    String sessionToken, {
+    required String familyId,
+    required String name,
+  }) async {
+    final json = await _requestJson(
+      'POST',
+      '/api/mobile/families/$familyId/travels/tags',
+      bearerToken: sessionToken,
+      body: {'name': name},
+    );
+
+    return TravelTag.fromJson(json);
+  }
+
+  Future<TravelTag> updateTravelTag(
+    String sessionToken, {
+    required String familyId,
+    required String tagId,
+    required String name,
+  }) async {
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/travels/tags/$tagId',
+      bearerToken: sessionToken,
+      body: {'name': name},
+    );
+
+    return TravelTag.fromJson(json);
+  }
+
+  Future<void> deleteTravelTag(
+    String sessionToken, {
+    required String familyId,
+    required String tagId,
+  }) async {
+    await _requestJson(
+      'DELETE',
+      '/api/mobile/families/$familyId/travels/tags/$tagId',
+      bearerToken: sessionToken,
+    );
+  }
+
+  Future<List<TravelChecklistItem>> getTravelChecklistItems(
+    String sessionToken, {
+    required String familyId,
+  }) async {
+    final json = await _requestJson(
+      'GET',
+      '/api/mobile/families/$familyId/travels/checklist-items',
+      bearerToken: sessionToken,
+    );
+    final items = json['items'] as List<Object?>? ?? [];
+
+    return items
+        .map(
+          (item) => TravelChecklistItem.fromJson(item as Map<String, Object?>),
+        )
+        .toList();
+  }
+
+  Future<TravelChecklistItem> createTravelChecklistItem(
+    String sessionToken, {
+    required String familyId,
+    required String name,
+  }) async {
+    final json = await _requestJson(
+      'POST',
+      '/api/mobile/families/$familyId/travels/checklist-items',
+      bearerToken: sessionToken,
+      body: {'name': name},
+    );
+
+    return TravelChecklistItem.fromJson(json);
+  }
+
+  Future<TravelChecklistItem> updateTravelChecklistItem(
+    String sessionToken, {
+    required String familyId,
+    required String itemId,
+    required String name,
+  }) async {
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/travels/checklist-items/$itemId',
+      bearerToken: sessionToken,
+      body: {'name': name},
+    );
+
+    return TravelChecklistItem.fromJson(json);
+  }
+
+  Future<void> deleteTravelChecklistItem(
+    String sessionToken, {
+    required String familyId,
+    required String itemId,
+  }) async {
+    await _requestJson(
+      'DELETE',
+      '/api/mobile/families/$familyId/travels/checklist-items/$itemId',
+      bearerToken: sessionToken,
+    );
+  }
+
   Future<TravelTrip> createTravelTrip(
     String sessionToken, {
     required String familyId,
@@ -962,6 +1082,81 @@ class ApiClient {
     );
 
     return TravelTripDetail.fromJson(json);
+  }
+
+  Future<List<TravelTripChecklistItem>> getTravelTripChecklistItems(
+    String sessionToken, {
+    required String familyId,
+    required String tripId,
+  }) async {
+    final json = await _requestJson(
+      'GET',
+      '/api/mobile/families/$familyId/travels/$tripId/checklist-items',
+      bearerToken: sessionToken,
+    );
+    final items = json['items'] as List<Object?>? ?? [];
+
+    return items
+        .map(
+          (item) =>
+              TravelTripChecklistItem.fromJson(item as Map<String, Object?>),
+        )
+        .toList();
+  }
+
+  Future<TravelTripChecklistItem> createTravelTripChecklistItem(
+    String sessionToken, {
+    required String familyId,
+    required String tripId,
+    required String name,
+  }) async {
+    final json = await _requestJson(
+      'POST',
+      '/api/mobile/families/$familyId/travels/$tripId/checklist-items',
+      bearerToken: sessionToken,
+      body: {'name': name},
+    );
+
+    return TravelTripChecklistItem.fromJson(json);
+  }
+
+  Future<TravelTripChecklistItem> updateTravelTripChecklistItem(
+    String sessionToken, {
+    required String familyId,
+    required String tripId,
+    required String itemId,
+    String? name,
+    bool? isChecked,
+  }) async {
+    final body = <String, Object?>{};
+    if (name != null) {
+      body['name'] = name;
+    }
+    if (isChecked != null) {
+      body['isChecked'] = isChecked;
+    }
+
+    final json = await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/travels/$tripId/checklist-items/$itemId',
+      bearerToken: sessionToken,
+      body: body,
+    );
+
+    return TravelTripChecklistItem.fromJson(json);
+  }
+
+  Future<void> deleteTravelTripChecklistItem(
+    String sessionToken, {
+    required String familyId,
+    required String tripId,
+    required String itemId,
+  }) async {
+    await _requestJson(
+      'DELETE',
+      '/api/mobile/families/$familyId/travels/$tripId/checklist-items/$itemId',
+      bearerToken: sessionToken,
+    );
   }
 
   Future<TravelItinerary> createTravelItinerary(
@@ -2007,15 +2202,18 @@ class TravelTripDetail {
     required this.trip,
     required this.itineraries,
     required this.tags,
+    required this.checklistItems,
   });
 
   final TravelTrip trip;
   final List<TravelItinerary> itineraries;
   final List<TravelTag> tags;
+  final List<TravelTripChecklistItem> checklistItems;
 
   factory TravelTripDetail.fromJson(Map<String, Object?> json) {
     final itineraries = json['itineraries'] as List<Object?>? ?? [];
     final tags = json['tags'] as List<Object?>? ?? [];
+    final checklistItems = json['checklistItems'] as List<Object?>? ?? [];
 
     return TravelTripDetail(
       trip: TravelTrip.fromJson(json['trip'] as Map<String, Object?>),
@@ -2024,6 +2222,12 @@ class TravelTripDetail {
           .toList(),
       tags: tags
           .map((item) => TravelTag.fromJson(item as Map<String, Object?>))
+          .toList(),
+      checklistItems: checklistItems
+          .map(
+            (item) =>
+                TravelTripChecklistItem.fromJson(item as Map<String, Object?>),
+          )
           .toList(),
     );
   }
@@ -2151,6 +2355,80 @@ class TravelTag {
       name: json['name'] as String,
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
       updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
+    );
+  }
+}
+
+class TravelChecklistItem {
+  const TravelChecklistItem({
+    required this.id,
+    required this.familyId,
+    required this.name,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String familyId;
+  final String name;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  factory TravelChecklistItem.fromJson(Map<String, Object?> json) {
+    return TravelChecklistItem(
+      id: json['id'] as String,
+      familyId: json['family_id'] as String,
+      name: json['name'] as String,
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+      updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
+    );
+  }
+}
+
+class TravelTripChecklistItem {
+  const TravelTripChecklistItem({
+    required this.id,
+    required this.familyId,
+    required this.tripId,
+    required this.name,
+    required this.isChecked,
+    required this.sortOrder,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
+  final String id;
+  final String familyId;
+  final String tripId;
+  final String name;
+  final bool isChecked;
+  final int sortOrder;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  factory TravelTripChecklistItem.fromJson(Map<String, Object?> json) {
+    return TravelTripChecklistItem(
+      id: json['id'] as String,
+      familyId: json['family_id'] as String,
+      tripId: json['trip_id'] as String,
+      name: json['name'] as String,
+      isChecked: json['is_checked'] as bool? ?? false,
+      sortOrder: json['sort_order'] as int? ?? 1,
+      createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
+      updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
+    );
+  }
+
+  TravelTripChecklistItem copyWith({bool? isChecked}) {
+    return TravelTripChecklistItem(
+      id: id,
+      familyId: familyId,
+      tripId: tripId,
+      name: name,
+      isChecked: isChecked ?? this.isChecked,
+      sortOrder: sortOrder,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 }

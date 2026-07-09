@@ -159,6 +159,18 @@ class _TravelScreenState extends State<TravelScreen> {
     }
   }
 
+  Future<void> _openTravelSettings() async {
+    await Navigator.of(context).push(
+      CupertinoPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => _TravelSettingsScreen(
+          family: _family,
+          sessionToken: widget.sessionToken,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final dashboard = _dashboard;
@@ -166,6 +178,12 @@ class _TravelScreenState extends State<TravelScreen> {
     return CupertinoPageScaffold(
       backgroundColor: AppColors.darkBackground,
       navigationBar: CupertinoNavigationBar(
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(32, 32),
+          onPressed: _isLoading ? null : _openTravelSettings,
+          child: const Icon(CupertinoIcons.star),
+        ),
         middle: _FeatureFamilyTitle(
           family: _family,
           featureName: '여행',
@@ -226,6 +244,690 @@ class _TravelScreenState extends State<TravelScreen> {
   }
 }
 
+class _TravelSettingsScreen extends StatelessWidget {
+  const _TravelSettingsScreen({
+    required this.family,
+    required this.sessionToken,
+  });
+
+  final AppFamily family;
+  final String sessionToken;
+
+  void _openTagManager(BuildContext context) {
+    Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (context) =>
+            _TravelTagManageScreen(family: family, sessionToken: sessionToken),
+      ),
+    );
+  }
+
+  void _openChecklistManager(BuildContext context) {
+    Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (context) => _TravelChecklistManageScreen(
+          family: family,
+          sessionToken: sessionToken,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      backgroundColor: AppColors.darkBackground,
+      navigationBar: CupertinoNavigationBar(
+        automaticallyImplyLeading: false,
+        middle: const Text('여행 메뉴'),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('닫기'),
+        ),
+      ),
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          children: [
+            _TravelSettingsMenuRow(
+              icon: CupertinoIcons.tag,
+              title: '즐겨찾는 태그 관리',
+              subtitle: '식당, 카페, 숙소처럼 여행 일정에 붙일 태그를 관리해요.',
+              onTap: () => _openTagManager(context),
+            ),
+            const SizedBox(height: 12),
+            _TravelSettingsMenuRow(
+              icon: CupertinoIcons.checkmark_alt_circle,
+              title: '여행 체크리스트 관리',
+              subtitle: '여권, 충전기처럼 여행 전 챙길 준비물을 관리해요.',
+              onTap: () => _openChecklistManager(context),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TravelSettingsMenuRow extends StatelessWidget {
+  const _TravelSettingsMenuRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.darkSurface,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.darkBorder),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppColors.darkPrimarySoft,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(icon, color: AppColors.darkPrimary, size: 22),
+            ),
+            const SizedBox(width: 13),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: AppColors.darkTextPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: AppColors.darkTextMuted,
+                      fontSize: 13,
+                      height: 1.25,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Icon(
+              CupertinoIcons.chevron_forward,
+              color: AppColors.darkTextMuted,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TravelTagManageScreen extends StatefulWidget {
+  const _TravelTagManageScreen({
+    required this.family,
+    required this.sessionToken,
+  });
+
+  final AppFamily family;
+  final String sessionToken;
+
+  @override
+  State<_TravelTagManageScreen> createState() => _TravelTagManageScreenState();
+}
+
+class _TravelTagManageScreenState extends State<_TravelTagManageScreen> {
+  final _apiClient = ApiClient();
+
+  List<TravelTag> _tags = const [];
+  String? _message;
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadTags();
+  }
+
+  Future<void> _loadTags() async {
+    setState(() {
+      _isLoading = true;
+      _message = null;
+    });
+
+    try {
+      final tags = await _apiClient.getTravelTags(
+        widget.sessionToken,
+        familyId: widget.family.id,
+      );
+
+      if (mounted) {
+        setState(() {
+          _tags = tags;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _addTag() async {
+    final name = await _showTravelTextInput(
+      context,
+      title: '태그 추가',
+      placeholder: '예: 맛집',
+      maxLength: 24,
+    );
+
+    if (name == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _message = null;
+    });
+
+    try {
+      await _apiClient.createTravelTag(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        name: name,
+      );
+      await _loadTags();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _editTag(TravelTag tag) async {
+    final name = await _showTravelTextInput(
+      context,
+      title: '태그 수정',
+      placeholder: '태그명',
+      initialValue: tag.name,
+      maxLength: 24,
+    );
+
+    if (name == null || name == tag.name || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _message = null;
+    });
+
+    try {
+      await _apiClient.updateTravelTag(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        tagId: tag.id,
+        name: name,
+      );
+      await _loadTags();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteTag(TravelTag tag) async {
+    final confirmed = await _confirmTravelDelete(
+      context,
+      title: '태그를 삭제할까요?',
+      content: '이 태그가 붙은 여행 일정에서도 태그가 제거됩니다.',
+    );
+
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _message = null;
+    });
+
+    try {
+      await _apiClient.deleteTravelTag(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        tagId: tag.id,
+      );
+      await _loadTags();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _TravelManageScaffold(
+      title: '즐겨찾는 태그',
+      isSaving: _isSaving,
+      onAdd: _addTag,
+      onRefresh: _loadTags,
+      message: _message,
+      isLoading: _isLoading,
+      emptyIcon: CupertinoIcons.tag,
+      emptyTitle: '등록된 태그가 없습니다.',
+      emptySubtitle: '+ 버튼으로 자주 쓰는 태그를 추가해 주세요.',
+      children: [
+        for (final tag in _tags)
+          _TravelManageRow(
+            title: tag.name,
+            leading: CupertinoIcons.tag_fill,
+            onEdit: () => _editTag(tag),
+            onDelete: () => _deleteTag(tag),
+          ),
+      ],
+    );
+  }
+}
+
+class _TravelChecklistManageScreen extends StatefulWidget {
+  const _TravelChecklistManageScreen({
+    required this.family,
+    required this.sessionToken,
+  });
+
+  final AppFamily family;
+  final String sessionToken;
+
+  @override
+  State<_TravelChecklistManageScreen> createState() =>
+      _TravelChecklistManageScreenState();
+}
+
+class _TravelChecklistManageScreenState
+    extends State<_TravelChecklistManageScreen> {
+  final _apiClient = ApiClient();
+
+  List<TravelChecklistItem> _items = const [];
+  String? _message;
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadItems();
+  }
+
+  Future<void> _loadItems() async {
+    setState(() {
+      _isLoading = true;
+      _message = null;
+    });
+
+    try {
+      final items = await _apiClient.getTravelChecklistItems(
+        widget.sessionToken,
+        familyId: widget.family.id,
+      );
+
+      if (mounted) {
+        setState(() {
+          _items = items;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _addItem() async {
+    final name = await _showTravelTextInput(
+      context,
+      title: '체크리스트 추가',
+      placeholder: '예: 여권',
+      maxLength: 40,
+    );
+
+    if (name == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _message = null;
+    });
+
+    try {
+      await _apiClient.createTravelChecklistItem(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        name: name,
+      );
+      await _loadItems();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _editItem(TravelChecklistItem item) async {
+    final name = await _showTravelTextInput(
+      context,
+      title: '체크리스트 수정',
+      placeholder: '준비물',
+      initialValue: item.name,
+      maxLength: 40,
+    );
+
+    if (name == null || name == item.name || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _message = null;
+    });
+
+    try {
+      await _apiClient.updateTravelChecklistItem(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        itemId: item.id,
+        name: name,
+      );
+      await _loadItems();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _deleteItem(TravelChecklistItem item) async {
+    final confirmed = await _confirmTravelDelete(
+      context,
+      title: '준비물을 삭제할까요?',
+      content: '삭제한 체크리스트 항목은 복구할 수 없습니다.',
+    );
+
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _message = null;
+    });
+
+    try {
+      await _apiClient.deleteTravelChecklistItem(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        itemId: item.id,
+      );
+      await _loadItems();
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return _TravelManageScaffold(
+      title: '여행 체크리스트',
+      isSaving: _isSaving,
+      onAdd: _addItem,
+      onRefresh: _loadItems,
+      message: _message,
+      isLoading: _isLoading,
+      emptyIcon: CupertinoIcons.checkmark_alt_circle,
+      emptyTitle: '등록된 준비물이 없습니다.',
+      emptySubtitle: '+ 버튼으로 여행 전 챙길 항목을 추가해 주세요.',
+      children: [
+        for (final item in _items)
+          _TravelManageRow(
+            title: item.name,
+            leading: CupertinoIcons.checkmark_circle_fill,
+            onEdit: () => _editItem(item),
+            onDelete: () => _deleteItem(item),
+          ),
+      ],
+    );
+  }
+}
+
+class _TravelManageScaffold extends StatelessWidget {
+  const _TravelManageScaffold({
+    required this.title,
+    required this.isSaving,
+    required this.onAdd,
+    required this.onRefresh,
+    required this.message,
+    required this.isLoading,
+    required this.emptyIcon,
+    required this.emptyTitle,
+    required this.emptySubtitle,
+    required this.children,
+  });
+
+  final String title;
+  final bool isSaving;
+  final VoidCallback onAdd;
+  final Future<void> Function() onRefresh;
+  final String? message;
+  final bool isLoading;
+  final IconData emptyIcon;
+  final String emptyTitle;
+  final String emptySubtitle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      backgroundColor: AppColors.darkBackground,
+      navigationBar: CupertinoNavigationBar(
+        middle: Text(title),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(32, 32),
+          onPressed: isSaving ? null : onAdd,
+          child: isSaving
+              ? const CupertinoActivityIndicator()
+              : const Icon(CupertinoIcons.plus),
+        ),
+      ),
+      child: SafeArea(
+        child: RefreshableScrollView(
+          onRefresh: onRefresh,
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+          children: [
+            if (message != null) ...[
+              _InlineMessage(message: message!),
+              const SizedBox(height: 14),
+            ],
+            if (isLoading)
+              const Padding(
+                padding: EdgeInsets.only(top: 72),
+                child: Center(child: CupertinoActivityIndicator()),
+              )
+            else if (children.isEmpty)
+              _EmptyState(
+                icon: emptyIcon,
+                title: emptyTitle,
+                subtitle: emptySubtitle,
+                actionLabel: '추가하기',
+                onPressed: onAdd,
+              )
+            else
+              ...children,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TravelManageRow extends StatelessWidget {
+  const _TravelManageRow({
+    required this.title,
+    required this.leading,
+    required this.onEdit,
+    required this.onDelete,
+  });
+
+  final String title;
+  final IconData leading;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppColors.darkSurface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.darkBorder),
+      ),
+      child: Row(
+        children: [
+          Icon(leading, color: AppColors.darkPrimary, size: 20),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: AppColors.darkTextPrimary,
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(36, 34),
+            onPressed: onEdit,
+            child: Icon(
+              CupertinoIcons.pencil,
+              color: AppColors.darkTextSecondary,
+              size: 18,
+            ),
+          ),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(36, 34),
+            onPressed: onDelete,
+            child: Icon(
+              CupertinoIcons.trash,
+              color: AppColors.darkDanger,
+              size: 18,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+enum _TravelDetailTab { schedule, checklist }
+
 class TravelDetailScreen extends StatefulWidget {
   const TravelDetailScreen({
     super.key,
@@ -251,6 +953,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
   List<TravelItinerary>? _dragSnapshot;
   bool _dropAccepted = false;
   bool _isLoading = true;
+  _TravelDetailTab _selectedTab = _TravelDetailTab.schedule;
 
   @override
   void initState() {
@@ -336,6 +1039,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
           trip: updated,
           itineraries: detail?.itineraries ?? const [],
           tags: detail?.tags ?? const [],
+          checklistItems: detail?.checklistItems ?? const [],
         );
       });
       await _loadTrip();
@@ -358,6 +1062,138 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
     if (changed == true && mounted) {
       await _loadTrip();
     }
+  }
+
+  Future<void> _createChecklistItem() async {
+    final name = await _showTravelTextInput(
+      context,
+      title: '체크리스트 추가',
+      placeholder: '예: 여권',
+      maxLength: 40,
+    );
+
+    if (name == null || !mounted) {
+      return;
+    }
+
+    try {
+      final item = await _apiClient.createTravelTripChecklistItem(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        tripId: (_detail?.trip ?? widget.trip).id,
+        name: name,
+      );
+
+      if (mounted) {
+        _setChecklistItems([...?_detail?.checklistItems, item]);
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    }
+  }
+
+  Future<void> _toggleChecklistItem(TravelTripChecklistItem item) async {
+    final detail = _detail;
+    if (detail == null) {
+      return;
+    }
+
+    final nextChecked = !item.isChecked;
+    _setChecklistItems(
+      detail.checklistItems
+          .map(
+            (current) => current.id == item.id
+                ? current.copyWith(isChecked: nextChecked)
+                : current,
+          )
+          .toList(),
+    );
+
+    try {
+      final updated = await _apiClient.updateTravelTripChecklistItem(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        tripId: detail.trip.id,
+        itemId: item.id,
+        isChecked: nextChecked,
+      );
+
+      if (mounted) {
+        _setChecklistItems(
+          (_detail?.checklistItems ?? const [])
+              .map((current) => current.id == item.id ? updated : current)
+              .toList(),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+        await _loadTrip();
+      }
+    }
+  }
+
+  Future<void> _deleteChecklistItem(TravelTripChecklistItem item) async {
+    final detail = _detail;
+    if (detail == null) {
+      return;
+    }
+
+    final confirmed = await _confirmTravelDelete(
+      context,
+      title: '체크리스트를 삭제할까요?',
+      content: '삭제한 항목은 복구할 수 없습니다.',
+    );
+
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    try {
+      await _apiClient.deleteTravelTripChecklistItem(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        tripId: detail.trip.id,
+        itemId: item.id,
+      );
+
+      if (mounted) {
+        _setChecklistItems(
+          detail.checklistItems
+              .where((current) => current.id != item.id)
+              .toList(),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    }
+  }
+
+  void _setChecklistItems(List<TravelTripChecklistItem> checklistItems) {
+    final detail = _detail;
+    if (detail == null) {
+      return;
+    }
+
+    setState(() {
+      _detail = TravelTripDetail(
+        trip: detail.trip,
+        itineraries: detail.itineraries,
+        tags: detail.tags,
+        checklistItems: checklistItems,
+      );
+      _message = null;
+    });
   }
 
   Future<void> _moveItinerary(
@@ -397,6 +1233,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
         trip: detail.trip,
         itineraries: normalized,
         tags: detail.tags,
+        checklistItems: detail.checklistItems,
       );
       _message = null;
     });
@@ -458,6 +1295,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
         trip: detail.trip,
         itineraries: normalized,
         tags: detail.tags,
+        checklistItems: detail.checklistItems,
       );
     });
   }
@@ -481,30 +1319,22 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
             fontWeight: FontWeight.w700,
           ),
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              minimumSize: const Size(34, 32),
-              onPressed: _isLoading ? null : _editTrip,
-              child: const Text('수정'),
-            ),
-            CupertinoButton(
-              padding: EdgeInsets.zero,
-              minimumSize: const Size(32, 32),
-              onPressed: _isLoading ? null : () => _createItinerary(),
-              child: const Icon(CupertinoIcons.plus),
-            ),
-          ],
-        ),
       ),
       child: SafeArea(
         child: RefreshableScrollView(
           onRefresh: _loadTrip,
           padding: const EdgeInsets.fromLTRB(18, 16, 18, 36),
           children: [
-            _TripHeader(trip: trip),
+            _TripHeader(trip: trip, onEdit: _isLoading ? null : _editTrip),
+            const SizedBox(height: 14),
+            _TravelDetailSegmentedControl(
+              selectedTab: _selectedTab,
+              onChanged: (value) {
+                setState(() {
+                  _selectedTab = value;
+                });
+              },
+            ),
             if (_message != null) ...[
               const SizedBox(height: 14),
               _InlineMessage(message: _message!),
@@ -515,8 +1345,10 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
                 padding: EdgeInsets.only(top: 56),
                 child: Center(child: CupertinoActivityIndicator()),
               )
+            else if (_selectedTab == _TravelDetailTab.schedule)
+              ..._buildDaySections(trip, detail?.itineraries ?? [])
             else
-              ..._buildDaySections(trip, detail?.itineraries ?? []),
+              ..._buildChecklistItems(detail?.checklistItems ?? const []),
           ],
         ),
       ),
@@ -563,6 +1395,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
                     trip: _detail!.trip,
                     itineraries: _dragSnapshot!,
                     tags: _detail!.tags,
+                    checklistItems: _detail!.checklistItems,
                   );
                 }
                 _draggingItineraryId = null;
@@ -576,6 +1409,219 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
         if (index != days.length - 1) const SizedBox(height: 14),
       ],
     ];
+  }
+
+  List<Widget> _buildChecklistItems(List<TravelTripChecklistItem> items) {
+    if (items.isEmpty) {
+      return [
+        const _ChecklistEmptyState(),
+        _ChecklistAddLink(onPressed: _createChecklistItem),
+      ];
+    }
+
+    return [
+      for (final item in items)
+        _TravelTripChecklistRow(
+          item: item,
+          onToggle: () => _toggleChecklistItem(item),
+          onDelete: () => _deleteChecklistItem(item),
+        ),
+      _ChecklistAddLink(onPressed: _createChecklistItem),
+    ];
+  }
+}
+
+class _TravelDetailSegmentedControl extends StatelessWidget {
+  const _TravelDetailSegmentedControl({
+    required this.selectedTab,
+    required this.onChanged,
+  });
+
+  final _TravelDetailTab selectedTab;
+  final ValueChanged<_TravelDetailTab> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: CupertinoSlidingSegmentedControl<_TravelDetailTab>(
+        groupValue: selectedTab,
+        thumbColor: AppColors.darkPrimary,
+        backgroundColor: AppColors.darkSurfaceElevated,
+        children: {
+          _TravelDetailTab.schedule: _TravelSegmentLabel(
+            label: '일정',
+            selected: selectedTab == _TravelDetailTab.schedule,
+          ),
+          _TravelDetailTab.checklist: _TravelSegmentLabel(
+            label: '체크리스트',
+            selected: selectedTab == _TravelDetailTab.checklist,
+          ),
+        },
+        onValueChanged: (value) {
+          if (value != null) {
+            onChanged(value);
+          }
+        },
+      ),
+    );
+  }
+}
+
+class _TravelSegmentLabel extends StatelessWidget {
+  const _TravelSegmentLabel({required this.label, required this.selected});
+
+  final String label;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: selected
+              ? AppColors.darkBackground
+              : AppColors.darkTextPrimary,
+          fontSize: 14,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _TravelTripChecklistRow extends StatelessWidget {
+  const _TravelTripChecklistRow({
+    required this.item,
+    required this.onToggle,
+    required this.onDelete,
+  });
+
+  final TravelTripChecklistItem item;
+  final VoidCallback onToggle;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: AppColors.darkSurface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.darkBorder),
+      ),
+      child: Row(
+        children: [
+          CupertinoButton(
+            padding: const EdgeInsets.only(left: 14, right: 10),
+            minimumSize: const Size(44, 52),
+            onPressed: onToggle,
+            child: Icon(
+              item.isChecked
+                  ? CupertinoIcons.checkmark_circle_fill
+                  : CupertinoIcons.circle,
+              color: item.isChecked
+                  ? AppColors.darkPrimary
+                  : AppColors.darkTextMuted,
+              size: 23,
+            ),
+          ),
+          Expanded(
+            child: CupertinoButton(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              alignment: Alignment.centerLeft,
+              onPressed: onToggle,
+              child: Text(
+                item.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: item.isChecked
+                      ? AppColors.darkTextMuted
+                      : AppColors.darkTextPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  decoration: item.isChecked
+                      ? TextDecoration.lineThrough
+                      : null,
+                  decorationColor: AppColors.darkTextMuted,
+                  decorationThickness: 2,
+                ),
+              ),
+            ),
+          ),
+          CupertinoButton(
+            padding: EdgeInsets.zero,
+            minimumSize: const Size(44, 52),
+            onPressed: onDelete,
+            child: Icon(
+              CupertinoIcons.trash,
+              color: AppColors.darkDanger,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChecklistEmptyState extends StatelessWidget {
+  const _ChecklistEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 44, bottom: 6),
+      child: Column(
+        children: [
+          Icon(
+            CupertinoIcons.checkmark_alt_circle,
+            color: AppColors.darkTextMuted,
+            size: 34,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '체크리스트가 없습니다.',
+            style: TextStyle(
+              color: AppColors.darkTextPrimary,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            '여행 준비물을 하나씩 추가해 보세요.',
+            style: TextStyle(color: AppColors.darkTextMuted, fontSize: 13),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ChecklistAddLink extends StatelessWidget {
+  const _ChecklistAddLink({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      onPressed: onPressed,
+      child: Text(
+        '+ 체크리스트 추가하기',
+        style: TextStyle(
+          color: AppColors.darkTextMuted,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 }
 
@@ -1437,9 +2483,10 @@ class _TravelTripRow extends StatelessWidget {
 }
 
 class _TripHeader extends StatelessWidget {
-  const _TripHeader({required this.trip});
+  const _TripHeader({required this.trip, required this.onEdit});
 
   final TravelTrip trip;
+  final VoidCallback? onEdit;
 
   @override
   Widget build(BuildContext context) {
@@ -1451,33 +2498,58 @@ class _TripHeader extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: AppColors.darkBorder),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Text(
-            trip.title,
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 24,
-              fontWeight: FontWeight.w900,
-              height: 1.15,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _InfoPill(
-                icon: CupertinoIcons.calendar,
-                label:
-                    '${_formatDate(trip.startsOn)} ~ ${_formatDate(trip.endsOn)}',
+              Padding(
+                padding: const EdgeInsets.only(right: 58),
+                child: Text(
+                  trip.title,
+                  style: TextStyle(
+                    color: AppColors.darkTextPrimary,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900,
+                    height: 1.15,
+                  ),
+                ),
               ),
-              _InfoPill(
-                icon: CupertinoIcons.sun_max,
-                label: '${_daysBetween(trip.startsOn, trip.endsOn).length}일',
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _InfoPill(
+                    icon: CupertinoIcons.calendar,
+                    label:
+                        '${_formatDate(trip.startsOn)} ~ ${_formatDate(trip.endsOn)}',
+                  ),
+                  _InfoPill(
+                    icon: CupertinoIcons.sun_max,
+                    label:
+                        '${_daysBetween(trip.startsOn, trip.endsOn).length}일',
+                  ),
+                ],
               ),
             ],
+          ),
+          Positioned(
+            top: -5,
+            right: -6,
+            child: CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              minimumSize: Size.zero,
+              onPressed: onEdit,
+              child: Text(
+                '수정',
+                style: TextStyle(
+                  color: AppColors.darkPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
           ),
         ],
       ),
@@ -2451,6 +3523,109 @@ Future<DateTime?> _pickDateInRange(
       );
     },
   );
+}
+
+Future<String?> _showTravelTextInput(
+  BuildContext context, {
+  required String title,
+  required String placeholder,
+  String? initialValue,
+  required int maxLength,
+}) async {
+  final controller = TextEditingController(text: initialValue ?? '');
+  String? errorText;
+
+  final result = await showCupertinoDialog<String>(
+    context: context,
+    builder: (context) => StatefulBuilder(
+      builder: (context, setDialogState) {
+        return CupertinoAlertDialog(
+          title: Text(title),
+          content: Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Column(
+              children: [
+                CupertinoTextField(
+                  controller: controller,
+                  autofocus: true,
+                  placeholder: placeholder,
+                  maxLength: maxLength,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (_) {
+                    final value = controller.text.trim();
+                    if (value.isEmpty || value.length > maxLength) {
+                      setDialogState(() {
+                        errorText = '$maxLength자 이하로 입력해 주세요.';
+                      });
+                      return;
+                    }
+                    Navigator.of(context).pop(value);
+                  },
+                ),
+                if (errorText != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    errorText!,
+                    style: TextStyle(color: AppColors.darkDanger, fontSize: 12),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            CupertinoDialogAction(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('취소'),
+            ),
+            CupertinoDialogAction(
+              isDefaultAction: true,
+              onPressed: () {
+                final value = controller.text.trim();
+                if (value.isEmpty || value.length > maxLength) {
+                  setDialogState(() {
+                    errorText = '$maxLength자 이하로 입력해 주세요.';
+                  });
+                  return;
+                }
+                Navigator.of(context).pop(value);
+              },
+              child: const Text('저장'),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+
+  controller.dispose();
+  return result;
+}
+
+Future<bool> _confirmTravelDelete(
+  BuildContext context, {
+  required String title,
+  required String content,
+}) async {
+  final confirmed = await showCupertinoDialog<bool>(
+    context: context,
+    builder: (context) => CupertinoAlertDialog(
+      title: Text(title),
+      content: Text(content),
+      actions: [
+        CupertinoDialogAction(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('취소'),
+        ),
+        CupertinoDialogAction(
+          isDestructiveAction: true,
+          onPressed: () => Navigator.of(context).pop(true),
+          child: const Text('삭제'),
+        ),
+      ],
+    ),
+  );
+
+  return confirmed == true;
 }
 
 Future<TimeOfDayValue?> _showTimePicker(

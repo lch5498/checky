@@ -8,6 +8,7 @@ export type TravelTrip = {
   title: string;
   starts_on: string;
   ends_on: string;
+  checklist_seeded_at: string | null;
   created_by_user_id: string | null;
   created_at: string;
   updated_at: string;
@@ -38,7 +39,35 @@ export type TravelTag = {
   updated_at: string;
 };
 
-const DEFAULT_TRAVEL_TAGS = ['식당', '카페', '교통', '호텔', '관광', '쇼핑'];
+export type TravelChecklistItem = {
+  id: string;
+  family_id: string;
+  name: string;
+  created_by_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TravelTripChecklistItem = {
+  id: string;
+  family_id: string;
+  trip_id: string;
+  name: string;
+  is_checked: boolean;
+  sort_order: number;
+  created_by_user_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+const DEFAULT_TRAVEL_TAGS = ['식당', '카페', '교통', '호텔', '관광', '숙소'];
+const DEFAULT_TRAVEL_CHECKLIST_ITEMS = [
+  '여권',
+  '충전기',
+  '보조배터리',
+  '상비약',
+  '세면도구',
+];
 
 export async function getTravelDashboard(userId: string, familyId: string) {
   await requireMembership(userId, familyId);
@@ -56,6 +85,147 @@ export async function getTravelDashboard(userId: string, familyId: string) {
   }
 
   return { trips: (data ?? []) as TravelTrip[] };
+}
+
+export async function getTravelTags(userId: string, familyId: string) {
+  await requireMembership(userId, familyId);
+
+  return listTravelTags(userId, familyId);
+}
+
+export async function createTravelTag(
+  userId: string,
+  familyId: string,
+  input: { name: string },
+) {
+  await requireMembership(userId, familyId);
+
+  const [tag] = await ensureTravelTags(userId, familyId, [input.name]);
+  if (!tag) {
+    throw new HttpError(400, { error: 'invalid_payload', field: 'name' });
+  }
+
+  return tag;
+}
+
+export async function updateTravelTag(
+  userId: string,
+  familyId: string,
+  tagId: string,
+  input: { name: string },
+) {
+  await requireMembership(userId, familyId);
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('travel_tags')
+    .update({ name: normalizeText(input.name, 24, 'name') })
+    .eq('family_id', familyId)
+    .eq('id', tagId)
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    throw new HttpError(404, { error: 'travel_tag_not_found' });
+  }
+
+  return data as TravelTag;
+}
+
+export async function deleteTravelTag(
+  userId: string,
+  familyId: string,
+  tagId: string,
+) {
+  await requireMembership(userId, familyId);
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from('travel_tags')
+    .delete()
+    .eq('family_id', familyId)
+    .eq('id', tagId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function getTravelChecklistItems(
+  userId: string,
+  familyId: string,
+) {
+  await requireMembership(userId, familyId);
+
+  return listTravelChecklistItems(userId, familyId);
+}
+
+export async function createTravelChecklistItem(
+  userId: string,
+  familyId: string,
+  input: { name: string },
+) {
+  await requireMembership(userId, familyId);
+
+  const [item] = await ensureTravelChecklistItems(userId, familyId, [
+    input.name,
+  ]);
+  if (!item) {
+    throw new HttpError(400, { error: 'invalid_payload', field: 'name' });
+  }
+
+  return item;
+}
+
+export async function updateTravelChecklistItem(
+  userId: string,
+  familyId: string,
+  itemId: string,
+  input: { name: string },
+) {
+  await requireMembership(userId, familyId);
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('travel_checklist_items')
+    .update({ name: normalizeText(input.name, 40, 'name') })
+    .eq('family_id', familyId)
+    .eq('id', itemId)
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    throw new HttpError(404, { error: 'travel_checklist_item_not_found' });
+  }
+
+  return data as TravelChecklistItem;
+}
+
+export async function deleteTravelChecklistItem(
+  userId: string,
+  familyId: string,
+  itemId: string,
+) {
+  await requireMembership(userId, familyId);
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from('travel_checklist_items')
+    .delete()
+    .eq('family_id', familyId)
+    .eq('id', itemId);
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function createTravelTrip(
@@ -167,13 +337,124 @@ export async function getTravelTripDetail(
   tripId: string,
 ) {
   await requireMembership(userId, familyId);
-  const [trip, itineraries, tags] = await Promise.all([
-    getTripOrThrow(familyId, tripId),
+  const trip = await getTripOrThrow(familyId, tripId);
+  const [itineraries, tags, checklistItems] = await Promise.all([
     listItineraries(familyId, tripId),
     listTravelTags(userId, familyId),
+    listTravelTripChecklistItems(userId, familyId, trip),
   ]);
 
-  return { trip, itineraries, tags };
+  return { trip, itineraries, tags, checklistItems };
+}
+
+export async function getTravelTripChecklistItems(
+  userId: string,
+  familyId: string,
+  tripId: string,
+) {
+  await requireMembership(userId, familyId);
+  const trip = await getTripOrThrow(familyId, tripId);
+
+  return listTravelTripChecklistItems(userId, familyId, trip);
+}
+
+export async function createTravelTripChecklistItem(
+  userId: string,
+  familyId: string,
+  tripId: string,
+  input: { name: string },
+) {
+  await requireMembership(userId, familyId);
+  const trip = await getTripOrThrow(familyId, tripId);
+  await ensureTravelTripChecklistSeeded(userId, familyId, trip);
+
+  const name = normalizeText(input.name, 40, 'name');
+  await ensureTravelChecklistItems(userId, familyId, [name]);
+
+  const supabase = getSupabaseAdmin();
+  const sortOrder = await nextTravelTripChecklistSortOrder(familyId, tripId);
+  const { data, error } = await supabase
+    .from('travel_trip_checklist_items')
+    .insert({
+      family_id: familyId,
+      trip_id: tripId,
+      name,
+      sort_order: sortOrder,
+      created_by_user_id: userId,
+    })
+    .select('*')
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as TravelTripChecklistItem;
+}
+
+export async function updateTravelTripChecklistItem(
+  userId: string,
+  familyId: string,
+  tripId: string,
+  itemId: string,
+  input: { name?: string; isChecked?: boolean },
+) {
+  await requireMembership(userId, familyId);
+  await getTripOrThrow(familyId, tripId);
+
+  const update: { name?: string; is_checked?: boolean } = {};
+  if (input.name !== undefined) {
+    update.name = normalizeText(input.name, 40, 'name');
+  }
+  if (input.isChecked !== undefined) {
+    update.is_checked = input.isChecked;
+  }
+
+  if (Object.keys(update).length === 0) {
+    throw new HttpError(400, { error: 'invalid_payload' });
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('travel_trip_checklist_items')
+    .update(update)
+    .eq('family_id', familyId)
+    .eq('trip_id', tripId)
+    .eq('id', itemId)
+    .select('*')
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (!data) {
+    throw new HttpError(404, { error: 'travel_trip_checklist_item_not_found' });
+  }
+
+  return data as TravelTripChecklistItem;
+}
+
+export async function deleteTravelTripChecklistItem(
+  userId: string,
+  familyId: string,
+  tripId: string,
+  itemId: string,
+) {
+  await requireMembership(userId, familyId);
+  await getTripOrThrow(familyId, tripId);
+
+  const supabase = getSupabaseAdmin();
+  const { error } = await supabase
+    .from('travel_trip_checklist_items')
+    .delete()
+    .eq('family_id', familyId)
+    .eq('trip_id', tripId)
+    .eq('id', itemId);
+
+  if (error) {
+    throw error;
+  }
 }
 
 export async function createTravelItinerary(
@@ -465,6 +746,50 @@ async function listTravelTags(userId: string, familyId: string) {
   return (data ?? []) as TravelTag[];
 }
 
+async function listTravelChecklistItems(userId: string, familyId: string) {
+  await ensureTravelChecklistItems(
+    userId,
+    familyId,
+    DEFAULT_TRAVEL_CHECKLIST_ITEMS,
+  );
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('travel_checklist_items')
+    .select('*')
+    .eq('family_id', familyId)
+    .order('name', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as TravelChecklistItem[];
+}
+
+async function listTravelTripChecklistItems(
+  userId: string,
+  familyId: string,
+  trip: TravelTrip,
+) {
+  await ensureTravelTripChecklistSeeded(userId, familyId, trip);
+
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('travel_trip_checklist_items')
+    .select('*')
+    .eq('family_id', familyId)
+    .eq('trip_id', trip.id)
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as TravelTripChecklistItem[];
+}
+
 async function attachItineraryTags(
   familyId: string,
   itineraries: TravelItinerary[],
@@ -581,6 +906,110 @@ async function ensureTravelTags(
   return (data ?? []) as TravelTag[];
 }
 
+async function ensureTravelChecklistItems(
+  userId: string,
+  familyId: string,
+  itemNames: string[],
+) {
+  const names = normalizeChecklistItemNames(itemNames);
+  if (names.length === 0) {
+    return [] as TravelChecklistItem[];
+  }
+
+  const supabase = getSupabaseAdmin();
+  const { error: upsertError } = await supabase
+    .from('travel_checklist_items')
+    .upsert(
+      names.map((name) => ({
+        family_id: familyId,
+        name,
+        created_by_user_id: userId,
+      })),
+      { onConflict: 'family_id,name', ignoreDuplicates: true },
+    );
+
+  if (upsertError) {
+    throw upsertError;
+  }
+
+  const { data, error } = await supabase
+    .from('travel_checklist_items')
+    .select('*')
+    .eq('family_id', familyId)
+    .in('name', names);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as TravelChecklistItem[];
+}
+
+async function ensureTravelTripChecklistSeeded(
+  userId: string,
+  familyId: string,
+  trip: TravelTrip,
+) {
+  if (trip.checklist_seeded_at) {
+    return;
+  }
+
+  const checklistItems = await listTravelChecklistItems(userId, familyId);
+  const supabase = getSupabaseAdmin();
+
+  if (checklistItems.length > 0) {
+    const { error: insertError } = await supabase
+      .from('travel_trip_checklist_items')
+      .upsert(
+        checklistItems.map((item, index) => ({
+          family_id: familyId,
+          trip_id: trip.id,
+          name: item.name,
+          sort_order: index + 1,
+          created_by_user_id: userId,
+        })),
+        { onConflict: 'trip_id,name', ignoreDuplicates: true },
+      );
+
+    if (insertError) {
+      throw insertError;
+    }
+  }
+
+  const { error } = await supabase
+    .from('travel_trips')
+    .update({ checklist_seeded_at: new Date().toISOString() })
+    .eq('family_id', familyId)
+    .eq('id', trip.id);
+
+  if (error) {
+    throw error;
+  }
+
+  trip.checklist_seeded_at = new Date().toISOString();
+}
+
+async function nextTravelTripChecklistSortOrder(
+  familyId: string,
+  tripId: string,
+) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
+    .from('travel_trip_checklist_items')
+    .select('sort_order')
+    .eq('family_id', familyId)
+    .eq('trip_id', tripId)
+    .order('sort_order', { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw error;
+  }
+
+  const lastSortOrder = (data?.[0]?.sort_order as number | undefined) ?? 0;
+  return lastSortOrder + 1;
+}
+
 async function nextItinerarySortOrder(
   familyId: string,
   tripId: string,
@@ -695,6 +1124,14 @@ function normalizeOptionalTime(value: string | undefined, field: string) {
 function normalizeTagNames(values: string[]) {
   const names = values
     .map((value) => normalizeOptionalText(value, 24, 'tagNames'))
+    .filter((value): value is string => Boolean(value));
+
+  return [...new Set(names)];
+}
+
+function normalizeChecklistItemNames(values: string[]) {
+  const names = values
+    .map((value) => normalizeOptionalText(value, 40, 'name'))
     .filter((value): value is string => Boolean(value));
 
   return [...new Set(names)];

@@ -1216,7 +1216,7 @@ class _ScheduleBriefingTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
-            constraints: const BoxConstraints(minWidth: 90, maxWidth: 106),
+            constraints: const BoxConstraints(minWidth: 100, maxWidth: 116),
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
             decoration: BoxDecoration(
               color: AppColors.darkPrimarySoft,
