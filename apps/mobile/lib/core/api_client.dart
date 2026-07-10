@@ -976,12 +976,18 @@ class ApiClient {
     String sessionToken, {
     required String familyId,
     required String name,
+    String? parentId,
   }) async {
+    final body = <String, Object?>{'name': name};
+    if (parentId != null) {
+      body['parentId'] = parentId;
+    }
+
     final json = await _requestJson(
       'POST',
       '/api/mobile/families/$familyId/travels/checklist-items',
       bearerToken: sessionToken,
-      body: {'name': name},
+      body: body,
     );
 
     return TravelChecklistItem.fromJson(json);
@@ -1013,6 +1019,25 @@ class ApiClient {
       '/api/mobile/families/$familyId/travels/checklist-items/$itemId',
       bearerToken: sessionToken,
     );
+  }
+
+  Future<List<TravelChecklistItem>> saveTravelTripChecklistItemsToFavorites(
+    String sessionToken, {
+    required String familyId,
+    required String tripId,
+  }) async {
+    final json = await _requestJson(
+      'POST',
+      '/api/mobile/families/$familyId/travels/$tripId/checklist-items/favorites',
+      bearerToken: sessionToken,
+    );
+    final items = json['items'] as List<Object?>? ?? [];
+
+    return items
+        .map(
+          (item) => TravelChecklistItem.fromJson(item as Map<String, Object?>),
+        )
+        .toList();
   }
 
   Future<TravelTrip> createTravelTrip(
@@ -1109,12 +1134,18 @@ class ApiClient {
     required String familyId,
     required String tripId,
     required String name,
+    String? parentId,
   }) async {
+    final body = <String, Object?>{'name': name};
+    if (parentId != null) {
+      body['parentId'] = parentId;
+    }
+
     final json = await _requestJson(
       'POST',
       '/api/mobile/families/$familyId/travels/$tripId/checklist-items',
       bearerToken: sessionToken,
-      body: {'name': name},
+      body: body,
     );
 
     return TravelTripChecklistItem.fromJson(json);
@@ -2363,6 +2394,7 @@ class TravelChecklistItem {
   const TravelChecklistItem({
     required this.id,
     required this.familyId,
+    required this.parentId,
     required this.name,
     required this.createdAt,
     required this.updatedAt,
@@ -2370,6 +2402,7 @@ class TravelChecklistItem {
 
   final String id;
   final String familyId;
+  final String? parentId;
   final String name;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -2378,6 +2411,7 @@ class TravelChecklistItem {
     return TravelChecklistItem(
       id: json['id'] as String,
       familyId: json['family_id'] as String,
+      parentId: json['parent_id'] as String?,
       name: json['name'] as String,
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
       updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
@@ -2390,6 +2424,7 @@ class TravelTripChecklistItem {
     required this.id,
     required this.familyId,
     required this.tripId,
+    required this.parentId,
     required this.name,
     required this.isChecked,
     required this.sortOrder,
@@ -2400,6 +2435,7 @@ class TravelTripChecklistItem {
   final String id;
   final String familyId;
   final String tripId;
+  final String? parentId;
   final String name;
   final bool isChecked;
   final int sortOrder;
@@ -2411,6 +2447,7 @@ class TravelTripChecklistItem {
       id: json['id'] as String,
       familyId: json['family_id'] as String,
       tripId: json['trip_id'] as String,
+      parentId: json['parent_id'] as String?,
       name: json['name'] as String,
       isChecked: json['is_checked'] as bool? ?? false,
       sortOrder: json['sort_order'] as int? ?? 1,
@@ -2424,6 +2461,7 @@ class TravelTripChecklistItem {
       id: id,
       familyId: familyId,
       tripId: tripId,
+      parentId: parentId,
       name: name,
       isChecked: isChecked ?? this.isChecked,
       sortOrder: sortOrder,

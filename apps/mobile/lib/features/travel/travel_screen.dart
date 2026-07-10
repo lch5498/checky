@@ -647,11 +647,11 @@ class _TravelChecklistManageScreenState
     }
   }
 
-  Future<void> _addItem() async {
+  Future<void> _addItem({TravelChecklistItem? parent}) async {
     final name = await _showTravelTextInput(
       context,
-      title: '체크리스트 추가',
-      placeholder: '예: 여권',
+      title: parent == null ? '체크리스트 추가' : '${parent.name} 하위 항목 추가',
+      placeholder: parent == null ? '예: 여권' : '예: 여권 사본',
       maxLength: 40,
     );
 
@@ -669,6 +669,7 @@ class _TravelChecklistManageScreenState
         widget.sessionToken,
         familyId: widget.family.id,
         name: name,
+        parentId: parent?.id,
       );
       await _loadItems();
     } catch (error) {
@@ -767,10 +768,22 @@ class _TravelChecklistManageScreenState
 
   @override
   Widget build(BuildContext context) {
+    final childrenByParentId = <String, List<TravelChecklistItem>>{};
+    final parentItems = <TravelChecklistItem>[];
+
+    for (final item in _items) {
+      final parentId = item.parentId;
+      if (parentId == null) {
+        parentItems.add(item);
+      } else {
+        childrenByParentId.putIfAbsent(parentId, () => []).add(item);
+      }
+    }
+
     return _TravelManageScaffold(
       title: '여행 체크리스트',
       isSaving: _isSaving,
-      onAdd: _addItem,
+      onAdd: () => _addItem(),
       onRefresh: _loadItems,
       message: _message,
       isLoading: _isLoading,
@@ -778,13 +791,23 @@ class _TravelChecklistManageScreenState
       emptyTitle: '등록된 준비물이 없습니다.',
       emptySubtitle: '+ 버튼으로 여행 전 챙길 항목을 추가해 주세요.',
       children: [
-        for (final item in _items)
+        for (final item in parentItems) ...[
           _TravelManageRow(
             title: item.name,
             leading: CupertinoIcons.checkmark_circle_fill,
             onEdit: () => _editItem(item),
             onDelete: () => _deleteItem(item),
+            onAddChild: () => _addItem(parent: item),
           ),
+          for (final child in childrenByParentId[item.id] ?? const [])
+            _TravelManageRow(
+              title: child.name,
+              leading: CupertinoIcons.checkmark_circle,
+              depth: 1,
+              onEdit: () => _editItem(child),
+              onDelete: () => _deleteItem(child),
+            ),
+        ],
       ],
     );
   }
@@ -867,21 +890,27 @@ class _TravelManageRow extends StatelessWidget {
     required this.leading,
     required this.onEdit,
     required this.onDelete,
+    this.onAddChild,
+    this.depth = 0,
   });
 
   final String title;
   final IconData leading;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
+  final VoidCallback? onAddChild;
+  final int depth;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.only(left: depth == 0 ? 0 : 24, bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(18),
+        color: depth == 0
+            ? AppColors.darkSurface
+            : AppColors.darkSurfaceElevated,
+        borderRadius: BorderRadius.circular(depth == 0 ? 18 : 15),
         border: Border.all(color: AppColors.darkBorder),
       ),
       child: Row(
@@ -910,6 +939,17 @@ class _TravelManageRow extends StatelessWidget {
               size: 18,
             ),
           ),
+          if (onAddChild != null)
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(36, 34),
+              onPressed: onAddChild,
+              child: Icon(
+                CupertinoIcons.plus_circle,
+                color: AppColors.darkTextSecondary,
+                size: 18,
+              ),
+            ),
           CupertinoButton(
             padding: EdgeInsets.zero,
             minimumSize: const Size(36, 34),
@@ -1064,11 +1104,11 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
     }
   }
 
-  Future<void> _createChecklistItem() async {
+  Future<void> _createChecklistItem({TravelTripChecklistItem? parent}) async {
     final name = await _showTravelTextInput(
       context,
-      title: '체크리스트 추가',
-      placeholder: '예: 여권',
+      title: parent == null ? '체크리스트 추가' : '${parent.name} 하위 항목 추가',
+      placeholder: parent == null ? '예: 여권' : '예: 여권 사본',
       maxLength: 40,
     );
 
@@ -1082,6 +1122,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
         familyId: widget.family.id,
         tripId: (_detail?.trip ?? widget.trip).id,
         name: name,
+        parentId: parent?.id,
       );
 
       if (mounted) {
@@ -1166,9 +1207,54 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
       if (mounted) {
         _setChecklistItems(
           detail.checklistItems
-              .where((current) => current.id != item.id)
+              .where(
+                (current) =>
+                    current.id != item.id && current.parentId != item.id,
+              )
               .toList(),
         );
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    }
+  }
+
+  Future<void> _saveChecklistItemsToFavorites() async {
+    final detail = _detail;
+    if (detail == null || detail.checklistItems.isEmpty) {
+      return;
+    }
+
+    final confirmed = await _confirmTravelDelete(
+      context,
+      title: '즐겨찾기를 덮어쓸까요?',
+      content: '기존 즐겨찾는 체크리스트가 모두 삭제되고 현재 여행 체크리스트로 대체됩니다.',
+      confirmLabel: '덮어쓰기',
+    );
+
+    if (!confirmed || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _message = null;
+    });
+
+    try {
+      await _apiClient.saveTravelTripChecklistItemsToFavorites(
+        widget.sessionToken,
+        familyId: widget.family.id,
+        tripId: detail.trip.id,
+      );
+
+      if (mounted) {
+        setState(() {
+          _message = '현재 여행 체크리스트를 즐겨찾기에 저장했습니다.';
+        });
       }
     } catch (error) {
       if (mounted) {
@@ -1459,18 +1545,42 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
     if (items.isEmpty) {
       return [
         const _ChecklistEmptyState(),
-        _ChecklistAddLink(onPressed: _createChecklistItem),
+        _ChecklistAddLink(onPressed: () => _createChecklistItem()),
       ];
     }
 
+    final childrenByParentId = <String, List<TravelTripChecklistItem>>{};
+    final parentItems = <TravelTripChecklistItem>[];
+
+    for (final item in items) {
+      final parentId = item.parentId;
+      if (parentId == null) {
+        parentItems.add(item);
+      } else {
+        childrenByParentId.putIfAbsent(parentId, () => []).add(item);
+      }
+    }
+
+    final visibleParents = parentItems.isEmpty ? items : parentItems;
+
     return [
-      for (final item in items)
+      _ChecklistFavoriteSaveLink(onPressed: _saveChecklistItemsToFavorites),
+      for (final item in visibleParents) ...[
         _TravelTripChecklistRow(
           item: item,
           onToggle: () => _toggleChecklistItem(item),
           onDelete: () => _deleteChecklistItem(item),
+          onAddChild: () => _createChecklistItem(parent: item),
         ),
-      _ChecklistAddLink(onPressed: _createChecklistItem),
+        for (final child in childrenByParentId[item.id] ?? const [])
+          _TravelTripChecklistRow(
+            item: child,
+            depth: 1,
+            onToggle: () => _toggleChecklistItem(child),
+            onDelete: () => _deleteChecklistItem(child),
+          ),
+      ],
+      _ChecklistAddLink(onPressed: () => _createChecklistItem()),
     ];
   }
 }
@@ -1541,19 +1651,28 @@ class _TravelTripChecklistRow extends StatelessWidget {
     required this.item,
     required this.onToggle,
     required this.onDelete,
+    this.onAddChild,
+    this.depth = 0,
   });
 
   final TravelTripChecklistItem item;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
+  final VoidCallback? onAddChild;
+  final int depth;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: EdgeInsets.only(
+        left: depth == 0 ? 0 : 24,
+        bottom: depth == 0 ? 10 : 8,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(18),
+        color: depth == 0
+            ? AppColors.darkSurface
+            : AppColors.darkSurfaceElevated,
+        borderRadius: BorderRadius.circular(depth == 0 ? 18 : 15),
         border: Border.all(color: AppColors.darkBorder),
       ),
       child: Row(
@@ -1596,6 +1715,17 @@ class _TravelTripChecklistRow extends StatelessWidget {
               ),
             ),
           ),
+          if (onAddChild != null)
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(40, 52),
+              onPressed: onAddChild,
+              child: Icon(
+                CupertinoIcons.plus_circle,
+                color: AppColors.darkTextSecondary,
+                size: 18,
+              ),
+            ),
           CupertinoButton(
             padding: EdgeInsets.zero,
             minimumSize: const Size(44, 52),
@@ -1642,6 +1772,32 @@ class _ChecklistEmptyState extends StatelessWidget {
             style: TextStyle(color: AppColors.darkTextMuted, fontSize: 13),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _ChecklistFavoriteSaveLink extends StatelessWidget {
+  const _ChecklistFavoriteSaveLink({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: CupertinoButton(
+        padding: const EdgeInsets.only(bottom: 10),
+        minimumSize: Size.zero,
+        onPressed: onPressed,
+        child: Text(
+          '즐겨찾기에 저장',
+          style: TextStyle(
+            color: AppColors.darkTextMuted,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }
@@ -3671,6 +3827,7 @@ Future<bool> _confirmTravelDelete(
   BuildContext context, {
   required String title,
   required String content,
+  String confirmLabel = '삭제',
 }) async {
   final confirmed = await showCupertinoDialog<bool>(
     context: context,
@@ -3685,7 +3842,7 @@ Future<bool> _confirmTravelDelete(
         CupertinoDialogAction(
           isDestructiveAction: true,
           onPressed: () => Navigator.of(context).pop(true),
-          child: const Text('삭제'),
+          child: Text(confirmLabel),
         ),
       ],
     ),

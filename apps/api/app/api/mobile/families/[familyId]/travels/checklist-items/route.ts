@@ -4,7 +4,11 @@ import {
 } from '../../../../../../../src/travels';
 import { jsonFromError } from '../../../../../../../src/http';
 import { authenticateMobileRequest } from '../../../../../../../src/mobile-auth';
-import { readJsonObject, requiredString } from '../../../../../../../src/validation';
+import {
+  optionalString,
+  readJsonObject,
+  requiredString,
+} from '../../../../../../../src/validation';
 
 export const runtime = 'nodejs';
 
@@ -33,6 +37,7 @@ export async function POST(request: Request, context: RouteContext) {
     const payload = await readJsonObject(request);
     const item = await createTravelChecklistItem(userId, familyId, {
       name: requiredString(payload, 'name', { maxLength: 40 }),
+      parentId: optionalString(payload, 'parentId'),
     });
 
     return Response.json(item, { status: 201 });
