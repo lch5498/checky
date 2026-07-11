@@ -16,6 +16,7 @@ export type ScrapChannel = {
   canEdit?: boolean;
   canDelete?: boolean;
   hasRecentPosts?: boolean;
+  latestPostCreatedAt?: string | null;
 };
 
 export type ScrapPost = {
@@ -97,7 +98,7 @@ export async function getScrapDashboard(userId: string, familyId: string) {
   const recentSince = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   const { data: recentPosts, error: recentPostsError } = await supabase
     .from('scrap_posts')
-    .select('channel_id')
+    .select('channel_id, created_at')
     .eq('family_id', familyId)
     .gte('created_at', recentSince);
 
@@ -106,10 +107,22 @@ export async function getScrapDashboard(userId: string, familyId: string) {
   }
 
   const recentChannelIds = new Set(
-    ((recentPosts ?? []) as Array<{ channel_id: string }>).map(
-      (post) => post.channel_id,
+    ((recentPosts ?? []) as Array<{ channel_id: string }>).map((post) =>
+      post.channel_id,
     ),
   );
+  const latestPostCreatedAtByChannel = new Map<string, string>();
+
+  for (const post of (recentPosts ?? []) as Array<{
+    channel_id: string;
+    created_at: string;
+  }>) {
+    const current = latestPostCreatedAtByChannel.get(post.channel_id);
+
+    if (!current || post.created_at > current) {
+      latestPostCreatedAtByChannel.set(post.channel_id, post.created_at);
+    }
+  }
 
   return {
     channels: (await attachAuthorNicknames(
@@ -117,7 +130,12 @@ export async function getScrapDashboard(userId: string, familyId: string) {
       (data ?? []) as ScrapChannel[],
     )).map((channel) =>
       withChannelManagePermissions(
-        { ...channel, hasRecentPosts: recentChannelIds.has(channel.id) },
+        {
+          ...channel,
+          hasRecentPosts: recentChannelIds.has(channel.id),
+          latestPostCreatedAt:
+            latestPostCreatedAtByChannel.get(channel.id) ?? null,
+        },
         userId,
         membership.role,
       ),

@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/refreshable_scroll_view.dart';
+import 'scrap_read_state.dart';
 
 class ScrapScreen extends StatefulWidget {
   const ScrapScreen({
@@ -63,10 +64,29 @@ class _ScrapScreenState extends State<ScrapScreen> {
         widget.sessionToken,
         familyId: _family.id,
       );
+      final channels = await Future.wait(
+        dashboard.channels.map((channel) async {
+          final latestPostCreatedAt = channel.latestPostCreatedAt;
+
+          if (!channel.hasRecentPosts || latestPostCreatedAt == null) {
+            return channel.copyWith(hasRecentPosts: false);
+          }
+
+          final readAt = await ScrapReadState.readAt(
+            familyId: _family.id,
+            channelId: channel.id,
+          );
+
+          return channel.copyWith(
+            hasRecentPosts:
+                readAt == null || latestPostCreatedAt.isAfter(readAt),
+          );
+        }),
+      );
 
       if (mounted) {
         setState(() {
-          _dashboard = dashboard;
+          _dashboard = ScrapDashboard(channels: channels);
         });
       }
     } catch (error) {
@@ -309,7 +329,15 @@ class _ScrapChannelScreenState extends State<ScrapChannelScreen> {
   @override
   void initState() {
     super.initState();
-    _loadChannel();
+    unawaited(_markReadAndLoadChannel());
+  }
+
+  Future<void> _markReadAndLoadChannel() async {
+    await ScrapReadState.markRead(
+      familyId: widget.family.id,
+      channelId: widget.channel.id,
+    );
+    await _loadChannel();
   }
 
   Future<void> _loadChannel() async {

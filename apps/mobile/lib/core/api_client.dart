@@ -2068,6 +2068,7 @@ class ScrapChannel {
     required this.canEdit,
     required this.canDelete,
     required this.hasRecentPosts,
+    this.latestPostCreatedAt,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -2080,6 +2081,7 @@ class ScrapChannel {
   final bool canEdit;
   final bool canDelete;
   final bool hasRecentPosts;
+  final DateTime? latestPostCreatedAt;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -2093,8 +2095,27 @@ class ScrapChannel {
       canEdit: json['canEdit'] as bool? ?? false,
       canDelete: json['canDelete'] as bool? ?? false,
       hasRecentPosts: json['hasRecentPosts'] as bool? ?? false,
+      latestPostCreatedAt: (json['latestPostCreatedAt'] as String?) == null
+          ? null
+          : DateTime.parse(json['latestPostCreatedAt'] as String).toLocal(),
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
       updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
+    );
+  }
+
+  ScrapChannel copyWith({bool? hasRecentPosts}) {
+    return ScrapChannel(
+      id: id,
+      familyId: familyId,
+      name: name,
+      sortOrder: sortOrder,
+      authorNickname: authorNickname,
+      canEdit: canEdit,
+      canDelete: canDelete,
+      hasRecentPosts: hasRecentPosts ?? this.hasRecentPosts,
+      latestPostCreatedAt: latestPostCreatedAt,
+      createdAt: createdAt,
+      updatedAt: updatedAt,
     );
   }
 }
