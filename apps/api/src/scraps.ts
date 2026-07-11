@@ -157,13 +157,13 @@ export async function getRecentScrapActivities(
         .select('*')
         .eq('family_id', familyId)
         .order('created_at', { ascending: false })
-        .limit(3),
+        .limit(5),
       supabase
         .from('scrap_comments')
         .select('*')
         .eq('family_id', familyId)
         .order('created_at', { ascending: false })
-        .limit(3),
+        .limit(5),
     ]);
 
   if (postsError) {
@@ -253,7 +253,7 @@ export async function getRecentScrapActivities(
       })
       .filter((activity): activity is ScrapRecentActivity => activity !== null)
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, 3),
+      .slice(0, 5),
   };
 }
 
