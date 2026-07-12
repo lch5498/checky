@@ -6,6 +6,7 @@ import '../../core/api_client.dart';
 import '../../core/theme_preference.dart';
 import '../../design_system/app_colors.dart';
 import '../family/family_screen.dart';
+import '../notification/notification_history_screen.dart';
 import '../parking/parking_screen.dart';
 import '../schedule/schedule_hub_screen.dart';
 import '../scrap/scrap_screen.dart';
@@ -563,6 +564,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
+        leading: _HomeNotificationButton(sessionToken: widget.sessionToken),
         middle: _HomeTitle(
           family: selectedFamily,
           canSwitch: _families.length > 1,
@@ -704,6 +706,29 @@ class _HomeNavigationTrailing extends StatelessWidget {
         );
       },
       child: const Icon(CupertinoIcons.gear),
+    );
+  }
+}
+
+class _HomeNotificationButton extends StatelessWidget {
+  const _HomeNotificationButton({required this.sessionToken});
+
+  final String sessionToken;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      minimumSize: const Size(32, 32),
+      onPressed: () {
+        Navigator.of(context, rootNavigator: true).push(
+          CupertinoPageRoute<void>(
+            builder: (_) =>
+                NotificationHistoryScreen(sessionToken: sessionToken),
+          ),
+        );
+      },
+      child: const Icon(CupertinoIcons.bell),
     );
   }
 }
@@ -949,6 +974,7 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
   Widget build(BuildContext context) {
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
+        leading: _HomeNotificationButton(sessionToken: widget.sessionToken),
         middle: _HomeTitle(
           family: widget.family,
           canSwitch: widget.families.length > 1,

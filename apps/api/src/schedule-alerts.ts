@@ -1,4 +1,5 @@
 import { sendFcmNotification, type FcmSendResult } from './fcm';
+import { recordPushNotificationHistory } from './notifications';
 import { getSupabaseAdmin } from './supabase';
 
 const DEFAULT_LOOKBACK_MINUTES = 5;
@@ -159,6 +160,23 @@ export async function dispatchDueScheduleAlerts(now = new Date()) {
         successCount,
         failureCount,
         errorSummary,
+      });
+
+      await recordPushNotificationHistory({
+        userIds: sendResults
+            .filter(({ result }) => result.ok)
+            .map(({ pushToken }) => pushToken.user_id),
+        familyId: schedule.family_id,
+        scheduleId: schedule.id,
+        type: 'schedule_alert',
+        title,
+        body,
+        data: {
+          type: 'schedule_alert',
+          scheduleId: schedule.id,
+          familyId: schedule.family_id,
+          startsAt: schedule.starts_at,
+        },
       });
 
       return {

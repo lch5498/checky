@@ -115,6 +115,25 @@ class ApiClient {
     );
   }
 
+  Future<List<PushNotificationHistoryItem>> getPushNotificationHistory(
+    String sessionToken,
+  ) async {
+    final json = await _requestJson(
+      'GET',
+      '/api/mobile/notifications',
+      bearerToken: sessionToken,
+    );
+    final notifications = json['notifications'] as List<Object?>? ?? const [];
+
+    return notifications
+        .map(
+          (notification) => PushNotificationHistoryItem.fromJson(
+            notification as Map<String, Object?>,
+          ),
+        )
+        .toList();
+  }
+
   Future<List<FamilySummary>> listFamilies(String sessionToken) async {
     final json = await _requestJson(
       'GET',
@@ -1454,6 +1473,35 @@ class AppUser {
       id: json['id'] as String,
       nickname: json['nickname'] as String,
       lastLoginAt: json['last_login_at'] as String?,
+    );
+  }
+}
+
+class PushNotificationHistoryItem {
+  const PushNotificationHistoryItem({
+    required this.id,
+    required this.type,
+    required this.title,
+    required this.body,
+    required this.familyName,
+    required this.sentAt,
+  });
+
+  final String id;
+  final String type;
+  final String title;
+  final String body;
+  final String? familyName;
+  final DateTime sentAt;
+
+  factory PushNotificationHistoryItem.fromJson(Map<String, Object?> json) {
+    return PushNotificationHistoryItem(
+      id: json['id'] as String,
+      type: json['type'] as String,
+      title: json['title'] as String,
+      body: json['body'] as String,
+      familyName: json['familyName'] as String?,
+      sentAt: DateTime.parse(json['sentAt'] as String).toLocal(),
     );
   }
 }
