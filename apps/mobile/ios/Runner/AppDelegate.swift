@@ -123,7 +123,7 @@ import UIKit
         return
       }
 
-      let subject = arguments["subject"] as? String ?? "체키 가족 초대"
+      let subject = arguments["subject"] as? String ?? "체키 그룹 초대"
       let presenter = self.topViewController(from: controller)
 
       let activityController = UIActivityViewController(

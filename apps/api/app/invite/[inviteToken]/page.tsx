@@ -7,19 +7,19 @@ type InvitePageProps = {
 };
 
 export const metadata: Metadata = {
-  title: '체키 가족 초대',
-  description: '체키에서 가족 일정과 주차 위치를 함께 관리해요.',
+  title: '체키 그룹 초대',
+  description: '체키에서 그룹 일정과 주차 위치를 함께 관리해요.',
   openGraph: {
-    title: '체키 가족 초대',
-    description: '체키에서 가족 일정과 주차 위치를 함께 관리해요.',
+    title: '체키 그룹 초대',
+    description: '체키에서 그룹 일정과 주차 위치를 함께 관리해요.',
     siteName: '체키',
     type: 'website',
     locale: 'ko_KR',
   },
   twitter: {
     card: 'summary',
-    title: '체키 가족 초대',
-    description: '체키에서 가족 일정과 주차 위치를 함께 관리해요.',
+    title: '체키 그룹 초대',
+    description: '체키에서 그룹 일정과 주차 위치를 함께 관리해요.',
   },
 };
 
@@ -32,10 +32,10 @@ export default async function InvitePage({ params }: InvitePageProps) {
     <main className="invite-shell">
       <section className="invite-card">
         <div className="invite-icon">체키</div>
-        <p className="eyebrow">가족 초대</p>
+        <p className="eyebrow">그룹 초대</p>
         <h1>체키에서 초대를 열어주세요</h1>
         <p className="description">
-          가족 일정과 주차 정보를 함께 관리할 수 있도록 체키 앱으로 이동합니다.
+          그룹 일정과 주차 정보를 함께 관리할 수 있도록 체키 앱으로 이동합니다.
           앱이 열리지 않으면 아래 버튼을 눌러주세요.
         </p>
         <a className="primary-button" href={appUrl}>

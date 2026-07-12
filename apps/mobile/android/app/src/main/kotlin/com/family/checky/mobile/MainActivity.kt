@@ -29,7 +29,7 @@ class MainActivity : FlutterActivity() {
             when (call.method) {
                 "shareText" -> {
                     val text = call.argument<String>("text")
-                    val subject = call.argument<String>("subject") ?: "체키 가족 초대"
+                    val subject = call.argument<String>("subject") ?: "체키 그룹 초대"
 
                     if (text.isNullOrBlank()) {
                         result.error("invalid_arguments", "text is required", null)

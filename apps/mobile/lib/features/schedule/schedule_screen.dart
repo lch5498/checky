@@ -261,7 +261,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     final selectedFamilyId = await showCupertinoModalPopup<String>(
       context: context,
       builder: (popupContext) => CupertinoActionSheet(
-        title: Text('가족 전환'),
+        title: Text('그룹 전환'),
         actions: widget.families
             .map(
               (family) => CupertinoActionSheetAction(
@@ -304,7 +304,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
     if (dashboard == null || dashboard.members.isEmpty) {
       setState(() {
-        _message = '일정을 등록할 가족 구성원이 필요합니다.';
+        _message = '일정을 등록할 그룹 구성원이 필요합니다.';
       });
       return;
     }
@@ -489,8 +489,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           child: _EmptyState(
                             icon: CupertinoIcons.person_2,
-                            title: '가족 구성원이 없습니다.',
-                            subtitle: '가족 구성원이 있어야 누구 일정인지 지정할 수 있습니다.',
+                            title: '그룹 구성원이 없습니다.',
+                            subtitle: '그룹 구성원이 있어야 누구 일정인지 지정할 수 있습니다.',
                             actionLabel: '다시 불러오기',
                             onPressed: _loadSchedules,
                           ),
@@ -2308,7 +2308,7 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
     final selectedId = await showCupertinoModalPopup<String>(
       context: context,
       builder: (popupContext) => CupertinoActionSheet(
-        title: Text('가족 구성원'),
+        title: Text('그룹 구성원'),
         actions: widget.members
             .map(
               (member) => CupertinoActionSheetAction(

@@ -67,7 +67,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
   Future<void> _createFamily() async {
     final name = await showCupertinoDialog<String>(
       context: context,
-      builder: (_) => const _FamilyNameDialog(title: '가족 만들기'),
+      builder: (_) => const _FamilyNameDialog(title: '그룹 만들기'),
     );
 
     if (name == null) {
@@ -310,7 +310,7 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
     final name = await showCupertinoDialog<String>(
       context: context,
       builder: (_) =>
-          _FamilyNameDialog(title: '가족 이름 수정', initialName: detail.family.name),
+          _FamilyNameDialog(title: '그룹 이름 수정', initialName: detail.family.name),
     );
 
     if (name == null) {
@@ -337,8 +337,8 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
     }
 
     final confirmed = await _confirm(
-      title: '가족 삭제',
-      message: '${detail.family.name} 가족을 삭제할까요? 구성원 연결과 초대가 함께 삭제됩니다.',
+      title: '그룹 삭제',
+      message: '${detail.family.name} 그룹을 삭제할까요? 구성원 연결과 초대가 함께 삭제됩니다.',
       actionText: '삭제',
       destructive: true,
     );
@@ -445,7 +445,7 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
 
     final confirmed = await _confirm(
       title: '구성원 삭제',
-      message: '${member.nickname}님을 ${detail.family.name} 가족에서 삭제할까요?',
+      message: '${member.nickname}님을 ${detail.family.name} 그룹에서 삭제할까요?',
       actionText: '삭제',
       destructive: true,
     );
@@ -569,7 +569,7 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
     return CupertinoPageScaffold(
       backgroundColor: AppColors.darkBackground,
       navigationBar: CupertinoNavigationBar(
-        middle: Text(detail?.family.name ?? '가족'),
+        middle: Text(detail?.family.name ?? '그룹'),
         trailing: detail?.canManage == true
             ? CupertinoButton(
                 padding: EdgeInsets.zero,
@@ -606,7 +606,7 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
                     ),
                     _ActionButton(
                       icon: CupertinoIcons.trash,
-                      title: '가족 삭제',
+                      title: '그룹 삭제',
                       destructive: true,
                       onPressed: _isLoading ? null : _deleteFamily,
                     ),
@@ -1158,14 +1158,14 @@ class _FamilyNameDialogState extends State<_FamilyNameDialog> {
 
     if (name.isEmpty) {
       setState(() {
-        _message = '가족 이름을 입력해 주세요.';
+        _message = '그룹 이름을 입력해 주세요.';
       });
       return;
     }
 
     if (name.length > 50) {
       setState(() {
-        _message = '가족 이름은 50자 이하로 입력해 주세요.';
+        _message = '그룹 이름은 50자 이하로 입력해 주세요.';
       });
       return;
     }
@@ -1489,7 +1489,7 @@ class _InviteResultDialogState extends State<_InviteResultDialog> {
   Future<void> _shareLink() async {
     await _shareChannel.invokeMethod<void>('shareText', {
       'text': widget.invitation.inviteUrl,
-      'subject': '체키 가족 초대',
+      'subject': '체키 그룹 초대',
     });
   }
 
@@ -1596,7 +1596,7 @@ class _EmptyFamilies extends StatelessWidget {
           ),
           SizedBox(height: 10),
           Text(
-            '아직 등록된 가족이 없습니다.',
+            '아직 등록된 그룹이 없습니다.',
             style: TextStyle(
               color: AppColors.darkTextPrimary,
               fontSize: 17,
@@ -1606,7 +1606,7 @@ class _EmptyFamilies extends StatelessWidget {
           ),
           SizedBox(height: 6),
           Text(
-            '오른쪽 위 + 버튼으로 가족을 먼저 만들어 주세요.',
+            '오른쪽 위 + 버튼으로 그룹을 먼저 만들어 주세요.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: AppColors.darkTextSecondary,

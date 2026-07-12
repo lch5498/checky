@@ -119,7 +119,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       builder: (dialogContext) {
         return CupertinoAlertDialog(
           title: Text('구성원 이름도 바꿀까요?'),
-          content: Text('여러 모임에 속해 있습니다. 연결된 구성원 이름도 모두 같은 이름으로 변경할까요?'),
+          content: Text('여러 그룹에 속해 있습니다. 연결된 구성원 이름도 모두 같은 이름으로 변경할까요?'),
           actions: [
             CupertinoDialogAction(
               onPressed: () => Navigator.of(dialogContext).pop(null),

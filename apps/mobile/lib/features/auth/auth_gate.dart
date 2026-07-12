@@ -669,7 +669,7 @@ class _NicknameSetupScreenState extends State<_NicknameSetupScreen> {
 
     if (nickname.isEmpty) {
       setState(() {
-        _validationMessage = '가족이 알아볼 수 있는 이름을 입력해 주세요.';
+        _validationMessage = '구성원이 알아볼 수 있는 이름을 입력해 주세요.';
       });
       return;
     }
@@ -862,7 +862,7 @@ class _LoginTitle extends StatelessWidget {
         ),
         SizedBox(height: 12),
         Text(
-          '가족 일정과 주차 자리, 오늘 챙길 일을 체키 하나로 가볍게 확인해요.',
+          '그룹 일정과 주차 자리, 오늘 챙길 일을 체키 하나로 가볍게 확인해요.',
           style: TextStyle(
             color: AppColors.darkTextSecondary,
             fontSize: 17,
@@ -873,7 +873,7 @@ class _LoginTitle extends StatelessWidget {
         ),
         SizedBox(height: 18),
         Text(
-          'Checky, 우리 가족 체크 비서',
+          'Checky, 우리 그룹 체크 비서',
           style: TextStyle(
             color: AppColors.brandCoral,
             fontSize: 14,

@@ -2035,7 +2035,7 @@ class _TravelTripFormScreenState extends State<_TravelTripFormScreen> {
               children: [
                 _LabeledTextField(
                   label: '여행 제목',
-                  placeholder: '예: 제주 가족여행',
+                  placeholder: '예: 제주 여행',
                   controller: _titleController,
                 ),
                 const SizedBox(height: 14),

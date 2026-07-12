@@ -15,10 +15,10 @@ export const metadata: Metadata = {
 const deletedData = [
   '계정 식별 정보와 로그인 연결 정보',
   '프로필 닉네임과 앱 설정',
-  '모임, 구성원, 초대 정보',
+  '그룹, 구성원, 초대 정보',
   '일정, 반복 일정, 기념일 정보',
   '차량, 주차 위치, 즐겨찾기 정보',
-  '학교·학원 정보와 사용자가 입력한 전화번호',
+  '반복 일정 정보와 사용자가 입력한 전화번호',
 ];
 
 export default function AccountDeletionPage() {

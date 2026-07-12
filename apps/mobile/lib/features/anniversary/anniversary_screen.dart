@@ -93,7 +93,7 @@ class _AnniversaryScreenState extends State<AnniversaryScreen> {
     final selectedFamilyId = await showCupertinoModalPopup<String>(
       context: context,
       builder: (popupContext) => CupertinoActionSheet(
-        title: Text('가족 전환'),
+        title: Text('그룹 전환'),
         actions: widget.families
             .map(
               (family) => CupertinoActionSheetAction(

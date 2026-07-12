@@ -231,10 +231,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final shouldAccept = await showCupertinoDialog<bool>(
       context: context,
       builder: (dialogContext) => CupertinoAlertDialog(
-        title: Text('가족 초대 수락'),
+        title: Text('그룹 초대 수락'),
         content: Padding(
           padding: const EdgeInsets.only(top: 8),
-          child: Text('이 초대 링크로 가족에 참여할까요?'),
+          child: Text('이 초대 링크로 그룹에 참여할까요?'),
         ),
         actions: [
           CupertinoDialogAction(
@@ -286,7 +286,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
           title: Text('초대 수락 완료'),
           content: Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text('${detail.family.name} 가족에 연결되었습니다.'),
+            child: Text('${detail.family.name} 그룹에 연결되었습니다.'),
           ),
           actions: [
             CupertinoDialogAction(
@@ -413,7 +413,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     final selectedFamilyId = await showCupertinoModalPopup<String>(
       context: context,
       builder: (popupContext) => CupertinoActionSheet(
-        title: Text('가족 전환'),
+        title: Text('그룹 전환'),
         actions: _families
             .map(
               (summary) => CupertinoActionSheetAction(
@@ -1693,8 +1693,8 @@ class _FamilyRequiredIntro extends StatelessWidget {
             Expanded(
               child: _IntroFeaturePill(
                 icon: CupertinoIcons.calendar,
-                title: '아이 일정 관리',
-                description: '학교와 학원 시간을 가족이 함께 확인',
+                title: '반복 일정 관리',
+                description: '반복 일정 시간을 그룹이 함께 확인',
                 color: AppColors.darkPrimary,
               ),
             ),
@@ -1711,7 +1711,7 @@ class _FamilyRequiredIntro extends StatelessWidget {
         ),
         const SizedBox(height: 16),
         Text(
-          '일정, 차량, 주차 기록은 모두 가족 단위로 저장됩니다. 가족을 만들거나 초대 링크를 수락하면 홈에서 바로 사용할 수 있어요.',
+          '일정, 차량, 주차 기록은 모두 그룹 단위로 저장됩니다. 그룹을 만들거나 초대 링크를 수락하면 홈에서 바로 사용할 수 있어요.',
           style: TextStyle(
             color: AppColors.darkTextMuted,
             fontSize: 14,
@@ -1733,7 +1733,7 @@ class _FamilyRequiredIntro extends StatelessWidget {
             onPressed: onOpenFamilyManagement,
             child: const Center(
               child: Text(
-                '가족 등록하기',
+                '그룹 등록하기',
                 style: TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w800,
@@ -1754,7 +1754,7 @@ class _FamilyRequiredIntro extends StatelessWidget {
             onPressed: onReloadFamilies,
             child: Center(
               child: Text(
-                '가족 목록 새로고침',
+                '그룹 목록 새로고침',
                 style: TextStyle(
                   color: AppColors.darkPrimary,
                   fontSize: 16,

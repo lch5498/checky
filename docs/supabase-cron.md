@@ -193,5 +193,5 @@ limit 1;
 - 중복 발송 방지는 `schedule_alert_deliveries`의 `(schedule_id, alert_due_at)` unique 제약으로 처리합니다.
 - Supabase Cron이 잠시 늦게 호출되어도 5분 lookback 안에서는 발송됩니다.
 - lookback은 Vercel 환경변수 `SCHEDULE_ALERT_LOOKBACK_MINUTES`로 조정할 수 있습니다.
-- 푸시 제목은 `{가족이름} - {일정제목}` 형식입니다.
+- 푸시 제목은 `{그룹이름} - {일정제목}` 형식입니다.
 - 푸시 본문은 `정시`, `10분전`, `1시간전`, `1일전` 형식입니다.

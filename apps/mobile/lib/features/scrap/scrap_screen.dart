@@ -108,7 +108,7 @@ class _ScrapScreenState extends State<ScrapScreen> {
     final selected = await showCupertinoModalPopup<AppFamily>(
       context: context,
       builder: (context) => CupertinoActionSheet(
-        title: const Text('스크랩을 볼 모임을 선택해 주세요'),
+        title: const Text('스크랩을 볼 그룹을 선택해 주세요'),
         actions: widget.families
             .map(
               (family) => CupertinoActionSheetAction(

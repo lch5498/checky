@@ -285,7 +285,7 @@ class _ParkingScreenState extends State<ParkingScreen> {
     final selectedFamilyId = await showCupertinoModalPopup<String>(
       context: context,
       builder: (sheetContext) => CupertinoActionSheet(
-        title: Text('가족 전환'),
+        title: Text('그룹 전환'),
         actions: widget.families
             .map(
               (family) => CupertinoActionSheetAction(

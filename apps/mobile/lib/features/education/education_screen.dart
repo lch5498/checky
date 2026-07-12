@@ -182,7 +182,7 @@ class _EducationScreenState extends State<EducationScreen> {
     final selectedFamilyId = await showCupertinoModalPopup<String>(
       context: context,
       builder: (popupContext) => CupertinoActionSheet(
-        title: Text('가족 전환'),
+        title: Text('그룹 전환'),
         actions: widget.families
             .map(
               (family) => CupertinoActionSheetAction(
@@ -221,7 +221,7 @@ class _EducationScreenState extends State<EducationScreen> {
 
     if (dashboard == null || dashboard.members.isEmpty) {
       setState(() {
-        _message = '반복 일정을 등록할 가족 구성원이 필요합니다.';
+        _message = '반복 일정을 등록할 그룹 구성원이 필요합니다.';
       });
       return;
     }
@@ -972,7 +972,7 @@ class _EducationProgramFormScreenState
     final selectedId = await showCupertinoModalPopup<String>(
       context: context,
       builder: (popupContext) => CupertinoActionSheet(
-        title: Text('가족 구성원'),
+        title: Text('그룹 구성원'),
         actions: widget.members
             .map(
               (member) => CupertinoActionSheetAction(
@@ -1837,7 +1837,7 @@ class _EducationProgramFormScreenState
                 _TextFieldRow(
                   label: '이름',
                   controller: _nameController,
-                  placeholder: '예: 영어학원',
+                  placeholder: '예: 영어 수업',
                 ),
                 _PickerRow(
                   label: '구성원',

@@ -79,7 +79,7 @@ class SettingsScreen extends StatelessWidget {
             _SettingsMenuRow(
               icon: CupertinoIcons.person_2,
               title: '그룹 관리',
-              subtitle: '가족 그룹과 구성원을 관리해요',
+              subtitle: '그룹과 그룹 구성원을 관리해요',
               onPressed: () => _openGroups(context),
             ),
             _SettingsMenuRow(
