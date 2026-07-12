@@ -157,99 +157,106 @@ class _AlertOffsetInputSheetState extends State<_AlertOffsetInputSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.darkSurface,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: widget.onCancel,
-                    child: const Text('취소'),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '직접 설정',
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
+    return AnimatedPadding(
+      duration: const Duration(milliseconds: 180),
+      curve: Curves.easeOut,
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: Container(
+        color: AppColors.darkSurface,
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 14, 18, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: widget.onCancel,
+                      child: const Text('취소'),
                     ),
-                  ),
-                  const Spacer(),
-                  CupertinoButton(
-                    padding: EdgeInsets.zero,
-                    onPressed: _submit,
-                    child: const Text('완료'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: CupertinoTextField(
-                      controller: _amountController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      placeholder: '숫자',
-                      textAlign: TextAlign.center,
+                    const Spacer(),
+                    Text(
+                      '직접 설정',
                       style: TextStyle(
                         color: AppColors.darkTextPrimary,
-                        fontSize: 20,
+                        fontSize: 17,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 0,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: CupertinoSlidingSegmentedControl<_AlertOffsetUnit>(
-                      groupValue: _unit,
-                      children: const {
-                        _AlertOffsetUnit.minute: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text('분'),
+                    const Spacer(),
+                    CupertinoButton(
+                      padding: EdgeInsets.zero,
+                      onPressed: _submit,
+                      child: const Text('완료'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: CupertinoTextField(
+                        controller: _amountController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        placeholder: '숫자',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: AppColors.darkTextPrimary,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
                         ),
-                        _AlertOffsetUnit.hour: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text('시간'),
-                        ),
-                        _AlertOffsetUnit.day: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: Text('일'),
-                        ),
-                      },
-                      onValueChanged: (value) {
-                        if (value != null) {
-                          setState(() => _unit = value);
-                        }
-                      },
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: CupertinoSlidingSegmentedControl<_AlertOffsetUnit>(
+                        groupValue: _unit,
+                        children: const {
+                          _AlertOffsetUnit.minute: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            child: Text('분'),
+                          ),
+                          _AlertOffsetUnit.hour: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            child: Text('시간'),
+                          ),
+                          _AlertOffsetUnit.day: Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            child: Text('일'),
+                          ),
+                        },
+                        onValueChanged: (value) {
+                          if (value != null) {
+                            setState(() => _unit = value);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                if (_message != null) ...[
+                  const SizedBox(height: 10),
+                  Text(
+                    _message!,
+                    style: TextStyle(
+                      color: AppColors.darkDanger,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
                     ),
                   ),
                 ],
-              ),
-              if (_message != null) ...[
-                const SizedBox(height: 10),
-                Text(
-                  _message!,
-                  style: TextStyle(
-                    color: AppColors.darkDanger,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                  ),
-                ),
               ],
-            ],
+            ),
           ),
         ),
       ),
