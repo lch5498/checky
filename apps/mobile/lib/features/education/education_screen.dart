@@ -11,6 +11,7 @@ import '../../shared/schedule_section_switcher.dart';
 const _weekdayLabels = ['일', '월', '화', '수', '목', '금', '토'];
 const _weekdayPickerOrder = [1, 2, 3, 4, 5, 6, 0];
 const _weekOfMonthLabels = {1: '첫째주', 2: '둘째주', 3: '셋째주', 4: '넷째주'};
+const _monthlyDefaultDays = [1, 15, 20, 25];
 const _phoneContactLabelOptions = ['선생님', '데스크', '직접입력'];
 const _phoneChannel = MethodChannel('checky/phone');
 const _contactChannel = MethodChannel('checky/contacts');
@@ -834,6 +835,8 @@ class _EducationProgramFormResult {
 
 enum _PhoneContactAddMode { contact, manual }
 
+enum _MonthlyRuleMode { weekday, dayOfMonth }
+
 class _PhoneContactDraft {
   _PhoneContactDraft({
     required this.label,
@@ -886,6 +889,7 @@ class _EducationProgramFormScreenState
   late DateTime _startsOn;
   late DateTime _endsOn;
   late EducationRecurrenceType _recurrenceType;
+  late _MonthlyRuleMode _monthlyRuleMode;
   late final Map<int, _DayRule> _dayRules;
   late final Map<int, _MonthlyRule> _monthlyRules;
   late final List<_PhoneContactDraft> _phoneContacts;
@@ -903,6 +907,12 @@ class _EducationProgramFormScreenState
     _startsOn = _dateOnly(program?.startsOn ?? now);
     _endsOn = _dateOnly(program?.endsOn ?? now.add(const Duration(days: 30)));
     _recurrenceType = program?.recurrenceType ?? EducationRecurrenceType.weekly;
+    _monthlyRuleMode =
+        (program?.monthlySchedules ?? const []).any(
+          (schedule) => schedule.dayOfMonth != null,
+        )
+        ? _MonthlyRuleMode.dayOfMonth
+        : _MonthlyRuleMode.weekday;
     _alertOffsetMinutes = program?.alertOffsetMinutes;
     _dayRules = {
       for (var weekday = 0; weekday < 7; weekday++)
@@ -918,7 +928,7 @@ class _EducationProgramFormScreenState
       for (var weekOfMonth = 1; weekOfMonth <= 4; weekOfMonth++)
         weekOfMonth: _MonthlyRule(
           enabled: false,
-          dayOfMonth: 1,
+          dayOfMonth: _monthlyDefaultDays[weekOfMonth - 1],
           weekday: 1,
           startsAt: const TimeOfDayValue(hour: 15, minute: 0),
           endsAt: const TimeOfDayValue(hour: 16, minute: 0),
@@ -944,7 +954,9 @@ class _EducationProgramFormScreenState
     for (final schedule in program?.monthlySchedules ?? const []) {
       _monthlyRules[schedule.weekOfMonth] = _MonthlyRule(
         enabled: true,
-        dayOfMonth: schedule.dayOfMonth,
+        dayOfMonth:
+            schedule.dayOfMonth ??
+            _monthlyDefaultDays[schedule.weekOfMonth - 1],
         weekday: schedule.weekday,
         startsAt: schedule.startsAt,
         endsAt: schedule.endsAt,
@@ -1267,9 +1279,90 @@ class _EducationProgramFormScreenState
       return;
     }
 
+    if (_isMonthlyDayInUse(selectedDay, exceptWeekOfMonth: weekOfMonth)) {
+      setState(() {
+        _message = '이미 선택한 날짜입니다.';
+      });
+      return;
+    }
+
     setState(() {
       _monthlyRules[weekOfMonth] = rule.copyWith(dayOfMonth: selectedDay);
     });
+  }
+
+  bool _isMonthlyDayInUse(int dayOfMonth, {required int exceptWeekOfMonth}) {
+    return _monthlyRules.entries.any(
+      (entry) =>
+          entry.key != exceptWeekOfMonth &&
+          entry.value.enabled &&
+          entry.value.dayOfMonth == dayOfMonth,
+    );
+  }
+
+  List<int> _visibleMonthlyRuleKeys() {
+    if (_monthlyRuleMode != _MonthlyRuleMode.dayOfMonth) {
+      return _monthlyRules.keys.toList();
+    }
+
+    final enabledKeys = _monthlyRules.entries
+        .where((entry) => entry.value.enabled)
+        .map((entry) => entry.key)
+        .toList();
+
+    return enabledKeys.isEmpty ? const [1] : enabledKeys;
+  }
+
+  void _selectMonthlyRuleMode(_MonthlyRuleMode mode) {
+    setState(() {
+      _monthlyRuleMode = mode;
+
+      if (mode == _MonthlyRuleMode.dayOfMonth &&
+          !_monthlyRules.values.any((rule) => rule.enabled)) {
+        _monthlyRules[1] = _monthlyRules[1]!.copyWith(enabled: true);
+      }
+    });
+  }
+
+  void _addMonthlyDayRule() {
+    MapEntry<int, _MonthlyRule>? nextEntry;
+    for (final entry in _monthlyRules.entries) {
+      if (!entry.value.enabled) {
+        nextEntry = entry;
+        break;
+      }
+    }
+
+    if (nextEntry == null) {
+      setState(() {
+        _message = '특정일은 최대 4개까지 추가할 수 있습니다.';
+      });
+      return;
+    }
+
+    final selectedEntry = nextEntry;
+    final defaultDay = selectedEntry.value.dayOfMonth ?? 1;
+    final dayOfMonth =
+        _isMonthlyDayInUse(defaultDay, exceptWeekOfMonth: selectedEntry.key)
+        ? _firstAvailableMonthlyDay(selectedEntry.key)
+        : defaultDay;
+
+    setState(() {
+      _monthlyRules[selectedEntry.key] = selectedEntry.value.copyWith(
+        enabled: true,
+        dayOfMonth: dayOfMonth,
+      );
+    });
+  }
+
+  int _firstAvailableMonthlyDay(int exceptWeekOfMonth) {
+    for (var day = 1; day <= 31; day++) {
+      if (!_isMonthlyDayInUse(day, exceptWeekOfMonth: exceptWeekOfMonth)) {
+        return day;
+      }
+    }
+
+    return 1;
   }
 
   Future<void> _pickDate({required bool isStart}) async {
@@ -1503,7 +1596,9 @@ class _EducationProgramFormScreenState
           (entry) => EducationMonthlySchedule(
             weekOfMonth: entry.key,
             weekday: entry.value.weekday,
-            dayOfMonth: entry.value.dayOfMonth,
+            dayOfMonth: _monthlyRuleMode == _MonthlyRuleMode.dayOfMonth
+                ? entry.value.dayOfMonth
+                : null,
             startsAt: entry.value.startsAt,
             endsAt: entry.value.endsAt,
             vehicleBoardingTime: entry.value.vehicleBoardingTime,
@@ -1884,6 +1979,17 @@ class _EducationProgramFormScreenState
               ],
             ),
             const SizedBox(height: 14),
+            if (_recurrenceType == EducationRecurrenceType.monthly) ...[
+              _FormSection(
+                children: [
+                  _MonthlyRuleModeRow(
+                    value: _monthlyRuleMode,
+                    onChanged: _selectMonthlyRuleMode,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+            ],
             if (_recurrenceType == EducationRecurrenceType.weekly)
               _FormSection(
                 children: [
@@ -1916,11 +2022,23 @@ class _EducationProgramFormScreenState
             else
               _FormSection(
                 children: [
-                  for (var weekOfMonth = 1; weekOfMonth <= 4; weekOfMonth++)
+                  for (final weekOfMonth in _visibleMonthlyRuleKeys())
                     _MonthlyRuleRow(
                       weekOfMonth: weekOfMonth,
+                      mode: _monthlyRuleMode,
                       rule: _monthlyRules[weekOfMonth]!,
                       onToggle: (value) {
+                        if (value &&
+                            _monthlyRuleMode == _MonthlyRuleMode.dayOfMonth &&
+                            _isMonthlyDayInUse(
+                              _monthlyRules[weekOfMonth]!.dayOfMonth ?? 1,
+                              exceptWeekOfMonth: weekOfMonth,
+                            )) {
+                          setState(() {
+                            _message = '이미 선택한 날짜입니다.';
+                          });
+                          return;
+                        }
                         setState(() {
                           _monthlyRules[weekOfMonth] =
                               _monthlyRules[weekOfMonth]!.copyWith(
@@ -1951,6 +2069,12 @@ class _EducationProgramFormScreenState
                         isBoarding: false,
                       ),
                     ),
+                  if (_monthlyRuleMode == _MonthlyRuleMode.dayOfMonth &&
+                      _monthlyRules.values
+                              .where((rule) => rule.enabled)
+                              .length <
+                          _monthlyRules.length)
+                    _AddMonthlyDayRuleButton(onPressed: _addMonthlyDayRule),
                 ],
               ),
             if (widget.program != null) ...[
@@ -2538,6 +2662,40 @@ class _PhoneContactsHeader extends StatelessWidget {
   }
 }
 
+class _AddMonthlyDayRuleButton extends StatelessWidget {
+  const _AddMonthlyDayRuleButton({required this.onPressed});
+
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: CupertinoButton(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        minimumSize: const Size(44, 36),
+        onPressed: onPressed,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(CupertinoIcons.add, size: 16, color: AppColors.darkPrimary),
+            const SizedBox(width: 4),
+            Text(
+              '특정일 추가',
+              style: TextStyle(
+                color: AppColors.darkPrimary,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _PhoneContactInputRow extends StatelessWidget {
   const _PhoneContactInputRow({
     required this.contact,
@@ -2821,6 +2979,56 @@ class _RecurrenceTypeRow extends StatelessWidget {
   }
 }
 
+class _MonthlyRuleModeRow extends StatelessWidget {
+  const _MonthlyRuleModeRow({required this.value, required this.onChanged});
+
+  final _MonthlyRuleMode value;
+  final ValueChanged<_MonthlyRuleMode> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 82,
+            child: Text(
+              '월 반복 기준',
+              style: TextStyle(
+                color: AppColors.darkTextPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+          Expanded(
+            child: CupertinoSlidingSegmentedControl<_MonthlyRuleMode>(
+              groupValue: value,
+              children: const {
+                _MonthlyRuleMode.weekday: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 7),
+                  child: Text('특정 요일'),
+                ),
+                _MonthlyRuleMode.dayOfMonth: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 7),
+                  child: Text('특정일'),
+                ),
+              },
+              onValueChanged: (nextValue) {
+                if (nextValue != null) {
+                  onChanged(nextValue);
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _WeekdayRuleRow extends StatelessWidget {
   const _WeekdayRuleRow({
     required this.weekday,
@@ -2913,6 +3121,7 @@ class _WeekdayRuleRow extends StatelessWidget {
 class _MonthlyRuleRow extends StatelessWidget {
   const _MonthlyRuleRow({
     required this.weekOfMonth,
+    required this.mode,
     required this.rule,
     required this.onToggle,
     required this.onPickWeekday,
@@ -2926,6 +3135,7 @@ class _MonthlyRuleRow extends StatelessWidget {
   });
 
   final int weekOfMonth;
+  final _MonthlyRuleMode mode;
   final _MonthlyRule rule;
   final ValueChanged<bool> onToggle;
   final VoidCallback onPickWeekday;
@@ -2939,13 +3149,18 @@ class _MonthlyRuleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDayOfMonth = mode == _MonthlyRuleMode.dayOfMonth;
+    final selectorWidth = isDayOfMonth ? 64.0 : 48.0;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _RuleLeadingColumn(
-            label: _weekOfMonthLabels[weekOfMonth] ?? '$weekOfMonth주',
+            label: isDayOfMonth
+                ? '특정일'
+                : _weekOfMonthLabels[weekOfMonth] ?? '$weekOfMonth주',
             enabled: rule.enabled,
             onToggle: onToggle,
           ),
@@ -2966,13 +3181,12 @@ class _MonthlyRuleRow extends StatelessWidget {
                     ),
                     const SizedBox(width: 6),
                     _SmallWeekdayButton(
-                      value: rule.dayOfMonth == null
-                          ? '${_weekdayLabels[rule.weekday]}요일'
-                          : '매월 ${rule.dayOfMonth}일',
+                      width: selectorWidth,
+                      value: isDayOfMonth
+                          ? '매월 ${rule.dayOfMonth}일'
+                          : '${_weekdayLabels[rule.weekday]}요일',
                       enabled: rule.enabled,
-                      onPressed: rule.dayOfMonth == null
-                          ? onPickWeekday
-                          : onPickDay,
+                      onPressed: isDayOfMonth ? onPickDay : onPickWeekday,
                     ),
                   ],
                 ),
@@ -2999,7 +3213,7 @@ class _MonthlyRuleRow extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 6),
-                    const SizedBox(width: 48, height: 32),
+                    SizedBox(width: selectorWidth, height: 32),
                   ],
                 ),
               ],
@@ -3060,16 +3274,18 @@ class _SmallWeekdayButton extends StatelessWidget {
     required this.value,
     required this.enabled,
     required this.onPressed,
+    this.width = 48,
   });
 
   final String value;
   final bool enabled;
   final VoidCallback onPressed;
+  final double width;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 48,
+      width: width,
       height: 32,
       child: CupertinoButton(
         padding: EdgeInsets.zero,
