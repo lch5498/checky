@@ -993,6 +993,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
   String? _message;
   String? _draggingItineraryId;
   List<TravelItinerary>? _dragSnapshot;
+  String? _selectedItineraryTagName;
   bool _dropAccepted = false;
   bool _isLoading = true;
   late _TravelDetailTab _selectedTab;
@@ -1022,6 +1023,12 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
       if (mounted) {
         setState(() {
           _detail = detail;
+          if (_selectedItineraryTagName != null &&
+              !_itineraryTagNames(
+                detail.itineraries,
+              ).contains(_selectedItineraryTagName)) {
+            _selectedItineraryTagName = null;
+          }
         });
       }
     } catch (error) {
@@ -1440,6 +1447,17 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
   Widget build(BuildContext context) {
     final detail = _detail;
     final trip = detail?.trip ?? widget.trip;
+    final itineraries = detail?.itineraries ?? const <TravelItinerary>[];
+    final itineraryTagNames = _itineraryTagNames(itineraries);
+    final selectedTagName = _selectedItineraryTagName;
+    final visibleItineraries = selectedTagName == null
+        ? itineraries
+        : itineraries
+              .where(
+                (itinerary) =>
+                    itinerary.tags.any((tag) => tag.name == selectedTagName),
+              )
+              .toList();
 
     return CupertinoPageScaffold(
       backgroundColor: AppColors.darkBackground,
@@ -1481,9 +1499,25 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
                 padding: EdgeInsets.only(top: 56),
                 child: Center(child: CupertinoActivityIndicator()),
               )
-            else if (_selectedTab == _TravelDetailTab.schedule)
-              ..._buildDaySections(trip, detail?.itineraries ?? [])
-            else
+            else if (_selectedTab == _TravelDetailTab.schedule) ...[
+              if (itineraryTagNames.isNotEmpty)
+                _TravelTagFilterBar(
+                  tagNames: itineraryTagNames,
+                  selectedTagName: selectedTagName,
+                  onSelected: (tagName) {
+                    setState(() {
+                      _selectedItineraryTagName = tagName;
+                    });
+                  },
+                ),
+              if (itineraryTagNames.isNotEmpty) const SizedBox(height: 14),
+              ..._buildDaySections(
+                trip,
+                visibleItineraries,
+                hideEmptyDays: selectedTagName != null,
+                emptyTagName: selectedTagName,
+              ),
+            ] else
               ..._buildChecklistItems(detail?.checklistItems ?? const []),
           ],
         ),
@@ -1493,8 +1527,10 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
 
   List<Widget> _buildDaySections(
     TravelTrip trip,
-    List<TravelItinerary> itineraries,
-  ) {
+    List<TravelItinerary> itineraries, {
+    bool hideEmptyDays = false,
+    String? emptyTagName,
+  }) {
     final days = _daysBetween(trip.startsOn, trip.endsOn);
     final byDate = <String, List<TravelItinerary>>{};
 
@@ -1504,20 +1540,32 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
           .add(itinerary);
     }
 
+    final visibleDays = hideEmptyDays
+        ? days
+              .where((date) => (byDate[_dateKey(date)] ?? const []).isNotEmpty)
+              .toList()
+        : days;
+
+    if (visibleDays.isEmpty) {
+      return [_TravelTagFilterEmpty(tagName: emptyTagName ?? '')];
+    }
+
     return [
-      for (var index = 0; index < days.length; index++) ...[
+      for (var index = 0; index < visibleDays.length; index++) ...[
         _TravelDaySection(
-          dayIndex: index + 1,
-          date: days[index],
-          itineraries: byDate[_dateKey(days[index])] ?? const [],
-          onAdd: () => _createItinerary(initialDate: days[index]),
+          dayIndex:
+              visibleDays[index].difference(_dateOnly(trip.startsOn)).inDays +
+              1,
+          date: visibleDays[index],
+          itineraries: byDate[_dateKey(visibleDays[index])] ?? const [],
+          onAdd: () => _createItinerary(initialDate: visibleDays[index]),
           onOpen: _openItinerary,
           onMove: _moveItinerary,
           onPreviewMove: _previewMoveItinerary,
           onDragStarted: (itinerary) {
             setState(() {
               _draggingItineraryId = itinerary.id;
-              _dragSnapshot = itineraries;
+              _dragSnapshot = _detail?.itineraries ?? itineraries;
               _dropAccepted = false;
             });
           },
@@ -1542,7 +1590,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
           },
           draggingItineraryId: _draggingItineraryId,
         ),
-        if (index != days.length - 1) const SizedBox(height: 14),
+        if (index != visibleDays.length - 1) const SizedBox(height: 14),
       ],
     ];
   }
@@ -3069,10 +3117,9 @@ class _DraggableItineraryRow extends StatelessWidget {
           childWhenDragging: IgnorePointer(
             child: _ItineraryCard(itinerary: itinerary),
           ),
-          child: CupertinoButton(
-            padding: EdgeInsets.zero,
+          child: _ItineraryCard(
+            itinerary: itinerary,
             onPressed: isDragging ? null : onTap,
-            child: _ItineraryCard(itinerary: itinerary),
           ),
         );
       },
@@ -3081,69 +3128,119 @@ class _DraggableItineraryRow extends StatelessWidget {
 }
 
 class _ItineraryCard extends StatelessWidget {
-  const _ItineraryCard({required this.itinerary, this.elevated = false});
+  const _ItineraryCard({
+    required this.itinerary,
+    this.elevated = false,
+    this.onPressed,
+  });
 
   final TravelItinerary itinerary;
   final bool elevated;
+  final VoidCallback? onPressed;
+
+  Future<void> _openMap() async {
+    final mapUrl = itinerary.mapUrl?.trim();
+    if (mapUrl == null || mapUrl.isEmpty) {
+      return;
+    }
+
+    final uri = Uri.tryParse(mapUrl);
+    if (uri != null) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: elevated
-            ? AppColors.darkPrimarySoft
-            : AppColors.darkSurfaceElevated,
-        borderRadius: BorderRadius.circular(16),
-        border: elevated ? Border.all(color: AppColors.darkPrimary) : null,
-      ),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        child: Row(
-          children: [
-            if (itinerary.startsAt != null) ...[
-              Text(
-                _formatTime(itinerary.startsAt!),
-                style: TextStyle(
-                  color: AppColors.darkPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
+    final hasMapLink = itinerary.mapUrl?.trim().isNotEmpty ?? false;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onPressed,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: elevated
+              ? AppColors.darkPrimarySoft
+              : AppColors.darkSurfaceElevated,
+          borderRadius: BorderRadius.circular(16),
+          border: elevated ? Border.all(color: AppColors.darkPrimary) : null,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Row(
+            children: [
+              if (itinerary.startsAt != null) ...[
+                Text(
+                  _formatTime(itinerary.startsAt!),
+                  style: TextStyle(
+                    color: AppColors.darkPrimary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(width: 10),
+              ],
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      itinerary.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.darkTextPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (itinerary.tags.isNotEmpty) ...[
+                      const SizedBox(height: 7),
+                      _TravelTagWrap(
+                        tagNames: itinerary.tags
+                            .map((tag) => tag.name)
+                            .take(3)
+                            .toList(),
+                        compact: true,
+                      ),
+                    ],
+                  ],
                 ),
               ),
-              const SizedBox(width: 10),
-            ],
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    itinerary.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                    ),
+              if (hasMapLink)
+                CupertinoButton(
+                  padding: const EdgeInsets.only(left: 8),
+                  minimumSize: const Size(40, 32),
+                  onPressed: _openMap,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        CupertinoIcons.location_solid,
+                        color: AppColors.darkPrimary,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 3),
+                      Text(
+                        '지도',
+                        style: TextStyle(
+                          color: AppColors.darkPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ],
                   ),
-                  if (itinerary.tags.isNotEmpty) ...[
-                    const SizedBox(height: 7),
-                    _TravelTagWrap(
-                      tagNames: itinerary.tags
-                          .map((tag) => tag.name)
-                          .take(3)
-                          .toList(),
-                      compact: true,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-            Icon(
-              CupertinoIcons.chevron_forward,
-              color: AppColors.darkTextMuted,
-              size: 15,
-            ),
-          ],
+                ),
+              if (onPressed != null)
+                Icon(
+                  CupertinoIcons.chevron_forward,
+                  color: AppColors.darkTextMuted,
+                  size: 15,
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -3366,6 +3463,102 @@ class _TravelTagPicker extends StatelessWidget {
   }
 }
 
+List<String> _itineraryTagNames(List<TravelItinerary> itineraries) {
+  final tagNames = <String>{};
+
+  for (final itinerary in itineraries) {
+    for (final tag in itinerary.tags) {
+      tagNames.add(tag.name);
+    }
+  }
+
+  return tagNames.toList()..sort();
+}
+
+class _TravelTagFilterBar extends StatelessWidget {
+  const _TravelTagFilterBar({
+    required this.tagNames,
+    required this.selectedTagName,
+    required this.onSelected,
+  });
+
+  final List<String> tagNames;
+  final String? selectedTagName;
+  final ValueChanged<String?> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '태그별 보기',
+          style: TextStyle(
+            color: AppColors.darkTextSecondary,
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: [
+              CupertinoButton(
+                padding: EdgeInsets.zero,
+                minimumSize: Size.zero,
+                onPressed: () => onSelected(null),
+                child: _TravelTagChip(
+                  label: '전체',
+                  selected: selectedTagName == null,
+                  showHash: false,
+                ),
+              ),
+              for (final tagName in tagNames)
+                Padding(
+                  padding: const EdgeInsets.only(left: 7),
+                  child: CupertinoButton(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    onPressed: () => onSelected(tagName),
+                    child: _TravelTagChip(
+                      label: tagName,
+                      selected: selectedTagName == tagName,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _TravelTagFilterEmpty extends StatelessWidget {
+  const _TravelTagFilterEmpty({required this.tagName});
+
+  final String tagName;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 22),
+      decoration: BoxDecoration(
+        color: AppColors.darkSurface,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppColors.darkBorder),
+      ),
+      child: Text(
+        '#$tagName 태그가 붙은 일정이 없습니다.',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: AppColors.darkTextSecondary, fontSize: 14),
+      ),
+    );
+  }
+}
+
 class _TravelTagWrap extends StatelessWidget {
   const _TravelTagWrap({required this.tagNames, this.compact = false});
 
@@ -3390,11 +3583,13 @@ class _TravelTagChip extends StatelessWidget {
     required this.label,
     this.selected = false,
     this.compact = false,
+    this.showHash = true,
   });
 
   final String label;
   final bool selected;
   final bool compact;
+  final bool showHash;
 
   @override
   Widget build(BuildContext context) {
@@ -3414,7 +3609,7 @@ class _TravelTagChip extends StatelessWidget {
         ),
       ),
       child: Text(
-        '#$label',
+        '${showHash ? '#' : ''}$label',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(
