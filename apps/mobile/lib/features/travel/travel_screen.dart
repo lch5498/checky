@@ -3756,23 +3756,29 @@ Future<DateTime?> _pickDateInRange(
   return showCupertinoModalPopup<DateTime>(
     context: context,
     builder: (context) {
+      final bottomInset = MediaQuery.viewPaddingOf(context).bottom;
+
       return Container(
-        height: 320,
         color: AppColors.darkSurface,
-        child: SafeArea(
-          top: false,
+        padding: EdgeInsets.only(bottom: bottomInset),
+        child: SizedBox(
+          height: 320,
           child: Column(
             children: [
               SizedBox(
-                height: 52,
+                height: 56,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     CupertinoButton(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      minimumSize: const Size(44, 48),
                       onPressed: () => Navigator.of(context).pop(),
                       child: const Text('취소'),
                     ),
                     CupertinoButton(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      minimumSize: const Size(44, 48),
                       onPressed: () => Navigator.of(context).pop(selected),
                       child: const Text('선택'),
                     ),

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/alert_offset_picker.dart';
+import '../../shared/cupertino_picker_sheet.dart';
 import '../../shared/member_filter.dart';
 import '../../shared/schedule_section_switcher.dart';
 
@@ -2439,12 +2440,20 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
   }
 
   Future<DateTime?> _showDateTimePicker(DateTime initial) async {
+    var selected = initial;
+
     return showCupertinoModalPopup<DateTime>(
       context: context,
-      builder: (popupContext) => _DateTimeInputSheet(
-        initial: initial,
+      builder: (popupContext) => CupertinoPickerSheet(
         onCancel: () => Navigator.of(popupContext).pop(),
-        onDone: (value) => Navigator.of(popupContext).pop(value),
+        onDone: () => Navigator.of(popupContext).pop(selected),
+        child: CupertinoDatePicker(
+          mode: CupertinoDatePickerMode.dateAndTime,
+          initialDateTime: selected,
+          onDateTimeChanged: (value) {
+            selected = value;
+          },
+        ),
       ),
     );
   }

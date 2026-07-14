@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
+import '../../shared/cupertino_picker_sheet.dart';
 import '../../shared/refreshable_scroll_view.dart';
 import '../../shared/schedule_section_switcher.dart';
 
@@ -556,6 +557,47 @@ class _AnniversaryFormScreenState extends State<_AnniversaryFormScreen> {
     });
   }
 
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final year = int.tryParse(_yearController.text.trim()) ?? now.year;
+    final month = int.tryParse(_monthController.text.trim()) ?? now.month;
+    final day = int.tryParse(_dayController.text.trim()) ?? now.day;
+    final candidate = DateTime(year, month, day);
+    var selected =
+        candidate.year == year &&
+            candidate.month == month &&
+            candidate.day == day
+        ? candidate
+        : now;
+
+    final picked = await showCupertinoModalPopup<DateTime>(
+      context: context,
+      builder: (popupContext) => CupertinoPickerSheet(
+        onCancel: () => Navigator.of(popupContext).pop(),
+        onDone: () => Navigator.of(popupContext).pop(selected),
+        child: CupertinoDatePicker(
+          mode: CupertinoDatePickerMode.date,
+          initialDateTime: selected,
+          minimumDate: DateTime(1900),
+          maximumDate: now,
+          onDateTimeChanged: (value) {
+            selected = value;
+          },
+        ),
+      ),
+    );
+
+    if (picked == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _yearController.text = '${picked.year}';
+      _monthController.text = '${picked.month}';
+      _dayController.text = '${picked.day}';
+    });
+  }
+
   void _submit() {
     final customCategoryLabel = _customCategoryController.text.trim();
     final title = _titleController.text.trim();
@@ -664,9 +706,12 @@ class _AnniversaryFormScreenState extends State<_AnniversaryFormScreen> {
                   placeholder: '예: 엄마 생일',
                 ),
                 _AnniversaryDateRow(
-                  yearController: _yearController,
-                  monthController: _monthController,
-                  dayController: _dayController,
+                  value: _anniversaryDateInputLabel(
+                    yearController: _yearController,
+                    monthController: _monthController,
+                    dayController: _dayController,
+                  ),
+                  onPressed: _pickDate,
                 ),
                 if (_allowsCalendarTypeSelection(_category)) ...[
                   Padding(
@@ -973,6 +1018,26 @@ String _anniversaryTimeLabel(int hour, int minute) {
   return '$period $displayHour시 ${_two(minute)}분';
 }
 
+String _anniversaryDateInputLabel({
+  required TextEditingController yearController,
+  required TextEditingController monthController,
+  required TextEditingController dayController,
+}) {
+  final year = yearController.text.trim();
+  final month = monthController.text.trim();
+  final day = dayController.text.trim();
+
+  if (year.isEmpty && month.isEmpty && day.isEmpty) {
+    return '날짜 선택';
+  }
+
+  if (year.isEmpty) {
+    return '$month월 $day일';
+  }
+
+  return '$year년 $month월 $day일';
+}
+
 _AnniversaryAlertSetting? _anniversaryAlertSettingFromOffset(int? minutes) {
   if (minutes == null || minutes < 0) {
     return null;
@@ -1017,8 +1082,6 @@ class _AnniversaryAlertSetting {
   int get offsetMinutes => daysBefore * 60 * 24 - hour * 60 - minute;
 }
 
-enum _AnniversaryAlertPeriod { am, pm }
-
 class _AnniversaryAlertInputSheet extends StatefulWidget {
   const _AnniversaryAlertInputSheet({
     required this.initialSetting,
@@ -1038,63 +1101,67 @@ class _AnniversaryAlertInputSheet extends StatefulWidget {
 class _AnniversaryAlertInputSheetState
     extends State<_AnniversaryAlertInputSheet> {
   late final TextEditingController _daysController;
-  late final TextEditingController _hourController;
-  late final TextEditingController _minuteController;
-  late _AnniversaryAlertPeriod _period;
+  late DateTime _selectedTime;
   String? _message;
 
   @override
   void initState() {
     super.initState();
-    _period = widget.initialSetting.hour < 12
-        ? _AnniversaryAlertPeriod.am
-        : _AnniversaryAlertPeriod.pm;
     _daysController = TextEditingController(
       text: '${widget.initialSetting.daysBefore}',
     );
-    _hourController = TextEditingController(
-      text: '${_displayHour(widget.initialSetting.hour)}',
-    );
-    _minuteController = TextEditingController(
-      text: '${widget.initialSetting.minute}',
+    _selectedTime = DateTime(
+      2000,
+      1,
+      1,
+      widget.initialSetting.hour,
+      widget.initialSetting.minute,
     );
   }
 
   @override
   void dispose() {
     _daysController.dispose();
-    _hourController.dispose();
-    _minuteController.dispose();
     super.dispose();
   }
 
   void _submit() {
     final daysBefore = int.tryParse(_daysController.text.trim());
-    final hour = int.tryParse(_hourController.text.trim());
-    final minute = int.tryParse(_minuteController.text.trim());
 
     if (daysBefore == null || daysBefore < 1 || daysBefore > 365) {
       setState(() => _message = '며칠 전은 1부터 365까지 입력해 주세요.');
       return;
     }
 
-    if (hour == null || hour < 1 || hour > 12) {
-      setState(() => _message = '시간은 1부터 12까지 입력해 주세요.');
-      return;
-    }
-
-    if (minute == null || minute < 0 || minute > 59) {
-      setState(() => _message = '분은 0부터 59까지 입력해 주세요.');
-      return;
-    }
-
     widget.onDone(
       _AnniversaryAlertSetting(
         daysBefore: daysBefore,
-        hour: _hour24(hour, _period),
-        minute: minute,
+        hour: _selectedTime.hour,
+        minute: _selectedTime.minute,
       ).offsetMinutes,
     );
+  }
+
+  Future<void> _pickTime() async {
+    var selected = _selectedTime;
+    final picked = await showCupertinoModalPopup<DateTime>(
+      context: context,
+      builder: (popupContext) => CupertinoPickerSheet(
+        onCancel: () => Navigator.of(popupContext).pop(),
+        onDone: () => Navigator.of(popupContext).pop(selected),
+        child: CupertinoDatePicker(
+          mode: CupertinoDatePickerMode.time,
+          initialDateTime: selected,
+          onDateTimeChanged: (value) {
+            selected = value;
+          },
+        ),
+      ),
+    );
+
+    if (picked != null && mounted) {
+      setState(() => _selectedTime = picked);
+    }
   }
 
   @override
@@ -1165,49 +1232,33 @@ class _AnniversaryAlertInputSheetState
                   ],
                 ),
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    CupertinoSlidingSegmentedControl<_AnniversaryAlertPeriod>(
-                      groupValue: _period,
-                      children: const {
-                        _AnniversaryAlertPeriod.am: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('오전'),
+                CupertinoButton(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  color: AppColors.darkSurfaceElevated,
+                  borderRadius: BorderRadius.circular(10),
+                  onPressed: _pickTime,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _anniversaryTimeLabel(
+                            _selectedTime.hour,
+                            _selectedTime.minute,
+                          ),
+                          style: TextStyle(
+                            color: AppColors.darkTextPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0,
+                          ),
                         ),
-                        _AnniversaryAlertPeriod.pm: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
-                          child: Text('오후'),
-                        ),
-                      },
-                      onValueChanged: (value) {
-                        if (value != null) {
-                          setState(() => _period = value);
-                        }
-                      },
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _NumberField(
-                        controller: _hourController,
-                        placeholder: '9',
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10),
-                      child: Text('시', style: _suffixStyle),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _NumberField(
-                        controller: _minuteController,
-                        placeholder: '0',
-                      ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(left: 10),
-                      child: Text('분', style: _suffixStyle),
-                    ),
-                  ],
+                      const Icon(CupertinoIcons.chevron_down, size: 15),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 10),
                 Align(
@@ -1232,28 +1283,11 @@ class _AnniversaryAlertInputSheetState
   }
 }
 
-int _displayHour(int hour24) {
-  return hour24 % 12 == 0 ? 12 : hour24 % 12;
-}
-
-int _hour24(int hour12, _AnniversaryAlertPeriod period) {
-  if (period == _AnniversaryAlertPeriod.am) {
-    return hour12 == 12 ? 0 : hour12;
-  }
-
-  return hour12 == 12 ? 12 : hour12 + 12;
-}
-
 class _AnniversaryDateRow extends StatelessWidget {
-  const _AnniversaryDateRow({
-    required this.yearController,
-    required this.monthController,
-    required this.dayController,
-  });
+  const _AnniversaryDateRow({required this.value, required this.onPressed});
 
-  final TextEditingController yearController;
-  final TextEditingController monthController;
-  final TextEditingController dayController;
+  final String value;
+  final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -1263,42 +1297,29 @@ class _AnniversaryDateRow extends StatelessWidget {
         children: [
           SizedBox(width: 82, child: Text('날짜', style: _rowLabelStyle)),
           Expanded(
-            child: Row(
-              children: [
-                Flexible(
-                  flex: 2,
-                  child: _NumberField(
-                    controller: yearController,
-                    placeholder: '선택',
-                    fontSize: 14,
-                    horizontalPadding: 6,
+            child: CupertinoButton(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              color: AppColors.darkSurfaceElevated,
+              borderRadius: BorderRadius.circular(10),
+              onPressed: onPressed,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      value,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.darkTextPrimary,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0,
+                      ),
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  child: Text('년', style: _suffixStyle),
-                ),
-                Flexible(
-                  child: _NumberField(
-                    controller: monthController,
-                    placeholder: '월',
-                    horizontalPadding: 6,
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 5),
-                  child: Text('월', style: _suffixStyle),
-                ),
-                Flexible(
-                  child: _NumberField(
-                    controller: dayController,
-                    placeholder: '일',
-                    horizontalPadding: 6,
-                  ),
-                ),
-                const SizedBox(width: 5),
-                Text('일', style: _suffixStyle),
-              ],
+                  const Icon(CupertinoIcons.chevron_down, size: 15),
+                ],
+              ),
             ),
           ),
         ],
@@ -1308,17 +1329,10 @@ class _AnniversaryDateRow extends StatelessWidget {
 }
 
 class _NumberField extends StatelessWidget {
-  const _NumberField({
-    required this.controller,
-    required this.placeholder,
-    this.fontSize = 16,
-    this.horizontalPadding = 10,
-  });
+  const _NumberField({required this.controller, required this.placeholder});
 
   final TextEditingController controller;
   final String placeholder;
-  final double fontSize;
-  final double horizontalPadding;
 
   @override
   Widget build(BuildContext context) {
@@ -1327,16 +1341,13 @@ class _NumberField extends StatelessWidget {
       placeholder: placeholder,
       keyboardType: TextInputType.number,
       textAlign: TextAlign.center,
-      padding: EdgeInsets.symmetric(
-        horizontal: horizontalPadding,
-        vertical: 10,
-      ),
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         color: AppColors.darkSurfaceElevated,
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: AppColors.darkBorder),
       ),
-      style: TextStyle(fontSize: fontSize, letterSpacing: 0),
+      style: const TextStyle(fontSize: 16, letterSpacing: 0),
     );
   }
 }
