@@ -1512,6 +1512,7 @@ class _ScrapBriefingTile extends StatelessWidget {
     final activityLabel = activity.type == ScrapRecentActivityType.post
         ? '글'
         : '댓글';
+    final previewText = _scrapActivityPreviewText(activity);
 
     return CupertinoButton(
       padding: EdgeInsets.zero,
@@ -1543,7 +1544,7 @@ class _ScrapBriefingTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    activity.content,
+                    previewText,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -1574,6 +1575,17 @@ class _ScrapBriefingTile extends StatelessWidget {
       ),
     );
   }
+}
+
+String _scrapActivityPreviewText(ScrapRecentActivity activity) {
+  final firstLine = activity.content
+      .trim()
+      .split(RegExp(r'\r?\n'))
+      .first
+      .trim();
+  final linkTitle = activity.linkTitle?.trim();
+
+  return linkTitle == null || linkTitle.isEmpty ? firstLine : linkTitle;
 }
 
 class _BriefingSection extends StatelessWidget {

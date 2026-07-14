@@ -2067,6 +2067,7 @@ class ScrapRecentActivity {
     required this.channelId,
     required this.channelName,
     required this.content,
+    required this.linkTitle,
     required this.authorNickname,
     required this.createdAt,
   });
@@ -2077,6 +2078,7 @@ class ScrapRecentActivity {
   final String channelId;
   final String channelName;
   final String content;
+  final String? linkTitle;
   final String authorNickname;
   final DateTime createdAt;
 
@@ -2088,6 +2090,7 @@ class ScrapRecentActivity {
       channelId: json['channel_id'] as String,
       channelName: json['channel_name'] as String,
       content: json['content'] as String,
+      linkTitle: json['linkTitle'] as String?,
       authorNickname: json['authorNickname'] as String? ?? '알 수 없음',
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
     );

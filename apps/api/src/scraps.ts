@@ -62,6 +62,7 @@ export type ScrapRecentActivity = {
   channel_id: string;
   channel_name: string;
   content: string;
+  linkTitle: string | null;
   created_at: string;
   authorNickname: string;
 };
@@ -226,8 +227,7 @@ export async function getRecentScrapActivities(
     ...commentRows.map((comment) => ({ ...comment, type: 'comment' as const })),
   ]);
 
-  return {
-    activities: activitiesWithAuthors
+  const recentActivities = activitiesWithAuthors
       .map((activity): ScrapRecentActivity | null => {
         const channelId =
           activity.type === 'post'
@@ -247,13 +247,37 @@ export async function getRecentScrapActivities(
           channel_id: channelId,
           channel_name: channelName,
           content: activity.content,
+          linkTitle: null,
           created_at: activity.created_at,
           authorNickname: activity.authorNickname,
         };
       })
       .filter((activity): activity is ScrapRecentActivity => activity !== null)
       .sort((a, b) => b.created_at.localeCompare(a.created_at))
-      .slice(0, 5),
+      .slice(0, 5);
+
+  return {
+    activities: await Promise.all(
+      recentActivities.map(async (activity) => {
+        const linkUrl = extractFirstLineHttpUrl(activity.content);
+
+        if (!linkUrl) {
+          return activity;
+        }
+
+        const savedTitle =
+          activity.type === 'post'
+            ? knownPosts.get(activity.post_id)?.link_title
+            : null;
+        const preview = savedTitle ? null : await fetchLinkPreview(linkUrl);
+
+        return {
+          ...activity,
+          linkTitle:
+            savedTitle ?? preview?.title ?? preview?.siteName ?? hostFromUrl(linkUrl),
+        };
+      }),
+    ),
   };
 }
 
@@ -1297,6 +1321,16 @@ function extractFirstHttpUrl(content: string) {
   } catch {
     return null;
   }
+}
+
+function extractFirstLineHttpUrl(content: string) {
+  const firstLine = content.trim().split(/\r?\n/, 1)[0]?.trim() ?? '';
+
+  if (!firstLine || /\s/.test(firstLine)) {
+    return null;
+  }
+
+  return extractFirstHttpUrl(firstLine);
 }
 
 function extractNaverPlaceId(value: string) {
