@@ -919,8 +919,11 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
     }
   }
 
-  void _openTravelDetail(TravelTrip trip, {bool initialChecklist = false}) {
-    Navigator.of(context, rootNavigator: true).push(
+  Future<void> _openTravelDetail(
+    TravelTrip trip, {
+    bool initialChecklist = false,
+  }) async {
+    await Navigator.of(context, rootNavigator: true).push<void>(
       CupertinoPageRoute<void>(
         builder: (_) => TravelDetailScreen(
           family: widget.family,
@@ -930,6 +933,10 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
         ),
       ),
     );
+
+    if (mounted) {
+      await _loadBriefing();
+    }
   }
 
   Future<AppUser> _updateProfile(
@@ -996,7 +1003,7 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
 
   @override
   Widget build(BuildContext context) {
-    final upcomingTrips = _upcomingTrips(_travelDashboard?.trips ?? const []);
+    final homeTrips = _homeTravelTrips(_travelDashboard?.trips ?? const []);
 
     return CupertinoPageScaffold(
       navigationBar: CupertinoNavigationBar(
@@ -1069,10 +1076,10 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
                 dashboard: _parkingDashboard,
                 onPressed: widget.onOpenParking,
               ),
-              if (upcomingTrips.isNotEmpty)
+              if (homeTrips.isNotEmpty)
                 _TravelBriefingSection(
-                  trips: upcomingTrips,
-                  onPressed: () => _openTravelDetail(upcomingTrips.first),
+                  trips: homeTrips,
+                  onPressed: () => _openTravelDetail(homeTrips.first),
                   onChecklistPressed: (trip) =>
                       _openTravelDetail(trip, initialChecklist: true),
                 ),
@@ -1264,7 +1271,7 @@ class _TravelBriefingSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return _BriefingSection(
       icon: CupertinoIcons.airplane,
-      title: '다가오는 여행',
+      title: '여행',
       emptyText: '',
       isEmpty: false,
       onPressed: onPressed,
@@ -1292,6 +1299,8 @@ class _TravelBriefingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isInProgress = _isTravelInProgress(trip);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -1301,12 +1310,16 @@ class _TravelBriefingTile extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: AppColors.darkPrimarySoft,
+              color: isInProgress
+                  ? AppColors.darkWarning.withValues(alpha: 0.18)
+                  : AppColors.darkPrimarySoft,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
               CupertinoIcons.airplane,
-              color: AppColors.darkPrimary,
+              color: isInProgress
+                  ? AppColors.darkWarning
+                  : AppColors.darkPrimary,
               size: 18,
             ),
           ),
@@ -1331,15 +1344,37 @@ class _TravelBriefingTile extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      _travelCountdownText(trip.startsOn),
-                      style: TextStyle(
-                        color: AppColors.darkPrimary,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
+                    if (isInProgress)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.darkWarning.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Text(
+                          '여행 중',
+                          style: TextStyle(
+                            color: AppColors.darkWarning,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                            height: 1,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                      )
+                    else
+                      Text(
+                        _travelCountdownText(trip.startsOn),
+                        style: TextStyle(
+                          color: AppColors.darkPrimary,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
+                        ),
                       ),
-                    ),
                   ],
                 ),
                 const SizedBox(height: 3),
@@ -1352,6 +1387,53 @@ class _TravelBriefingTile extends StatelessWidget {
                     letterSpacing: 0,
                   ),
                 ),
+                if (trip.checklistItemCount > 0) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '체크리스트 ${trip.checklistCompletedCount}/${trip.checklistItemCount} 완료',
+                          style: TextStyle(
+                            color: AppColors.darkTextSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        '${trip.checklistCompletionPercent}%',
+                        style: TextStyle(
+                          color: AppColors.darkPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 5),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(999),
+                    child: SizedBox(
+                      height: 4,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          ColoredBox(color: AppColors.darkBorder),
+                          FractionallySizedBox(
+                            alignment: Alignment.centerLeft,
+                            widthFactor:
+                                trip.checklistCompletedCount /
+                                trip.checklistItemCount,
+                            child: ColoredBox(color: AppColors.darkPrimary),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 5),
                 CupertinoButton(
                   padding: EdgeInsets.zero,
@@ -1767,17 +1849,39 @@ Map<String, MemberFilterColor> _homeMemberColors(List<FamilyMember> members) {
   };
 }
 
-List<TravelTrip> _upcomingTrips(List<TravelTrip> trips) {
+List<TravelTrip> _homeTravelTrips(List<TravelTrip> trips) {
   final today = _dateOnly(DateTime.now());
-  final upcomingTrips = trips.where((trip) {
+  final homeTrips = trips.where((trip) {
     final startsOn = _dateOnly(trip.startsOn);
+    final endsOn = _dateOnly(trip.endsOn);
     final daysUntilStart = startsOn.difference(today).inDays;
 
-    return daysUntilStart >= 0 && daysUntilStart <= 7;
+    return (startsOn.isBefore(today) || _isSameDate(startsOn, today)) &&
+            (endsOn.isAfter(today) || _isSameDate(endsOn, today)) ||
+        (daysUntilStart >= 0 && daysUntilStart <= 7);
   }).toList();
 
-  upcomingTrips.sort((a, b) => a.startsOn.compareTo(b.startsOn));
-  return upcomingTrips;
+  homeTrips.sort((a, b) {
+    final aIsInProgress = _isTravelInProgress(a, today: today);
+    final bIsInProgress = _isTravelInProgress(b, today: today);
+
+    if (aIsInProgress != bIsInProgress) {
+      return aIsInProgress ? -1 : 1;
+    }
+
+    return a.startsOn.compareTo(b.startsOn);
+  });
+  return homeTrips;
+}
+
+bool _isTravelInProgress(TravelTrip trip, {DateTime? today}) {
+  final currentDate = _dateOnly(today ?? DateTime.now());
+  final startsOn = _dateOnly(trip.startsOn);
+  final endsOn = _dateOnly(trip.endsOn);
+
+  return (startsOn.isBefore(currentDate) ||
+          _isSameDate(startsOn, currentDate)) &&
+      (endsOn.isAfter(currentDate) || _isSameDate(endsOn, currentDate));
 }
 
 String _travelCountdownText(DateTime startsOn) {

@@ -2428,6 +2428,8 @@ class TravelTrip {
     required this.title,
     required this.startsOn,
     required this.endsOn,
+    required this.checklistItemCount,
+    required this.checklistCompletedCount,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -2437,8 +2439,18 @@ class TravelTrip {
   final String title;
   final DateTime startsOn;
   final DateTime endsOn;
+  final int checklistItemCount;
+  final int checklistCompletedCount;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  int get checklistCompletionPercent {
+    if (checklistItemCount == 0) {
+      return 0;
+    }
+
+    return (checklistCompletedCount / checklistItemCount * 100).round();
+  }
 
   factory TravelTrip.fromJson(Map<String, Object?> json) {
     return TravelTrip(
@@ -2447,6 +2459,9 @@ class TravelTrip {
       title: json['title'] as String,
       startsOn: DateTime.parse(json['starts_on'] as String),
       endsOn: DateTime.parse(json['ends_on'] as String),
+      checklistItemCount: (json['checklist_total_count'] as num?)?.toInt() ?? 0,
+      checklistCompletedCount:
+          (json['checklist_completed_count'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(json['created_at'] as String).toLocal(),
       updatedAt: DateTime.parse(json['updated_at'] as String).toLocal(),
     );

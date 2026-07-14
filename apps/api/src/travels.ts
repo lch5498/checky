@@ -85,7 +85,51 @@ export async function getTravelDashboard(userId: string, familyId: string) {
     throw error;
   }
 
-  return { trips: (data ?? []) as TravelTrip[] };
+  const trips = (data ?? []) as TravelTrip[];
+
+  if (trips.length === 0) {
+    return { trips };
+  }
+
+  const { data: checklistItems, error: checklistError } = await supabase
+    .from('travel_trip_checklist_items')
+    .select('trip_id, is_checked')
+    .eq('family_id', familyId)
+    .in(
+      'trip_id',
+      trips.map((trip) => trip.id),
+    );
+
+  if (checklistError) {
+    throw checklistError;
+  }
+
+  const checklistCountsByTripId = new Map<
+    string,
+    { total: number; completed: number }
+  >();
+  for (const item of checklistItems ?? []) {
+    const count = checklistCountsByTripId.get(item.trip_id) ?? {
+      total: 0,
+      completed: 0,
+    };
+    count.total += 1;
+    if (item.is_checked) {
+      count.completed += 1;
+    }
+    checklistCountsByTripId.set(item.trip_id, count);
+  }
+
+  return {
+    trips: trips.map((trip) => {
+      const count = checklistCountsByTripId.get(trip.id);
+      return {
+        ...trip,
+        checklist_total_count: count?.total ?? 0,
+        checklist_completed_count: count?.completed ?? 0,
+      };
+    }),
+  };
 }
 
 export async function getTravelTags(userId: string, familyId: string) {
