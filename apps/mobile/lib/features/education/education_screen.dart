@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/alert_offset_picker.dart';
-import '../../shared/cupertino_picker_sheet.dart';
 import '../../shared/member_filter.dart';
 import '../../shared/refreshable_scroll_view.dart';
 import '../../shared/schedule_section_switcher.dart';
@@ -1553,41 +1552,26 @@ class _EducationProgramFormScreenState
   Future<DateTime?> _showDatePicker(DateTime initial) {
     final minimumDate = _minimumEducationProgramDate();
     final maximumDate = _maximumEducationProgramDate();
-    var selected = _clampDate(initial, minimumDate, maximumDate);
 
     return showCupertinoModalPopup<DateTime>(
       context: context,
-      builder: (popupContext) => CupertinoPickerSheet(
+      builder: (popupContext) => _DateInputSheet(
+        initial: _clampDate(initial, minimumDate, maximumDate),
+        minimumDate: minimumDate,
+        maximumDate: maximumDate,
         onCancel: () => Navigator.of(popupContext).pop(),
-        onDone: () => Navigator.of(popupContext).pop(selected),
-        child: CupertinoDatePicker(
-          mode: CupertinoDatePickerMode.date,
-          initialDateTime: selected,
-          minimumDate: minimumDate,
-          maximumDate: maximumDate,
-          onDateTimeChanged: (value) {
-            selected = _dateOnly(value);
-          },
-        ),
+        onDone: (value) => Navigator.of(popupContext).pop(value),
       ),
     );
   }
 
   Future<TimeOfDayValue?> _showTimePicker(TimeOfDayValue initial) {
-    var selected = initial;
-
     return showCupertinoModalPopup<TimeOfDayValue>(
       context: context,
-      builder: (popupContext) => CupertinoPickerSheet(
+      builder: (popupContext) => _TimeInputSheet(
+        initial: initial,
         onCancel: () => Navigator.of(popupContext).pop(),
-        onDone: () => Navigator.of(popupContext).pop(selected),
-        child: CupertinoDatePicker(
-          mode: CupertinoDatePickerMode.time,
-          initialDateTime: DateTime(2000, 1, 1, initial.hour, initial.minute),
-          onDateTimeChanged: (value) {
-            selected = TimeOfDayValue(hour: value.hour, minute: value.minute);
-          },
-        ),
+        onDone: (value) => Navigator.of(popupContext).pop(value),
       ),
     );
   }
