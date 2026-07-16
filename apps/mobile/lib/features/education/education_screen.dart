@@ -918,6 +918,7 @@ class _EducationProgramFormScreenState
       for (var weekday = 0; weekday < 7; weekday++)
         weekday: _DayRule(
           enabled: false,
+          isAllDay: false,
           startsAt: const TimeOfDayValue(hour: 15, minute: 0),
           endsAt: const TimeOfDayValue(hour: 16, minute: 0),
           vehicleBoardingTime: null,
@@ -928,6 +929,7 @@ class _EducationProgramFormScreenState
       for (var weekOfMonth = 1; weekOfMonth <= 4; weekOfMonth++)
         weekOfMonth: _MonthlyRule(
           enabled: false,
+          isAllDay: false,
           dayOfMonth: _monthlyDefaultDays[weekOfMonth - 1],
           weekday: 1,
           startsAt: const TimeOfDayValue(hour: 15, minute: 0),
@@ -944,6 +946,7 @@ class _EducationProgramFormScreenState
     for (final schedule in program?.weeklySchedules ?? const []) {
       _dayRules[schedule.weekday] = _DayRule(
         enabled: true,
+        isAllDay: schedule.isAllDay,
         startsAt: schedule.startsAt,
         endsAt: schedule.endsAt,
         vehicleBoardingTime: schedule.vehicleBoardingTime,
@@ -954,6 +957,7 @@ class _EducationProgramFormScreenState
     for (final schedule in program?.monthlySchedules ?? const []) {
       _monthlyRules[schedule.weekOfMonth] = _MonthlyRule(
         enabled: true,
+        isAllDay: schedule.isAllDay,
         dayOfMonth:
             schedule.dayOfMonth ??
             _monthlyDefaultDays[schedule.weekOfMonth - 1],
@@ -1416,6 +1420,20 @@ class _EducationProgramFormScreenState
     });
   }
 
+  void _setRuleAllDay(int weekday, bool isAllDay) {
+    setState(() {
+      _dayRules[weekday] = _dayRules[weekday]!.copyWith(isAllDay: isAllDay);
+    });
+  }
+
+  void _setMonthlyRuleAllDay(int weekOfMonth, bool isAllDay) {
+    setState(() {
+      _monthlyRules[weekOfMonth] = _monthlyRules[weekOfMonth]!.copyWith(
+        isAllDay: isAllDay,
+      );
+    });
+  }
+
   Future<void> _pickRuleVehicleTime(
     int weekday, {
     required bool isBoarding,
@@ -1583,6 +1601,7 @@ class _EducationProgramFormScreenState
         .map(
           (entry) => EducationWeeklySchedule(
             weekday: entry.key,
+            isAllDay: entry.value.isAllDay,
             startsAt: entry.value.startsAt,
             endsAt: entry.value.endsAt,
             vehicleBoardingTime: entry.value.vehicleBoardingTime,
@@ -1599,6 +1618,7 @@ class _EducationProgramFormScreenState
             dayOfMonth: _monthlyRuleMode == _MonthlyRuleMode.dayOfMonth
                 ? entry.value.dayOfMonth
                 : null,
+            isAllDay: entry.value.isAllDay,
             startsAt: entry.value.startsAt,
             endsAt: entry.value.endsAt,
             vehicleBoardingTime: entry.value.vehicleBoardingTime,
@@ -1657,6 +1677,7 @@ class _EducationProgramFormScreenState
             label: '${_weekdayLabels[schedule.weekday]}요일',
             startsAt: schedule.startsAt,
             endsAt: schedule.endsAt,
+            isAllDay: schedule.isAllDay,
           ),
         ),
       if (_recurrenceType == EducationRecurrenceType.monthly)
@@ -1667,12 +1688,14 @@ class _EducationProgramFormScreenState
                 : '매월 ${schedule.dayOfMonth}일',
             startsAt: schedule.startsAt,
             endsAt: schedule.endsAt,
+            isAllDay: schedule.isAllDay,
           ),
         ),
     ];
 
     for (final schedule in ruleTimes) {
-      if (_minutes(schedule.endsAt) < _minutes(schedule.startsAt)) {
+      if (!schedule.isAllDay &&
+          _minutes(schedule.endsAt) < _minutes(schedule.startsAt)) {
         setState(() {
           _message = '${schedule.label} 종료 시각을 확인해 주세요.';
         });
@@ -2007,6 +2030,7 @@ class _EducationProgramFormScreenState
                       },
                       onPickStart: () => _pickRuleTime(weekday, isStart: true),
                       onPickEnd: () => _pickRuleTime(weekday, isStart: false),
+                      onToggleAllDay: (value) => _setRuleAllDay(weekday, value),
                       onPickBoarding: () =>
                           _pickRuleVehicleTime(weekday, isBoarding: true),
                       onPickDropoff: () =>
@@ -2052,6 +2076,8 @@ class _EducationProgramFormScreenState
                           _pickMonthlyRuleTime(weekOfMonth, isStart: true),
                       onPickEnd: () =>
                           _pickMonthlyRuleTime(weekOfMonth, isStart: false),
+                      onToggleAllDay: (value) =>
+                          _setMonthlyRuleAllDay(weekOfMonth, value),
                       onPickBoarding: () => _pickMonthlyRuleVehicleTime(
                         weekOfMonth,
                         isBoarding: true,
@@ -3037,6 +3063,7 @@ class _WeekdayRuleRow extends StatelessWidget {
     required this.onToggle,
     required this.onPickStart,
     required this.onPickEnd,
+    required this.onToggleAllDay,
     required this.onPickBoarding,
     required this.onPickDropoff,
     required this.onClearBoarding,
@@ -3050,6 +3077,7 @@ class _WeekdayRuleRow extends StatelessWidget {
   final ValueChanged<bool> onToggle;
   final VoidCallback onPickStart;
   final VoidCallback onPickEnd;
+  final ValueChanged<bool> onToggleAllDay;
   final VoidCallback onPickBoarding;
   final VoidCallback onPickDropoff;
   final VoidCallback onClearBoarding;
@@ -3074,21 +3102,30 @@ class _WeekdayRuleRow extends StatelessWidget {
           Expanded(
             child: Column(
               children: [
-                _AlignedRuleTimeLine(
-                  label: '일정',
-                  startValue: _timeOfDayLabel(rule.startsAt),
-                  endValue: _timeOfDayLabel(rule.endsAt),
-                  onPickStart: rule.enabled ? onPickStart : null,
-                  onPickEnd: rule.enabled ? onPickEnd : null,
-                  trailing: copyLabel == null
-                      ? null
-                      : _CopyPreviousRuleButton(
-                          enabled: canCopy,
-                          label: copyLabel!,
-                          onPressed: onCopyPrevious,
-                        ),
+                _RuleAllDayToggle(
+                  value: rule.isAllDay,
+                  enabled: rule.enabled,
+                  onChanged: onToggleAllDay,
                 ),
-                const SizedBox(height: 6),
+                if (!rule.isAllDay) ...[
+                  const SizedBox(height: 6),
+                  _AlignedRuleTimeLine(
+                    label: '일정',
+                    startValue: _timeOfDayLabel(rule.startsAt),
+                    endValue: _timeOfDayLabel(rule.endsAt),
+                    onPickStart: rule.enabled ? onPickStart : null,
+                    onPickEnd: rule.enabled ? onPickEnd : null,
+                    trailing: copyLabel == null
+                        ? null
+                        : _CopyPreviousRuleButton(
+                            enabled: canCopy,
+                            label: copyLabel!,
+                            onPressed: onCopyPrevious,
+                          ),
+                  ),
+                  const SizedBox(height: 6),
+                ] else
+                  const SizedBox(height: 6),
                 _AlignedRuleTimeLine(
                   label: '차량',
                   startValue: rule.vehicleBoardingTime == null
@@ -3128,6 +3165,7 @@ class _MonthlyRuleRow extends StatelessWidget {
     required this.onPickDay,
     required this.onPickStart,
     required this.onPickEnd,
+    required this.onToggleAllDay,
     required this.onPickBoarding,
     required this.onPickDropoff,
     required this.onClearBoarding,
@@ -3142,6 +3180,7 @@ class _MonthlyRuleRow extends StatelessWidget {
   final VoidCallback onPickDay;
   final VoidCallback onPickStart;
   final VoidCallback onPickEnd;
+  final ValueChanged<bool> onToggleAllDay;
   final VoidCallback onPickBoarding;
   final VoidCallback onPickDropoff;
   final VoidCallback onClearBoarding;
@@ -3181,14 +3220,23 @@ class _MonthlyRuleRow extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                _AlignedRuleTimeLine(
-                  label: '시간',
-                  startValue: _timeOfDayLabel(rule.startsAt),
-                  endValue: _timeOfDayLabel(rule.endsAt),
-                  onPickStart: rule.enabled ? onPickStart : null,
-                  onPickEnd: rule.enabled ? onPickEnd : null,
+                _RuleAllDayToggle(
+                  value: rule.isAllDay,
+                  enabled: rule.enabled,
+                  onChanged: onToggleAllDay,
                 ),
-                const SizedBox(height: 6),
+                if (!rule.isAllDay) ...[
+                  const SizedBox(height: 6),
+                  _AlignedRuleTimeLine(
+                    label: '시간',
+                    startValue: _timeOfDayLabel(rule.startsAt),
+                    endValue: _timeOfDayLabel(rule.endsAt),
+                    onPickStart: rule.enabled ? onPickStart : null,
+                    onPickEnd: rule.enabled ? onPickEnd : null,
+                  ),
+                  const SizedBox(height: 6),
+                ] else
+                  const SizedBox(height: 6),
                 _AlignedRuleTimeLine(
                   label: '차량',
                   startValue: rule.vehicleBoardingTime == null
@@ -3251,6 +3299,51 @@ class _RuleLeadingColumn extends StatelessWidget {
             child: FittedBox(
               fit: BoxFit.contain,
               child: CupertinoSwitch(value: enabled, onChanged: onToggle),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RuleAllDayToggle extends StatelessWidget {
+  const _RuleAllDayToggle({
+    required this.value,
+    required this.enabled,
+    required this.onChanged,
+  });
+
+  final bool value;
+  final bool enabled;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 30,
+      child: Row(
+        children: [
+          Text(
+            '종일',
+            style: TextStyle(
+              color: enabled
+                  ? AppColors.darkTextSecondary
+                  : AppColors.darkTextMuted,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Spacer(),
+          SizedBox(
+            width: 34,
+            height: 22,
+            child: FittedBox(
+              fit: BoxFit.contain,
+              child: CupertinoSwitch(
+                value: value,
+                onChanged: enabled ? onChanged : null,
+              ),
             ),
           ),
         ],
@@ -3468,6 +3561,7 @@ class _ClearTimeButton extends StatelessWidget {
 class _DayRule {
   const _DayRule({
     required this.enabled,
+    required this.isAllDay,
     required this.startsAt,
     required this.endsAt,
     required this.vehicleBoardingTime,
@@ -3475,6 +3569,7 @@ class _DayRule {
   });
 
   final bool enabled;
+  final bool isAllDay;
   final TimeOfDayValue startsAt;
   final TimeOfDayValue endsAt;
   final TimeOfDayValue? vehicleBoardingTime;
@@ -3482,6 +3577,7 @@ class _DayRule {
 
   _DayRule copyWith({
     bool? enabled,
+    bool? isAllDay,
     TimeOfDayValue? startsAt,
     TimeOfDayValue? endsAt,
     _OptionalTimeUpdate? vehicleBoardingTime,
@@ -3489,6 +3585,7 @@ class _DayRule {
   }) {
     return _DayRule(
       enabled: enabled ?? this.enabled,
+      isAllDay: isAllDay ?? this.isAllDay,
       startsAt: startsAt ?? this.startsAt,
       endsAt: endsAt ?? this.endsAt,
       vehicleBoardingTime: vehicleBoardingTime == null
@@ -3504,6 +3601,7 @@ class _DayRule {
 class _MonthlyRule {
   const _MonthlyRule({
     required this.enabled,
+    required this.isAllDay,
     required this.dayOfMonth,
     required this.weekday,
     required this.startsAt,
@@ -3513,6 +3611,7 @@ class _MonthlyRule {
   });
 
   final bool enabled;
+  final bool isAllDay;
   final int? dayOfMonth;
   final int weekday;
   final TimeOfDayValue startsAt;
@@ -3522,6 +3621,7 @@ class _MonthlyRule {
 
   _MonthlyRule copyWith({
     bool? enabled,
+    bool? isAllDay,
     int? dayOfMonth,
     int? weekday,
     TimeOfDayValue? startsAt,
@@ -3531,6 +3631,7 @@ class _MonthlyRule {
   }) {
     return _MonthlyRule(
       enabled: enabled ?? this.enabled,
+      isAllDay: isAllDay ?? this.isAllDay,
       dayOfMonth: dayOfMonth ?? this.dayOfMonth,
       weekday: weekday ?? this.weekday,
       startsAt: startsAt ?? this.startsAt,
@@ -3550,11 +3651,13 @@ class _RuleTimeCheck {
     required this.label,
     required this.startsAt,
     required this.endsAt,
+    required this.isAllDay,
   });
 
   final String label;
   final TimeOfDayValue startsAt;
   final TimeOfDayValue endsAt;
+  final bool isAllDay;
 }
 
 class _OptionalTimeUpdate {
@@ -3947,6 +4050,7 @@ List<_EducationScheduleSummary> _monthlyScheduleSummaries(
 
 String _scheduleTimeKey(EducationWeeklySchedule schedule) {
   return [
+    schedule.isAllDay ? 'all-day' : 'timed',
     schedule.startsAt.toApiString(),
     schedule.endsAt.toApiString(),
     schedule.vehicleBoardingTime?.toApiString() ?? '',
@@ -3956,6 +4060,7 @@ String _scheduleTimeKey(EducationWeeklySchedule schedule) {
 
 String _monthlyScheduleTimeKey(EducationMonthlySchedule schedule) {
   return [
+    schedule.isAllDay ? 'all-day' : 'timed',
     schedule.startsAt.toApiString(),
     schedule.endsAt.toApiString(),
     schedule.vehicleBoardingTime?.toApiString() ?? '',
@@ -4012,8 +4117,9 @@ class _EducationScheduleSummary {
     ];
 
     return _EducationScheduleSummary(
-      title:
-          '${_weekdayGroupText(weekdays)} ${_timeOfDayLabel(schedule.startsAt)}-${_timeOfDayLabel(schedule.endsAt)}',
+      title: schedule.isAllDay
+          ? '${_weekdayGroupText(weekdays)} 종일'
+          : '${_weekdayGroupText(weekdays)} ${_timeOfDayLabel(schedule.startsAt)}-${_timeOfDayLabel(schedule.endsAt)}',
       vehicleText: vehicleParts.isEmpty ? null : vehicleParts.join(' · '),
     );
   }
@@ -4041,8 +4147,9 @@ class _EducationScheduleSummary {
         .join(',');
 
     return _EducationScheduleSummary(
-      title:
-          '매월 $scheduleText ${_timeOfDayLabel(schedule.startsAt)}-${_timeOfDayLabel(schedule.endsAt)}',
+      title: schedule.isAllDay
+          ? '매월 $scheduleText 종일'
+          : '매월 $scheduleText ${_timeOfDayLabel(schedule.startsAt)}-${_timeOfDayLabel(schedule.endsAt)}',
       vehicleText: vehicleParts.isEmpty ? null : vehicleParts.join(' · '),
     );
   }

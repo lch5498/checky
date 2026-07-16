@@ -53,6 +53,7 @@ export async function POST(request: Request, context: RouteContext) {
       content: optionalText(payload, 'content'),
       startsAt: requiredString(payload, 'startsAt'),
       endsAt: requiredString(payload, 'endsAt'),
+      isAllDay: optionalBoolean(payload, 'isAllDay'),
       vehicleBoardingAt: optionalText(payload, 'vehicleBoardingAt'),
       vehicleDropoffAt: optionalText(payload, 'vehicleDropoffAt'),
       educationProgramId:
@@ -75,6 +76,20 @@ function optionalText(payload: Record<string, unknown>, key: string) {
   }
 
   if (typeof value !== 'string') {
+    throw new HttpError(400, { error: 'invalid_payload', field: key });
+  }
+
+  return value;
+}
+
+function optionalBoolean(payload: Record<string, unknown>, key: string) {
+  const value = payload[key];
+
+  if (value === undefined || value === null) {
+    return undefined;
+  }
+
+  if (typeof value !== 'boolean') {
     throw new HttpError(400, { error: 'invalid_payload', field: key });
   }
 

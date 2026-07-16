@@ -492,6 +492,7 @@ class ApiClient {
     String? content,
     required DateTime startsAt,
     required DateTime endsAt,
+    required bool isAllDay,
     DateTime? vehicleBoardingAt,
     DateTime? vehicleDropoffAt,
     String? educationProgramId,
@@ -507,6 +508,7 @@ class ApiClient {
         content: content,
         startsAt: startsAt,
         endsAt: endsAt,
+        isAllDay: isAllDay,
         vehicleBoardingAt: vehicleBoardingAt,
         vehicleDropoffAt: vehicleDropoffAt,
         educationProgramId: educationProgramId,
@@ -526,6 +528,7 @@ class ApiClient {
     String? content,
     required DateTime startsAt,
     required DateTime endsAt,
+    required bool isAllDay,
     DateTime? vehicleBoardingAt,
     DateTime? vehicleDropoffAt,
     String? educationProgramId,
@@ -541,6 +544,7 @@ class ApiClient {
         content: content,
         startsAt: startsAt,
         endsAt: endsAt,
+        isAllDay: isAllDay,
         vehicleBoardingAt: vehicleBoardingAt,
         vehicleDropoffAt: vehicleDropoffAt,
         educationProgramId: educationProgramId,
@@ -1361,6 +1365,7 @@ class ApiClient {
     String? content,
     required DateTime startsAt,
     required DateTime endsAt,
+    required bool isAllDay,
     DateTime? vehicleBoardingAt,
     DateTime? vehicleDropoffAt,
     String? educationProgramId,
@@ -1371,6 +1376,7 @@ class ApiClient {
       'title': title,
       'startsAt': startsAt.toUtc().toIso8601String(),
       'endsAt': endsAt.toUtc().toIso8601String(),
+      'isAllDay': isAllDay,
       'alertOffsetMinutes': alertOffsetMinutes,
     };
 
@@ -3004,6 +3010,7 @@ class EducationProgramPhoneContact {
 class EducationWeeklySchedule {
   const EducationWeeklySchedule({
     required this.weekday,
+    required this.isAllDay,
     required this.startsAt,
     required this.endsAt,
     required this.vehicleBoardingTime,
@@ -3011,6 +3018,7 @@ class EducationWeeklySchedule {
   });
 
   final int weekday;
+  final bool isAllDay;
   final TimeOfDayValue startsAt;
   final TimeOfDayValue endsAt;
   final TimeOfDayValue? vehicleBoardingTime;
@@ -3019,6 +3027,7 @@ class EducationWeeklySchedule {
   factory EducationWeeklySchedule.fromJson(Map<String, Object?> json) {
     return EducationWeeklySchedule(
       weekday: json['weekday'] as int,
+      isAllDay: json['isAllDay'] as bool? ?? false,
       startsAt: TimeOfDayValue.parse(json['startsAt'] as String),
       endsAt: TimeOfDayValue.parse(json['endsAt'] as String),
       vehicleBoardingTime: _parseOptionalTimeOfDayValue(
@@ -3033,6 +3042,7 @@ class EducationWeeklySchedule {
   Map<String, Object?> toJson() {
     return {
       'weekday': weekday,
+      'isAllDay': isAllDay,
       'startsAt': startsAt.toApiString(),
       'endsAt': endsAt.toApiString(),
       'vehicleBoardingTime': vehicleBoardingTime?.toApiString(),
@@ -3046,6 +3056,7 @@ class EducationMonthlySchedule {
     required this.weekOfMonth,
     required this.weekday,
     required this.dayOfMonth,
+    required this.isAllDay,
     required this.startsAt,
     required this.endsAt,
     required this.vehicleBoardingTime,
@@ -3055,6 +3066,7 @@ class EducationMonthlySchedule {
   final int weekOfMonth;
   final int weekday;
   final int? dayOfMonth;
+  final bool isAllDay;
   final TimeOfDayValue startsAt;
   final TimeOfDayValue endsAt;
   final TimeOfDayValue? vehicleBoardingTime;
@@ -3065,6 +3077,7 @@ class EducationMonthlySchedule {
       weekOfMonth: json['weekOfMonth'] as int,
       weekday: json['weekday'] as int,
       dayOfMonth: json['dayOfMonth'] as int?,
+      isAllDay: json['isAllDay'] as bool? ?? false,
       startsAt: TimeOfDayValue.parse(json['startsAt'] as String),
       endsAt: TimeOfDayValue.parse(json['endsAt'] as String),
       vehicleBoardingTime: _parseOptionalTimeOfDayValue(
@@ -3081,6 +3094,7 @@ class EducationMonthlySchedule {
       'weekOfMonth': weekOfMonth,
       'weekday': weekday,
       'dayOfMonth': dayOfMonth,
+      'isAllDay': isAllDay,
       'startsAt': startsAt.toApiString(),
       'endsAt': endsAt.toApiString(),
       'vehicleBoardingTime': vehicleBoardingTime?.toApiString(),
@@ -3116,6 +3130,7 @@ class AppSchedule {
     required this.content,
     required this.startsAt,
     required this.endsAt,
+    required this.isAllDay,
     required this.vehicleBoardingAt,
     required this.vehicleDropoffAt,
     required this.educationProgramId,
@@ -3136,6 +3151,7 @@ class AppSchedule {
   final String? content;
   final DateTime startsAt;
   final DateTime endsAt;
+  final bool isAllDay;
   final DateTime? vehicleBoardingAt;
   final DateTime? vehicleDropoffAt;
   final String? educationProgramId;
@@ -3163,6 +3179,7 @@ class AppSchedule {
       content: json['content'] as String?,
       startsAt: DateTime.parse(json['starts_at'] as String).toLocal(),
       endsAt: DateTime.parse(json['ends_at'] as String).toLocal(),
+      isAllDay: json['is_all_day'] as bool? ?? false,
       vehicleBoardingAt: _parseOptionalLocalDateTime(
         json['vehicle_boarding_at'] as String?,
       ),

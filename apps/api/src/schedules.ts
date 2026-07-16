@@ -16,6 +16,7 @@ export type Schedule = {
   content: string | null;
   starts_at: string;
   ends_at: string;
+  is_all_day: boolean;
   vehicle_boarding_at: string | null;
   vehicle_dropoff_at: string | null;
   education_program_id: string | null;
@@ -52,6 +53,7 @@ export type ScheduleInput = {
   content?: string;
   startsAt: string;
   endsAt: string;
+  isAllDay?: boolean;
   vehicleBoardingAt?: string;
   vehicleDropoffAt?: string;
   educationProgramId?: string;
@@ -137,6 +139,7 @@ export async function createSchedule(
       content: normalized.content,
       starts_at: normalized.startsAt,
       ends_at: normalized.endsAt,
+      is_all_day: normalized.isAllDay,
       vehicle_boarding_at: normalized.vehicleBoardingAt,
       vehicle_dropoff_at: normalized.vehicleDropoffAt,
       education_program_id: normalized.educationProgramId,
@@ -172,6 +175,7 @@ export async function updateSchedule(
       content: normalized.content,
       starts_at: normalized.startsAt,
       ends_at: normalized.endsAt,
+      is_all_day: normalized.isAllDay,
       vehicle_boarding_at: normalized.vehicleBoardingAt,
       vehicle_dropoff_at: normalized.vehicleDropoffAt,
       education_program_id: normalized.educationProgramId,
@@ -259,6 +263,7 @@ async function normalizeScheduleInput(familyId: string, input: ScheduleInput) {
     content: normalizeOptionalText(input.content, 'content', 1000),
     startsAt,
     endsAt,
+    isAllDay: input.isAllDay === true,
     vehicleBoardingAt: normalizeOptionalDateTime(
       input.vehicleBoardingAt,
       'vehicleBoardingAt',

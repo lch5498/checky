@@ -125,6 +125,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             content: itinerary.content,
             startsAt: startsAt,
             endsAt: startsAt.add(const Duration(hours: 1)),
+            isAllDay: false,
             vehicleBoardingAt: null,
             vehicleDropoffAt: null,
             educationProgramId: null,
@@ -431,6 +432,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           content: input.content,
           startsAt: input.startsAt,
           endsAt: input.endsAt,
+          isAllDay: input.isAllDay,
           vehicleBoardingAt: input.vehicleBoardingAt,
           vehicleDropoffAt: input.vehicleDropoffAt,
           educationProgramId: input.educationProgramId,
@@ -446,6 +448,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           content: input.content,
           startsAt: input.startsAt,
           endsAt: input.endsAt,
+          isAllDay: input.isAllDay,
           vehicleBoardingAt: input.vehicleBoardingAt,
           vehicleDropoffAt: input.vehicleDropoffAt,
           educationProgramId: input.educationProgramId,
@@ -2280,17 +2283,29 @@ class _ScheduleDetailScreen extends StatelessWidget {
                     ],
                   ],
                   _DetailDivider(),
-                  _DetailRow(
-                    icon: CupertinoIcons.calendar,
-                    label: 'From',
-                    value: _fullDateTimeLabel(schedule.startsAt),
-                  ),
-                  _DetailDivider(),
-                  _DetailRow(
-                    icon: CupertinoIcons.clock,
-                    label: 'To',
-                    value: _fullDateTimeLabel(schedule.endsAt),
-                  ),
+                  if (schedule.isAllDay) ...[
+                    _DetailRow(
+                      icon: CupertinoIcons.calendar,
+                      label: '날짜',
+                      value: _dayLabel(schedule.startsAt),
+                    ),
+                    _DetailDivider(),
+                    _DetailSwitchRow(label: '종일', value: true),
+                  ] else ...[
+                    _DetailRow(
+                      icon: CupertinoIcons.calendar,
+                      label: 'From',
+                      value: _fullDateTimeLabel(schedule.startsAt),
+                    ),
+                    _DetailDivider(),
+                    _DetailSwitchRow(label: '종일', value: false),
+                    _DetailDivider(),
+                    _DetailRow(
+                      icon: CupertinoIcons.clock,
+                      label: 'To',
+                      value: _fullDateTimeLabel(schedule.endsAt),
+                    ),
+                  ],
                   _DetailDivider(),
                   _DetailRow(
                     icon: CupertinoIcons.bell,
@@ -2420,6 +2435,43 @@ class _DetailRow extends StatelessWidget {
   }
 }
 
+class _DetailSwitchRow extends StatelessWidget {
+  const _DetailSwitchRow({required this.label, required this.value});
+
+  final String label;
+  final bool value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          const Icon(
+            CupertinoIcons.checkmark_circle,
+            color: CupertinoColors.systemTeal,
+            size: 19,
+          ),
+          const SizedBox(width: 10),
+          SizedBox(
+            width: 86,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: AppColors.darkTextSecondary,
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const Spacer(),
+          CupertinoSwitch(value: value, onChanged: null),
+        ],
+      ),
+    );
+  }
+}
+
 class _PhoneDetailRow extends StatelessWidget {
   const _PhoneDetailRow({required this.contact, required this.onPressed});
 
@@ -2515,6 +2567,7 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
   late final TextEditingController _contentController;
   late DateTime _startsAt;
   late DateTime _endsAt;
+  late bool _isAllDay;
   DateTime? _vehicleBoardingAt;
   DateTime? _vehicleDropoffAt;
   String? _educationProgramId;
@@ -2530,6 +2583,11 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
     _contentController = TextEditingController(text: schedule?.content);
     _startsAt = schedule?.startsAt ?? _defaultStartAt(widget.initialDate);
     _endsAt = schedule?.endsAt ?? _startsAt.add(const Duration(hours: 1));
+    _isAllDay = schedule?.isAllDay ?? false;
+    if (_isAllDay) {
+      _startsAt = _dateOnly(_startsAt);
+      _endsAt = _startsAt.add(const Duration(days: 1));
+    }
     _vehicleBoardingAt = schedule?.vehicleBoardingAt;
     _vehicleDropoffAt = schedule?.vehicleDropoffAt;
     _educationProgramId = schedule?.educationProgramId;
@@ -2660,6 +2718,18 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
     });
   }
 
+  void _setAllDay(bool value) {
+    setState(() {
+      _isAllDay = value;
+      if (value) {
+        _startsAt = _dateOnly(_startsAt);
+        _endsAt = _startsAt.add(const Duration(days: 1));
+      } else {
+        _endsAt = _startsAt.add(const Duration(hours: 1));
+      }
+    });
+  }
+
   Future<void> _pickOptionalDateTime({required bool isBoarding}) async {
     final current = isBoarding ? _vehicleBoardingAt : _vehicleDropoffAt;
     final picked = await _showDateTimePicker(current ?? _startsAt);
@@ -2728,6 +2798,7 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
         content: content.isEmpty ? null : content,
         startsAt: _startsAt,
         endsAt: _endsAt,
+        isAllDay: _isAllDay,
         vehicleBoardingAt: _vehicleBoardingAt,
         vehicleDropoffAt: _vehicleDropoffAt,
         educationProgramId: _educationProgramId,
@@ -2806,17 +2877,27 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
             const SizedBox(height: 14),
             _FormSection(
               children: [
-                _PickerRow(
-                  label: '시작 시각',
-                  value: _dateTimeLabel(_startsAt),
-                  onPressed: () => _pickDateTime(isStart: true),
-                ),
+                _ScheduleAllDayRow(value: _isAllDay, onChanged: _setAllDay),
                 _FormDivider(),
-                _PickerRow(
-                  label: '종료 시각',
-                  value: _dateTimeLabel(_endsAt),
-                  onPressed: () => _pickDateTime(isStart: false),
-                ),
+                if (_isAllDay)
+                  _PickerRow(
+                    label: '날짜',
+                    value: _dayLabel(_startsAt),
+                    onPressed: null,
+                  )
+                else ...[
+                  _PickerRow(
+                    label: '시작 시각',
+                    value: _dateTimeLabel(_startsAt),
+                    onPressed: () => _pickDateTime(isStart: true),
+                  ),
+                  _FormDivider(),
+                  _PickerRow(
+                    label: '종료 시각',
+                    value: _dateTimeLabel(_endsAt),
+                    onPressed: () => _pickDateTime(isStart: false),
+                  ),
+                ],
                 _FormDivider(),
                 _PickerRow(
                   label: '알림',
@@ -2889,7 +2970,7 @@ class _PickerRow extends StatelessWidget {
 
   final String label;
   final String value;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -2919,7 +3000,9 @@ class _PickerRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.right,
                 style: TextStyle(
-                  color: CupertinoColors.systemBlue,
+                  color: onPressed == null
+                      ? AppColors.darkTextSecondary
+                      : CupertinoColors.systemBlue,
                   fontSize: 15,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0,
@@ -2928,6 +3011,34 @@ class _PickerRow extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ScheduleAllDayRow extends StatelessWidget {
+  const _ScheduleAllDayRow({required this.value, required this.onChanged});
+
+  final bool value;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: Row(
+        children: [
+          Text(
+            '종일',
+            style: TextStyle(
+              color: AppColors.darkTextPrimary,
+              fontSize: 15,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Spacer(),
+          CupertinoSwitch(value: value, onChanged: onChanged),
+        ],
       ),
     );
   }
@@ -3393,6 +3504,7 @@ class _ScheduleInput {
     required this.content,
     required this.startsAt,
     required this.endsAt,
+    required this.isAllDay,
     required this.vehicleBoardingAt,
     required this.vehicleDropoffAt,
     required this.educationProgramId,
@@ -3404,6 +3516,7 @@ class _ScheduleInput {
   final String? content;
   final DateTime startsAt;
   final DateTime endsAt;
+  final bool isAllDay;
   final DateTime? vehicleBoardingAt;
   final DateTime? vehicleDropoffAt;
   final String? educationProgramId;

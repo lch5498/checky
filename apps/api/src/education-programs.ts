@@ -13,6 +13,7 @@ const MAX_PHONE_CONTACTS = 10;
 
 export type EducationWeeklySchedule = {
   weekday: number;
+  isAllDay?: boolean;
   startsAt: string;
   endsAt: string;
   vehicleBoardingTime: string | null;
@@ -25,6 +26,7 @@ export type EducationMonthlySchedule = {
   weekOfMonth: number;
   weekday: number;
   dayOfMonth?: number | null;
+  isAllDay?: boolean;
   startsAt: string;
   endsAt: string;
   vehicleBoardingTime: string | null;
@@ -386,7 +388,12 @@ function generateSchedules(
       title: input.name,
       content: null,
       starts_at: zonedDateTimeIso(cursor, rule.startsAt, input.timeZoneOffsetMinutes),
-      ends_at: zonedDateTimeIso(cursor, rule.endsAt, input.timeZoneOffsetMinutes),
+      ends_at: zonedDateTimeIso(
+        rule.isAllDay ? addDays(cursor, 1) : cursor,
+        rule.isAllDay ? '00:00' : rule.endsAt,
+        input.timeZoneOffsetMinutes,
+      ),
+      is_all_day: rule.isAllDay === true,
       vehicle_boarding_at: rule.vehicleBoardingTime
         ? zonedDateTimeIso(cursor, rule.vehicleBoardingTime, input.timeZoneOffsetMinutes)
         : null,
@@ -479,6 +486,7 @@ function normalizeWeeklySchedules(value: EducationWeeklySchedule[] | undefined) 
       const weekday = Number(schedule.weekday);
       const startsAt = normalizeTime(schedule.startsAt, 'startsAt');
       const endsAt = normalizeTime(schedule.endsAt, 'endsAt');
+      const isAllDay = schedule.isAllDay === true;
       const vehicleBoardingTime = normalizeOptionalTime(
         schedule.vehicleBoardingTime,
         'vehicleBoardingTime',
@@ -492,13 +500,20 @@ function normalizeWeeklySchedules(value: EducationWeeklySchedule[] | undefined) 
         throw new HttpError(400, { error: 'invalid_payload', field: 'weekday' });
       }
 
-      if (timeToMinutes(endsAt) < timeToMinutes(startsAt)) {
+      if (!isAllDay && timeToMinutes(endsAt) < timeToMinutes(startsAt)) {
         throw new HttpError(400, { error: 'invalid_payload', field: 'endsAt' });
       }
 
       seen.add(weekday);
 
-      return { weekday, startsAt, endsAt, vehicleBoardingTime, vehicleDropoffTime };
+      return {
+        weekday,
+        startsAt: isAllDay ? '00:00' : startsAt,
+        endsAt: isAllDay ? '00:00' : endsAt,
+        isAllDay,
+        vehicleBoardingTime,
+        vehicleDropoffTime,
+      };
     })
     .sort((left, right) => left.weekday - right.weekday);
 }
@@ -524,6 +539,7 @@ function normalizeMonthlySchedules(value: EducationMonthlySchedule[] | undefined
       const weekday = Number(schedule.weekday);
       const startsAt = normalizeTime(schedule.startsAt, 'startsAt');
       const endsAt = normalizeTime(schedule.endsAt, 'endsAt');
+      const isAllDay = schedule.isAllDay === true;
       const vehicleBoardingTime = normalizeOptionalTime(
         schedule.vehicleBoardingTime,
         'vehicleBoardingTime',
@@ -551,7 +567,7 @@ function normalizeMonthlySchedules(value: EducationMonthlySchedule[] | undefined
         }
       }
 
-      if (timeToMinutes(endsAt) < timeToMinutes(startsAt)) {
+      if (!isAllDay && timeToMinutes(endsAt) < timeToMinutes(startsAt)) {
         throw new HttpError(400, { error: 'invalid_payload', field: 'endsAt' });
       }
 
@@ -569,8 +585,9 @@ function normalizeMonthlySchedules(value: EducationMonthlySchedule[] | undefined
         weekOfMonth,
         weekday,
         dayOfMonth,
-        startsAt,
-        endsAt,
+        startsAt: isAllDay ? '00:00' : startsAt,
+        endsAt: isAllDay ? '00:00' : endsAt,
+        isAllDay,
         vehicleBoardingTime,
         vehicleDropoffTime,
       };
