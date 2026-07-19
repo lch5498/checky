@@ -4,6 +4,7 @@ import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/refreshable_scroll_view.dart';
 import '../../shared/schedule_section_switcher.dart';
+import '../travel/travel_screen.dart';
 
 enum _HolidaySubsection { holidays, longWeekends, bridgeDays }
 
@@ -31,6 +32,7 @@ class _HolidayScreenState extends State<HolidayScreen> {
   final _apiClient = ApiClient();
 
   List<KoreanHoliday>? _holidays;
+  List<TravelTrip>? _trips;
   _HolidaySubsection _subsection = _HolidaySubsection.holidays;
   String? _message;
   bool _isLoading = true;
@@ -47,6 +49,7 @@ class _HolidayScreenState extends State<HolidayScreen> {
 
     if (oldWidget.family.id != widget.family.id) {
       _holidays = null;
+      _trips = null;
       _loadHolidays();
     }
   }
@@ -61,16 +64,25 @@ class _HolidayScreenState extends State<HolidayScreen> {
     });
 
     try {
-      final holidays = await _apiClient.getKoreanHolidays(
-        widget.sessionToken,
-        familyId: widget.family.id,
-        rangeStart: now,
-        rangeEnd: rangeEnd,
-      );
+      final results = await Future.wait([
+        _apiClient.getKoreanHolidays(
+          widget.sessionToken,
+          familyId: widget.family.id,
+          rangeStart: now,
+          rangeEnd: rangeEnd,
+        ),
+        _apiClient.getTravelDashboard(
+          widget.sessionToken,
+          familyId: widget.family.id,
+        ),
+      ]);
+      final holidays = results[0] as List<KoreanHoliday>;
+      final travelDashboard = results[1] as TravelDashboard;
 
       if (mounted) {
         setState(() {
           _holidays = holidays;
+          _trips = travelDashboard.trips;
         });
       }
     } catch (error) {
@@ -88,9 +100,83 @@ class _HolidayScreenState extends State<HolidayScreen> {
     }
   }
 
+  Future<void> _openTravelForRange(DateTime start, DateTime end) async {
+    final trips = _overlappingTrips(_trips ?? const <TravelTrip>[], start, end);
+
+    if (trips.isEmpty) {
+      final result = await Navigator.of(context).push<TravelTripFormResult>(
+        CupertinoPageRoute(
+          fullscreenDialog: true,
+          builder: (context) => TravelTripFormScreen(
+            familyId: widget.family.id,
+            sessionToken: widget.sessionToken,
+            initialStartsOn: start,
+            initialEndsOn: end,
+          ),
+        ),
+      );
+      final created = result?.trip;
+      if (created == null || !mounted) {
+        return;
+      }
+
+      await _loadHolidays();
+      if (mounted) {
+        await _openTrip(created);
+      }
+      return;
+    }
+
+    if (trips.length == 1) {
+      await _openTrip(trips.single);
+      return;
+    }
+
+    final selected = await showCupertinoModalPopup<TravelTrip>(
+      context: context,
+      builder: (context) => CupertinoActionSheet(
+        title: const Text('겹치는 여행'),
+        message: const Text('열어 볼 여행을 선택해 주세요.'),
+        actions: trips
+            .map(
+              (trip) => CupertinoActionSheetAction(
+                onPressed: () => Navigator.of(context).pop(trip),
+                child: Text('${trip.title} (${_travelRangeLabel(trip)})'),
+              ),
+            )
+            .toList(),
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('취소'),
+        ),
+      ),
+    );
+
+    if (selected != null && mounted) {
+      await _openTrip(selected);
+    }
+  }
+
+  Future<void> _openTrip(TravelTrip trip) async {
+    await Navigator.of(context).push(
+      CupertinoPageRoute(
+        builder: (context) => TravelDetailScreen(
+          family: widget.family,
+          sessionToken: widget.sessionToken,
+          trip: trip,
+        ),
+      ),
+    );
+
+    if (mounted) {
+      await _loadHolidays();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final holidays = _holidays ?? const <KoreanHoliday>[];
+    final trips = _trips ?? const <TravelTrip>[];
     final now = _dayOnly(DateTime.now());
     final rangeEnd = DateTime(now.year + 2, 1, 1);
     final longWeekends = _longWeekends(holidays, now, rangeEnd);
@@ -159,10 +245,18 @@ class _HolidayScreenState extends State<HolidayScreen> {
                       _HolidayTile(
                         date: holiday.start,
                         title: '${holiday.length}일 연휴',
-                        subtitle:
-                            '${_rangeDateLabel(holiday.start, holiday.end)} · ${holiday.names.join(' · ')}',
+                        subtitle: _holidayRangeSubtitle(
+                          holiday,
+                          _overlappingTrips(trips, holiday.start, holiday.end),
+                        ),
                         icon: CupertinoIcons.sun_max,
-                        onPressed: () => widget.onOpenCalendarAt(holiday.start),
+                        showTravelRegisterAction: _overlappingTrips(
+                          trips,
+                          holiday.start,
+                          holiday.end,
+                        ).isEmpty,
+                        onPressed: () =>
+                            _openTravelForRange(holiday.start, holiday.end),
                       ),
                 ],
                 _HolidaySubsection.bridgeDays => [
@@ -176,12 +270,23 @@ class _HolidayScreenState extends State<HolidayScreen> {
                     for (final bridgeDay in bridgeDays)
                       _HolidayTile(
                         date: bridgeDay.date,
-                        title: '${bridgeDay.length}일 연휴 만들기',
-                        subtitle:
-                            '${_holidayDateLabel(bridgeDay.date)} 하루 휴가 · ${_rangeDateLabel(bridgeDay.start, bridgeDay.end)}',
+                        title: '${bridgeDay.length}일 연휴',
+                        subtitle: _bridgeDaySubtitle(
+                          bridgeDay,
+                          _overlappingTrips(
+                            trips,
+                            bridgeDay.start,
+                            bridgeDay.end,
+                          ),
+                        ),
                         icon: CupertinoIcons.square_stack_3d_up,
+                        showTravelRegisterAction: _overlappingTrips(
+                          trips,
+                          bridgeDay.start,
+                          bridgeDay.end,
+                        ).isEmpty,
                         onPressed: () =>
-                            widget.onOpenCalendarAt(bridgeDay.date),
+                            _openTravelForRange(bridgeDay.start, bridgeDay.end),
                       ),
                 ],
               },
@@ -286,6 +391,7 @@ class _HolidayTile extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.onPressed,
+    this.showTravelRegisterAction = false,
   });
 
   final DateTime date;
@@ -293,6 +399,7 @@ class _HolidayTile extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final VoidCallback onPressed;
+  final bool showTravelRegisterAction;
 
   @override
   Widget build(BuildContext context) {
@@ -324,16 +431,32 @@ class _HolidayTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.darkTextPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                      ),
+                      if (showTravelRegisterAction) ...[
+                        const SizedBox(width: 8),
+                        const Text('✈️', style: TextStyle(fontSize: 16)),
+                        const SizedBox(width: 4),
+                        const Icon(
+                          CupertinoIcons.plus_circle_fill,
+                          color: CupertinoColors.systemTeal,
+                          size: 19,
+                        ),
+                      ],
+                    ],
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -435,6 +558,58 @@ class _BridgeDay {
   final DateTime end;
 
   int get length => end.difference(start).inDays + 1;
+}
+
+List<TravelTrip> _overlappingTrips(
+  List<TravelTrip> trips,
+  DateTime rangeStart,
+  DateTime rangeEnd,
+) {
+  return trips
+      .where(
+        (trip) =>
+            !trip.startsOn.isAfter(rangeEnd) &&
+            !trip.endsOn.isBefore(rangeStart),
+      )
+      .toList();
+}
+
+String _holidayRangeSubtitle(
+  _HolidayBreak holiday,
+  List<TravelTrip> overlappingTrips,
+) {
+  final holidaySummary =
+      '${_rangeDateLabel(holiday.start, holiday.end)} · ${holiday.names.join(' · ')}';
+  final travelSummary = _travelSummary(overlappingTrips);
+  return travelSummary == null
+      ? holidaySummary
+      : '$holidaySummary\n$travelSummary';
+}
+
+String _bridgeDaySubtitle(
+  _BridgeDay bridgeDay,
+  List<TravelTrip> overlappingTrips,
+) {
+  final bridgeSummary =
+      '${_holidayDateLabel(bridgeDay.date)} 휴가 - ${_rangeDateLabel(bridgeDay.start, bridgeDay.end)}';
+  final travelSummary = _travelSummary(overlappingTrips);
+  return travelSummary == null
+      ? bridgeSummary
+      : '$bridgeSummary\n$travelSummary';
+}
+
+String? _travelSummary(List<TravelTrip> trips) {
+  if (trips.isEmpty) {
+    return null;
+  }
+
+  final first = trips.first;
+  final suffix = trips.length > 1 ? ' 외 ${trips.length - 1}개' : '';
+  return '${first.title} - ${_travelRangeLabel(first)}$suffix';
+}
+
+String _travelRangeLabel(TravelTrip trip) {
+  return _rangeDateLabel(trip.startsOn, trip.endsOn);
 }
 
 List<_HolidayBreak> _longWeekends(

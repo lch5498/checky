@@ -82,10 +82,10 @@ class _TravelScreenState extends State<TravelScreen> {
   }
 
   Future<void> _createTrip() async {
-    final result = await Navigator.of(context).push<_TravelTripFormResult>(
+    final result = await Navigator.of(context).push<TravelTripFormResult>(
       CupertinoPageRoute(
         fullscreenDialog: true,
-        builder: (context) => _TravelTripFormScreen(
+        builder: (context) => TravelTripFormScreen(
           familyId: _family.id,
           sessionToken: widget.sessionToken,
         ),
@@ -1099,10 +1099,10 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
   Future<void> _editTrip() async {
     final detail = _detail;
     final trip = detail?.trip ?? widget.trip;
-    final result = await Navigator.of(context).push<_TravelTripFormResult>(
+    final result = await Navigator.of(context).push<TravelTripFormResult>(
       CupertinoPageRoute(
         fullscreenDialog: true,
-        builder: (context) => _TravelTripFormScreen(
+        builder: (context) => TravelTripFormScreen(
           familyId: widget.family.id,
           sessionToken: widget.sessionToken,
           trip: trip,
@@ -2083,36 +2083,41 @@ class _ChecklistAddLink extends StatelessWidget {
   }
 }
 
-class _TravelTripFormResult {
-  const _TravelTripFormResult._({this.trip, required this.isDeleted});
+class TravelTripFormResult {
+  const TravelTripFormResult._({this.trip, required this.isDeleted});
 
-  const _TravelTripFormResult.saved(TravelTrip trip)
+  const TravelTripFormResult.saved(TravelTrip trip)
     : this._(trip: trip, isDeleted: false);
 
-  const _TravelTripFormResult.deleted() : this._(isDeleted: true);
+  const TravelTripFormResult.deleted() : this._(isDeleted: true);
 
   final TravelTrip? trip;
   final bool isDeleted;
 }
 
-class _TravelTripFormScreen extends StatefulWidget {
-  const _TravelTripFormScreen({
+class TravelTripFormScreen extends StatefulWidget {
+  const TravelTripFormScreen({
+    super.key,
     required this.familyId,
     required this.sessionToken,
     this.trip,
     this.itineraries = const [],
+    this.initialStartsOn,
+    this.initialEndsOn,
   });
 
   final String familyId;
   final String sessionToken;
   final TravelTrip? trip;
   final List<TravelItinerary> itineraries;
+  final DateTime? initialStartsOn;
+  final DateTime? initialEndsOn;
 
   @override
-  State<_TravelTripFormScreen> createState() => _TravelTripFormScreenState();
+  State<TravelTripFormScreen> createState() => _TravelTripFormScreenState();
 }
 
-class _TravelTripFormScreenState extends State<_TravelTripFormScreen> {
+class _TravelTripFormScreenState extends State<TravelTripFormScreen> {
   final _apiClient = ApiClient();
   final _titleController = TextEditingController();
 
@@ -2129,6 +2134,12 @@ class _TravelTripFormScreenState extends State<_TravelTripFormScreen> {
       _titleController.text = trip.title;
       _startsOn = trip.startsOn;
       _endsOn = trip.endsOn;
+    } else if (widget.initialStartsOn != null) {
+      _startsOn = _dateOnly(widget.initialStartsOn!);
+      final initialEnd = widget.initialEndsOn ?? _startsOn;
+      _endsOn = _dateOnly(initialEnd).isBefore(_startsOn)
+          ? _startsOn
+          : _dateOnly(initialEnd);
     }
   }
 
@@ -2241,7 +2252,7 @@ class _TravelTripFormScreenState extends State<_TravelTripFormScreen> {
             );
 
       if (mounted) {
-        Navigator.of(context).pop(_TravelTripFormResult.saved(trip));
+        Navigator.of(context).pop(TravelTripFormResult.saved(trip));
       }
     } catch (error) {
       if (mounted) {
@@ -2295,7 +2306,7 @@ class _TravelTripFormScreenState extends State<_TravelTripFormScreen> {
       );
 
       if (mounted) {
-        Navigator.of(context).pop(const _TravelTripFormResult.deleted());
+        Navigator.of(context).pop(const TravelTripFormResult.deleted());
       }
     } catch (error) {
       if (mounted) {
