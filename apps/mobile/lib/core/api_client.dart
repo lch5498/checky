@@ -1967,18 +1967,21 @@ class ScheduleDashboard {
     required this.members,
     required this.schedules,
     required this.educationPrograms,
+    required this.holidays,
   });
 
   final bool canManage;
   final List<FamilyMember> members;
   final List<AppSchedule> schedules;
   final List<EducationProgram> educationPrograms;
+  final List<KoreanHoliday> holidays;
 
   factory ScheduleDashboard.fromJson(Map<String, Object?> json) {
     final members = json['members'] as List<Object?>;
     final schedules = json['schedules'] as List<Object?>;
     final educationPrograms =
         json['educationPrograms'] as List<Object?>? ?? const <Object?>[];
+    final holidays = json['holidays'] as List<Object?>? ?? const <Object?>[];
 
     return ScheduleDashboard(
       canManage: json['canManage'] as bool,
@@ -1999,6 +2002,29 @@ class ScheduleDashboard {
                 EducationProgram.fromJson(program as Map<String, Object?>),
           )
           .toList(),
+      holidays: holidays
+          .map(
+            (holiday) =>
+                KoreanHoliday.fromJson(holiday as Map<String, Object?>),
+          )
+          .toList(),
+    );
+  }
+}
+
+class KoreanHoliday {
+  const KoreanHoliday({required this.date, required this.name});
+
+  final DateTime date;
+  final String name;
+
+  factory KoreanHoliday.fromJson(Map<String, Object?> json) {
+    final value = json['date'] as String;
+    final parts = value.split('-').map(int.parse).toList();
+
+    return KoreanHoliday(
+      date: DateTime(parts[0], parts[1], parts[2]),
+      name: json['name'] as String,
     );
   }
 }

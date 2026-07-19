@@ -5,6 +5,7 @@ import {
 } from './families';
 import { normalizeAlertOffsetMinutes } from './alert-offset';
 import { recordGroupActivity } from './group-activity-logs';
+import { listKoreanHolidays } from './korean-holidays';
 import { listEducationPrograms } from './education-programs';
 import { HttpError } from './http';
 import { getSupabaseAdmin } from './supabase';
@@ -72,12 +73,13 @@ export async function getScheduleDashboard(
   rangeEnd: string,
 ) {
   const membership = await requireMembership(userId, familyId);
-  const [members, schedules, educationPrograms] = await Promise.all([
+  const [members, schedules, educationPrograms, holidays] = await Promise.all([
     listFamilyMembers(userId, familyId, { skipMembershipCheck: true }),
     listSchedules(userId, familyId, rangeStart, rangeEnd, {
       skipMembershipCheck: true,
     }),
     listEducationPrograms(userId, familyId, { skipMembershipCheck: true }),
+    listKoreanHolidays(rangeStart, rangeEnd),
   ]);
 
   return {
@@ -85,6 +87,7 @@ export async function getScheduleDashboard(
     members,
     schedules,
     educationPrograms,
+    holidays,
   };
 }
 

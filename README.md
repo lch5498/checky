@@ -420,6 +420,7 @@ KAKAO_REDIRECT_URI=http://localhost:3000/api/auth/kakao/callback
 SESSION_SECRET=
 WEB_INVITE_BASE_URL=https://favis.vercel.app/invite
 CRON_SECRET=
+KASI_SERVICE_KEY=
 ```
 
 중요한 규칙:
@@ -433,6 +434,7 @@ CRON_SECRET=
 - `SESSION_SECRET`은 모바일 앱용 자체 세션 토큰 서명에 사용합니다. 충분히 긴 랜덤 문자열을 사용합니다.
 - `WEB_INVITE_BASE_URL`은 그룹 초대 공유용 HTTPS 링크 생성에 사용합니다. 미설정 시 Vercel 도메인 기반 `/invite` 경로를 사용합니다. 카카오톡 공유 안정성을 위해 `checky://...` 같은 커스텀 scheme을 직접 공유하지 않습니다.
 - `CRON_SECRET`은 Supabase Cron이 일정 알림 발송 API를 호출할 때 사용하는 Bearer token입니다. Vercel과 Supabase Cron 설정에 같은 값을 넣고, repo에는 커밋하지 않습니다.
+- `KASI_SERVICE_KEY`는 한국천문연구원 특일 정보 API의 공공데이터포털 서비스 키입니다. 서버에서만 공휴일을 동기화할 때 사용하며, 앱에 넣거나 커밋하지 않습니다.
 
 로컬에서 직접 `.env.local`을 만들려면:
 
@@ -911,10 +913,11 @@ Vercel Dashboard 또는 CLI로 아래 환경변수를 등록합니다.
 - `SESSION_SECRET`
 - `WEB_INVITE_BASE_URL`
 - `CRON_SECRET`
+- `KASI_SERVICE_KEY`
 
 현재 서버 코드는 Supabase 서버용 secret key만 사용하므로 `SUPABASE_PUBLISHABLE_KEY`는 필수값이 아닙니다.
 
-일정 알림 발송은 Vercel Cron 대신 Supabase Cron으로 매분 `/api/cron/schedule-alerts`를 호출합니다. 설정 방법은 [docs/supabase-cron.md](docs/supabase-cron.md)를 참고합니다.
+캘린더는 토요일·일요일과 동기화된 대한민국 공휴일을 빨간색으로 표시합니다. 공휴일은 한국천문연구원 특일 정보 API에서 현재·다음 연도 기준으로 동기화하며, 과거 데이터는 한 번에 백필할 수 있습니다. 일정 알림 발송과 공휴일 동기화는 Vercel Cron 대신 Supabase Cron으로 호출합니다. 설정 방법은 [docs/supabase-cron.md](docs/supabase-cron.md)를 참고합니다.
 
 Production 배포용 카카오 Redirect URI는 카카오 개발자 콘솔에도 동일하게 등록해야 합니다.
 

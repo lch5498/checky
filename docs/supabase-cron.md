@@ -1,9 +1,10 @@
 # Supabase Cron 설정
 
-체키의 일정 알림 발송은 Vercel API가 담당하고, 반복 실행 트리거는 Supabase Cron에서 호출합니다.
+체키의 일정 알림 발송과 대한민국 공휴일 동기화는 Vercel API가 담당하고, 반복 실행 트리거는 Supabase Cron에서 호출합니다.
 
 ```text
 Supabase Cron -> https://favis.vercel.app/api/cron/schedule-alerts -> FCM/APNs
+Supabase Cron -> https://favis.vercel.app/api/cron/korean-holidays -> korean_holidays
 ```
 
 Vercel Hobby 플랜은 분 단위 cron을 쓰기 어렵기 때문에, 매분 실행이 필요한 일정 알림은 Supabase Cron으로 구성합니다. Supabase Cron은 Postgres 기반 cron job을 만들 수 있고, `pg_net`을 사용하면 SQL에서 외부 HTTP endpoint를 호출할 수 있습니다.
@@ -19,6 +20,7 @@ Vercel Production 환경에 아래 환경변수가 있어야 합니다.
 
 ```text
 CRON_SECRET=충분히_긴_랜덤_문자열
+KASI_SERVICE_KEY=공공데이터포털_서비스키
 ```
 
 `/api/cron/schedule-alerts`는 `CRON_SECRET`이 설정되어 있으면 아래 헤더가 맞을 때만 실행됩니다.
@@ -28,6 +30,8 @@ Authorization: Bearer {CRON_SECRET}
 ```
 
 `CRON_SECRET`은 repo에 커밋하지 않습니다. Vercel Environment Variables와 Supabase Cron 설정에만 같은 값을 넣습니다.
+
+`KASI_SERVICE_KEY`는 [한국천문연구원 특일 정보 API](https://www.data.go.kr/data/15012690/openapi.do)의 공공데이터포털 서비스 키입니다. `/api/cron/korean-holidays`는 이 키로 공휴일, 대체공휴일, 임시공휴일을 포함한 특일 정보를 받아 `korean_holidays` 테이블에 저장합니다.
 
 ## 2. Supabase Dashboard에서 설정하기
 
@@ -195,3 +199,36 @@ limit 1;
 - lookback은 Vercel 환경변수 `SCHEDULE_ALERT_LOOKBACK_MINUTES`로 조정할 수 있습니다.
 - 푸시 제목은 `{그룹이름} - {일정제목}` 형식입니다.
 - 푸시 본문은 `정시`, `10분전`, `1시간전`, `1일전` 형식입니다.
+
+## 7. 대한민국 공휴일 동기화
+
+`KASI_SERVICE_KEY`를 Vercel Production 환경변수에 등록한 뒤, 아래 job을 Supabase SQL Editor에서 한 번 실행합니다. 매일 한국 시간 오전 9시 10분에 현재 연도와 다음 연도를 다시 동기화합니다. 기존에 수동으로 등록한 날짜(`source = 'manual'`)는 덮어쓰지 않습니다.
+
+```sql
+select cron.schedule(
+  'checky-korean-holidays-daily',
+  '10 0 * * *',
+  $$
+  select net.http_get(
+    url := 'https://favis.vercel.app/api/cron/korean-holidays',
+    headers := jsonb_build_object(
+      'Authorization', 'Bearer 여기에_CRON_SECRET_값'
+    ),
+    timeout_milliseconds := 20000
+  );
+  $$
+);
+```
+
+과거 공휴일은 아래처럼 필요한 연도 범위를 지정해 한 번만 백필합니다. 한 요청은 최대 51개 연도까지 허용합니다.
+
+```bash
+curl -X GET 'https://favis.vercel.app/api/cron/korean-holidays?startYear=2000&endYear=2027' \
+  -H 'Authorization: Bearer 여기에_CRON_SECRET_값'
+```
+
+같은 이름의 job을 다시 만들기 전에는 아래 SQL로 기존 job을 제거합니다.
+
+```sql
+select cron.unschedule('checky-korean-holidays-daily');
+```

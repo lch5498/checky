@@ -58,10 +58,22 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   DateTime get _rangeStart => _startOfRange(_anchorDate, _mode);
   DateTime get _rangeEnd => _endOfRange(_anchorDate, _mode);
-  DateTime get _prefetchRangeStart =>
-      _startOfRange(_anchorDateForOffset(_anchorDate, _mode, -1), _mode);
-  DateTime get _prefetchRangeEnd =>
-      _endOfRange(_anchorDateForOffset(_anchorDate, _mode, 1), _mode);
+  DateTime get _prefetchRangeStart {
+    final start = _startOfRange(
+      _anchorDateForOffset(_anchorDate, _mode, -1),
+      _mode,
+    );
+    return _mode == _CalendarMode.month
+        ? start.subtract(const Duration(days: 6))
+        : start;
+  }
+
+  DateTime get _prefetchRangeEnd {
+    final end = _endOfRange(_anchorDateForOffset(_anchorDate, _mode, 1), _mode);
+    return _mode == _CalendarMode.month
+        ? end.add(const Duration(days: 6))
+        : end;
+  }
 
   List<AppSchedule> _filteredSchedulesForRange(
     DateTime rangeStart,
@@ -689,6 +701,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                           mode: _mode,
                           anchorDate: _anchorDate,
                           schedulesForRange: _filteredSchedulesForRange,
+                          holidaysForRange: _holidaysForRange,
                           memberColors: memberColors,
                           canManage: dashboard.canManage,
                           onTapDate: (date) =>
@@ -705,6 +718,19 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         ),
       ),
     );
+  }
+
+  List<KoreanHoliday> _holidaysForRange(
+    DateTime rangeStart,
+    DateTime rangeEnd,
+  ) {
+    return (_dashboard?.holidays ?? const <KoreanHoliday>[])
+        .where(
+          (holiday) =>
+              !holiday.date.isBefore(rangeStart) &&
+              holiday.date.isBefore(rangeEnd),
+        )
+        .toList();
   }
 }
 
@@ -1022,6 +1048,7 @@ class _PagedCalendarBoard extends StatelessWidget {
     required this.mode,
     required this.anchorDate,
     required this.schedulesForRange,
+    required this.holidaysForRange,
     required this.memberColors,
     required this.canManage,
     required this.onTapDate,
@@ -1034,6 +1061,8 @@ class _PagedCalendarBoard extends StatelessWidget {
   final DateTime anchorDate;
   final List<AppSchedule> Function(DateTime rangeStart, DateTime rangeEnd)
   schedulesForRange;
+  final List<KoreanHoliday> Function(DateTime rangeStart, DateTime rangeEnd)
+  holidaysForRange;
   final Map<String, MemberFilterColor> memberColors;
   final bool canManage;
   final ValueChanged<DateTime> onTapDate;
@@ -1054,12 +1083,19 @@ class _PagedCalendarBoard extends StatelessWidget {
         );
         final rangeStart = _startOfRange(pageAnchorDate, mode);
         final rangeEnd = _endOfRange(pageAnchorDate, mode);
+        final holidayRangeStart = mode == _CalendarMode.month
+            ? rangeStart.subtract(Duration(days: rangeStart.weekday % 7))
+            : rangeStart;
+        final holidayRangeEnd = mode == _CalendarMode.month
+            ? holidayRangeStart.add(const Duration(days: 42))
+            : rangeEnd;
         final board = _CalendarBoard(
           mode: mode,
           rangeStart: rangeStart,
           rangeEnd: rangeEnd,
           anchorDate: pageAnchorDate,
           schedules: schedulesForRange(rangeStart, rangeEnd),
+          holidays: holidaysForRange(holidayRangeStart, holidayRangeEnd),
           memberColors: memberColors,
           canManage: canManage,
           onTapDate: onTapDate,
@@ -1083,6 +1119,7 @@ class _CalendarBoard extends StatelessWidget {
     required this.rangeEnd,
     required this.anchorDate,
     required this.schedules,
+    required this.holidays,
     required this.memberColors,
     required this.canManage,
     required this.onTapDate,
@@ -1094,6 +1131,7 @@ class _CalendarBoard extends StatelessWidget {
   final DateTime rangeEnd;
   final DateTime anchorDate;
   final List<AppSchedule> schedules;
+  final List<KoreanHoliday> holidays;
   final Map<String, MemberFilterColor> memberColors;
   final bool canManage;
   final ValueChanged<DateTime> onTapDate;
@@ -1106,6 +1144,7 @@ class _CalendarBoard extends StatelessWidget {
         return _DayCalendar(
           date: rangeStart,
           schedules: schedules,
+          holiday: _holidayForDate(holidays, rangeStart),
           memberColors: memberColors,
           canManage: canManage,
           onTapDateTime: onTapDate,
@@ -1115,6 +1154,7 @@ class _CalendarBoard extends StatelessWidget {
         return _WeekCalendar(
           weekStart: rangeStart,
           schedules: schedules,
+          holidays: holidays,
           memberColors: memberColors,
           canManage: canManage,
           onTapDate: onTapDate,
@@ -1124,6 +1164,7 @@ class _CalendarBoard extends StatelessWidget {
         return _MonthCalendar(
           monthStart: DateTime(anchorDate.year, anchorDate.month),
           schedules: schedules,
+          holidays: holidays,
           memberColors: memberColors,
           canManage: canManage,
           onTapDate: onTapDate,
@@ -1144,6 +1185,7 @@ class _DayCalendar extends StatefulWidget {
   const _DayCalendar({
     required this.date,
     required this.schedules,
+    required this.holiday,
     required this.memberColors,
     required this.canManage,
     required this.onTapDateTime,
@@ -1152,6 +1194,7 @@ class _DayCalendar extends StatefulWidget {
 
   final DateTime date;
   final List<AppSchedule> schedules;
+  final KoreanHoliday? holiday;
   final Map<String, MemberFilterColor> memberColors;
   final bool canManage;
   final ValueChanged<DateTime> onTapDateTime;
@@ -1210,7 +1253,10 @@ class _DayCalendarState extends State<_DayCalendar> {
         children: [
           ColoredBox(
             color: AppColors.darkSurfaceElevated,
-            child: _CalendarTitleBar(title: _dayLabel(widget.date)),
+            child: _CalendarTitleBar(
+              title: _dayLabel(widget.date),
+              holidayName: widget.holiday?.name,
+            ),
           ),
           Container(height: 1, color: AppColors.darkBorder),
           Expanded(
@@ -1248,6 +1294,7 @@ class _WeekCalendar extends StatefulWidget {
   const _WeekCalendar({
     required this.weekStart,
     required this.schedules,
+    required this.holidays,
     required this.memberColors,
     required this.canManage,
     required this.onTapDate,
@@ -1256,6 +1303,7 @@ class _WeekCalendar extends StatefulWidget {
 
   final DateTime weekStart;
   final List<AppSchedule> schedules;
+  final List<KoreanHoliday> holidays;
   final Map<String, MemberFilterColor> memberColors;
   final bool canManage;
   final ValueChanged<DateTime> onTapDate;
@@ -1322,7 +1370,7 @@ class _WeekCalendarState extends State<_WeekCalendar> {
               children: [
                 Container(
                   width: _weekTimeColumnWidth,
-                  height: 62,
+                  height: 70,
                   decoration: BoxDecoration(
                     border: Border(
                       right: BorderSide(color: AppColors.darkBorder),
@@ -1330,7 +1378,12 @@ class _WeekCalendarState extends State<_WeekCalendar> {
                   ),
                 ),
                 ...days.map(
-                  (day) => Expanded(child: _WeekDayHeader(date: day)),
+                  (day) => Expanded(
+                    child: _WeekDayHeader(
+                      date: day,
+                      holiday: _holidayForDate(widget.holidays, day),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1725,6 +1778,7 @@ class _MonthCalendar extends StatelessWidget {
   const _MonthCalendar({
     required this.monthStart,
     required this.schedules,
+    required this.holidays,
     required this.memberColors,
     required this.canManage,
     required this.onTapDate,
@@ -1733,6 +1787,7 @@ class _MonthCalendar extends StatelessWidget {
 
   final DateTime monthStart;
   final List<AppSchedule> schedules;
+  final List<KoreanHoliday> holidays;
   final Map<String, MemberFilterColor> memberColors;
   final bool canManage;
   final ValueChanged<DateTime> onTapDate;
@@ -1763,6 +1818,7 @@ class _MonthCalendar extends StatelessWidget {
                 (index) => Expanded(
                   child: _MonthWeekdayHeader(
                     label: _calendarWeekdayLabel(index),
+                    isWeekend: index == 0 || index == 6,
                   ),
                 ),
               ),
@@ -1774,6 +1830,7 @@ class _MonthCalendar extends StatelessWidget {
               week: week,
               monthStart: monthStart,
               schedules: schedules,
+              holidays: holidays,
               memberColors: memberColors,
               canManage: canManage,
               onTapDate: onTapDate,
@@ -1797,9 +1854,10 @@ double _monthWeekRowHeight(int maxScheduleCount) {
 }
 
 class _CalendarTitleBar extends StatelessWidget {
-  const _CalendarTitleBar({required this.title});
+  const _CalendarTitleBar({required this.title, this.holidayName});
 
   final String title;
+  final String? holidayName;
 
   @override
   Widget build(BuildContext context) {
@@ -1826,6 +1884,21 @@ class _CalendarTitleBar extends StatelessWidget {
               ),
             ),
           ),
+          if (holidayName != null) ...[
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                holidayName!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: CupertinoColors.systemRed,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1833,16 +1906,18 @@ class _CalendarTitleBar extends StatelessWidget {
 }
 
 class _WeekDayHeader extends StatelessWidget {
-  const _WeekDayHeader({required this.date});
+  const _WeekDayHeader({required this.date, required this.holiday});
 
   final DateTime date;
+  final KoreanHoliday? holiday;
 
   @override
   Widget build(BuildContext context) {
     final isToday = _dateOnly(date) == _dateOnly(DateTime.now());
+    final isSpecialDay = _isWeekend(date) || holiday != null;
 
     return Container(
-      height: 62,
+      height: 70,
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
       decoration: BoxDecoration(
         border: Border(right: BorderSide(color: AppColors.darkBorder)),
@@ -1854,8 +1929,10 @@ class _WeekDayHeader extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             style: TextStyle(
-              color: isToday
+              color: isToday && !isSpecialDay
                   ? CupertinoColors.systemTeal
+                  : isSpecialDay
+                  ? CupertinoColors.systemRed
                   : AppColors.darkTextSecondary,
               fontSize: 12,
               height: 1.1,
@@ -1869,14 +1946,18 @@ class _WeekDayHeader extends StatelessWidget {
             height: 24,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isToday ? CupertinoColors.systemTeal : null,
+              color: isToday && !isSpecialDay
+                  ? CupertinoColors.systemTeal
+                  : null,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               '${date.day}',
               style: TextStyle(
-                color: isToday
+                color: isToday && !isSpecialDay
                     ? CupertinoColors.white
+                    : isSpecialDay
+                    ? CupertinoColors.systemRed
                     : AppColors.darkTextPrimary,
                 fontSize: 14,
                 height: 1.1,
@@ -1885,6 +1966,20 @@ class _WeekDayHeader extends StatelessWidget {
               ),
             ),
           ),
+          if (holiday != null) ...[
+            const SizedBox(height: 3),
+            Text(
+              holiday!.name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: CupertinoColors.systemRed,
+                fontSize: 8,
+                height: 1.1,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1892,9 +1987,10 @@ class _WeekDayHeader extends StatelessWidget {
 }
 
 class _MonthWeekdayHeader extends StatelessWidget {
-  const _MonthWeekdayHeader({required this.label});
+  const _MonthWeekdayHeader({required this.label, required this.isWeekend});
 
   final String label;
+  final bool isWeekend;
 
   @override
   Widget build(BuildContext context) {
@@ -1904,7 +2000,9 @@ class _MonthWeekdayHeader extends StatelessWidget {
         child: Text(
           label,
           style: TextStyle(
-            color: AppColors.darkTextSecondary,
+            color: isWeekend
+                ? CupertinoColors.systemRed
+                : AppColors.darkTextSecondary,
             fontSize: 12,
             fontWeight: FontWeight.w800,
             letterSpacing: 0,
@@ -1920,6 +2018,7 @@ class _MonthWeekRow extends StatelessWidget {
     required this.week,
     required this.monthStart,
     required this.schedules,
+    required this.holidays,
     required this.memberColors,
     required this.canManage,
     required this.onTapDate,
@@ -1929,6 +2028,7 @@ class _MonthWeekRow extends StatelessWidget {
   final List<DateTime> week;
   final DateTime monthStart;
   final List<AppSchedule> schedules;
+  final List<KoreanHoliday> holidays;
   final Map<String, MemberFilterColor> memberColors;
   final bool canManage;
   final ValueChanged<DateTime> onTapDate;
@@ -1957,6 +2057,7 @@ class _MonthWeekRow extends StatelessWidget {
                   return Expanded(
                     child: _DateCell(
                       date: day,
+                      holiday: _holidayForDate(holidays, day),
                       isInCurrentMonth: day.month == monthStart.month,
                       minHeight: rowHeight,
                       canManage: canManage,
@@ -1991,6 +2092,7 @@ class _MonthWeekRow extends StatelessWidget {
 class _DateCell extends StatelessWidget {
   const _DateCell({
     required this.date,
+    required this.holiday,
     required this.isInCurrentMonth,
     required this.minHeight,
     required this.canManage,
@@ -1998,6 +2100,7 @@ class _DateCell extends StatelessWidget {
   });
 
   final DateTime date;
+  final KoreanHoliday? holiday;
   final bool isInCurrentMonth;
   final double minHeight;
   final bool canManage;
@@ -2006,6 +2109,7 @@ class _DateCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isToday = _dateOnly(date) == _dateOnly(DateTime.now());
+    final isSpecialDay = _isWeekend(date) || holiday != null;
 
     return CupertinoButton(
       padding: EdgeInsets.zero,
@@ -2024,27 +2128,52 @@ class _DateCell extends StatelessWidget {
         ),
         child: Align(
           alignment: Alignment.topLeft,
-          child: Container(
-            width: 24,
-            height: 20,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: isToday ? CupertinoColors.systemTeal : null,
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Text(
-              '${date.day}',
-              style: TextStyle(
-                color: isToday
-                    ? CupertinoColors.white
-                    : isInCurrentMonth
-                    ? AppColors.darkTextPrimary
-                    : AppColors.darkTextMuted,
-                fontSize: 12,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 24,
+                height: 20,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: isToday && !isSpecialDay
+                      ? CupertinoColors.systemTeal
+                      : null,
+                  borderRadius: BorderRadius.circular(11),
+                ),
+                child: Text(
+                  '${date.day}',
+                  style: TextStyle(
+                    color: isToday && !isSpecialDay
+                        ? CupertinoColors.white
+                        : isSpecialDay
+                        ? CupertinoColors.systemRed
+                        : isInCurrentMonth
+                        ? AppColors.darkTextPrimary
+                        : AppColors.darkTextMuted,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                  ),
+                ),
               ),
-            ),
+              if (holiday != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 1),
+                  child: Text(
+                    holiday!.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: CupertinoColors.systemRed,
+                      fontSize: 8,
+                      height: 1.1,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
@@ -3569,6 +3698,20 @@ DateTime _anchorDateForOffset(
 }
 
 DateTime _dateOnly(DateTime date) => DateTime(date.year, date.month, date.day);
+
+bool _isWeekend(DateTime date) =>
+    date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
+
+KoreanHoliday? _holidayForDate(List<KoreanHoliday> holidays, DateTime date) {
+  final target = _dateOnly(date);
+  for (final holiday in holidays) {
+    if (_dateOnly(holiday.date) == target) {
+      return holiday;
+    }
+  }
+
+  return null;
+}
 
 DateTime _defaultStartAt(DateTime initialDate) {
   if (initialDate.hour == 0 && initialDate.minute == 0) {
