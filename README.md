@@ -3,7 +3,7 @@
 그룹 내 구성원과 공유해서 사용하는 Checky 앱입니다. Flutter 앱은 iOS와 Android에서 하단 탭으로 홈, 일정, 주차, 스크랩, 여행을 구분합니다.
 
 - 홈: 오늘 일정, 현재 주차 위치, 출발 7일 전부터의 여행 체크리스트 완료율, 최근 스크랩 브리핑
-- 일정: 종일 옵션을 포함한 그룹 구성원별 일정·반복 일정 관리와 여행 일정 필터 캘린더
+- 일정: 종일 옵션을 포함한 그룹 구성원별 일정·반복 일정·기념일 관리, 여행 일정 필터 캘린더, 다가오는 공휴일·연휴·징검다리 조회
 - 주차: 차량과 주차 위치 관리
 - 그룹 활동: 최근 7일간의 일정·주차·스크랩·여행 활동을 유형별로 조회
 - 여행: 여행별 일정·장소 링크와 체크리스트 관리(완료자·완료 시각 표시), 기간 축소 시 기간 밖 일정 삭제 확인
@@ -408,7 +408,7 @@ flutter pub get
 
 ## 환경변수
 
-루트의 `.env.example`을 기준으로 환경변수를 준비합니다.
+API 서버는 `apps/api`를 Next.js 프로젝트 루트로 실행하므로, 루트의 `.env.example`을 기준으로 `apps/api/.env.local`에 환경변수를 준비합니다.
 
 ```bash
 SUPABASE_URL=
@@ -436,19 +436,19 @@ KASI_SERVICE_KEY=
 - `CRON_SECRET`은 Supabase Cron이 일정 알림 발송 API를 호출할 때 사용하는 Bearer token입니다. Vercel과 Supabase Cron 설정에 같은 값을 넣고, repo에는 커밋하지 않습니다.
 - `KASI_SERVICE_KEY`는 한국천문연구원 특일 정보 API의 공공데이터포털 서비스 키입니다. 서버에서만 공휴일을 동기화할 때 사용하며, 앱에 넣거나 커밋하지 않습니다.
 
-로컬에서 직접 `.env.local`을 만들려면:
+로컬에서 직접 환경변수 파일을 만들려면:
 
 ```bash
-cd /Users/changhwanlee/Documents/project/favis
-cp .env.example .env.local
+cd /Users/changhwanlee/Documents/project/checky/apps/api
+cp ../../.env.example .env.local
 ```
 
-그 다음 `.env.local`에 Supabase 값을 채웁니다.
+그 다음 `apps/api/.env.local`에 Supabase 값과 필요한 API 키를 채웁니다. 특히 공휴일 동기화에는 `KASI_SERVICE_KEY`가 필요합니다.
 
 Vercel 프로젝트를 연결한 뒤 환경변수를 내려받으려면:
 
 ```bash
-cd /Users/changhwanlee/Documents/project/favis
+cd /Users/changhwanlee/Documents/project/checky/apps/api
 npx vercel link
 npx vercel env pull .env.local --yes
 ```
@@ -545,7 +545,7 @@ curl http://localhost:3000/api/health
 http://localhost:3000/api/auth/kakao/callback
 ```
 
-그 다음 `.env.local`에 값을 넣습니다.
+그 다음 `apps/api/.env.local`에 값을 넣습니다.
 
 ```bash
 KAKAO_REST_API_KEY=<카카오 REST API 키>
@@ -820,6 +820,14 @@ GET /api/mobile/families/<familyId>/schedules?rangeStart=<ISO8601>&rangeEnd=<ISO
 ```
 
 응답에는 그룹 구성원 목록, 조회 범위 안의 일정 목록, 쓰기 가능 여부가 포함됩니다.
+
+공휴일 조회:
+
+```http
+GET /api/mobile/families/<familyId>/holidays?rangeStart=<ISO8601>&rangeEnd=<ISO8601>
+```
+
+공휴일 탭은 조회한 공휴일과 주말을 기준으로 3일 이상 연휴, 평일 하루를 쉬면 3일 이상 연휴가 되는 징검다리를 앱에서 계산해 보여줍니다.
 
 일정 등록:
 

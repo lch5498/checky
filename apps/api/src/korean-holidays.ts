@@ -47,7 +47,10 @@ export async function listKoreanHolidays(
 
   return (data ?? []).map((row) => {
     const holiday = row as KoreanHolidayRow;
-    return { date: holiday.holiday_date, name: holiday.name };
+    return {
+      date: holiday.holiday_date,
+      name: normalizeHolidayName(holiday.name),
+    };
   });
 }
 
@@ -138,7 +141,10 @@ async function fetchKasiHolidays(year: number, serviceKey: string) {
     }
 
     const date = toDateOnly(entry.locdate);
-    const name = typeof entry.dateName === 'string' ? entry.dateName.trim() : '';
+    const name =
+        typeof entry.dateName === 'string'
+            ? normalizeHolidayName(entry.dateName)
+            : '';
     if (!date || !name) {
       continue;
     }
@@ -218,4 +224,8 @@ function toDateOnly(value: unknown) {
   }
 
   return `${date.substring(0, 4)}-${date.substring(4, 6)}-${date.substring(6, 8)}`;
+}
+
+function normalizeHolidayName(value: string) {
+  return value.trim().replaceAll('기독탄신일', '크리스마스');
 }

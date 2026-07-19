@@ -22,6 +22,7 @@ class ScheduleScreen extends StatefulWidget {
     required this.todayRequestToken,
     required this.onSelectFamily,
     this.initialDate,
+    this.showInitialDateInMonth = false,
     this.selectedScheduleSection,
     this.onScheduleSectionChanged,
   });
@@ -33,6 +34,7 @@ class ScheduleScreen extends StatefulWidget {
   final int todayRequestToken;
   final Future<void> Function(AppFamily family) onSelectFamily;
   final DateTime? initialDate;
+  final bool showInitialDateInMonth;
   final ScheduleSection? selectedScheduleSection;
   final ValueChanged<ScheduleSection>? onScheduleSectionChanged;
 
@@ -179,7 +181,9 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     super.initState();
     _family = widget.family;
     if (widget.initialDate != null) {
-      _mode = _CalendarMode.day;
+      _mode = widget.showInitialDateInMonth
+          ? _CalendarMode.month
+          : _CalendarMode.day;
       _anchorDate = _dateOnly(widget.initialDate!);
     } else if (widget.todayRequestToken > 0) {
       _setTodayDayViewState();
@@ -1861,6 +1865,8 @@ class _CalendarTitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isHoliday = holidayName != null;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
       child: Row(
@@ -1872,8 +1878,19 @@ class _CalendarTitleBar extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(
-              title,
+            child: Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(text: title),
+                  if (isHoliday) ...[
+                    const TextSpan(text: ' - '),
+                    TextSpan(
+                      text: holidayName,
+                      style: const TextStyle(color: CupertinoColors.systemRed),
+                    ),
+                  ],
+                ],
+              ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
@@ -1884,21 +1901,6 @@ class _CalendarTitleBar extends StatelessWidget {
               ),
             ),
           ),
-          if (holidayName != null) ...[
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                holidayName!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: CupertinoColors.systemRed,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ),
-          ],
         ],
       ),
     );

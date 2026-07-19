@@ -4,6 +4,7 @@ import '../../core/api_client.dart';
 import '../../shared/schedule_section_switcher.dart';
 import '../anniversary/anniversary_screen.dart';
 import '../education/education_screen.dart';
+import '../holiday/holiday_screen.dart';
 import 'schedule_screen.dart';
 
 class ScheduleHubScreen extends StatefulWidget {
@@ -30,10 +31,19 @@ class ScheduleHubScreen extends StatefulWidget {
 
 class _ScheduleHubScreenState extends State<ScheduleHubScreen> {
   ScheduleSection _section = ScheduleSection.calendar;
+  DateTime? _calendarDate;
 
   void _setSection(ScheduleSection section) {
     setState(() {
       _section = section;
+      _calendarDate = null;
+    });
+  }
+
+  void _openCalendarAt(DateTime date) {
+    setState(() {
+      _section = ScheduleSection.calendar;
+      _calendarDate = date;
     });
   }
 
@@ -60,6 +70,15 @@ class _ScheduleHubScreenState extends State<ScheduleHubScreen> {
           onScheduleSectionChanged: _setSection,
           onSelectFamily: widget.onSelectFamily,
         );
+      case ScheduleSection.holiday:
+        return HolidayScreen(
+          key: ValueKey('holiday-${widget.family.id}'),
+          family: widget.family,
+          sessionToken: widget.sessionToken,
+          selectedScheduleSection: _section,
+          onScheduleSectionChanged: _setSection,
+          onOpenCalendarAt: _openCalendarAt,
+        );
       case ScheduleSection.calendar:
         return ScheduleScreen(
           key: ValueKey('calendar-${widget.family.id}'),
@@ -68,6 +87,8 @@ class _ScheduleHubScreenState extends State<ScheduleHubScreen> {
           sessionToken: widget.sessionToken,
           refreshToken: widget.refreshToken,
           todayRequestToken: widget.todayRequestToken,
+          initialDate: _calendarDate,
+          showInitialDateInMonth: _calendarDate != null,
           selectedScheduleSection: _section,
           onScheduleSectionChanged: _setSection,
           onSelectFamily: widget.onSelectFamily,

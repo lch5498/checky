@@ -504,6 +504,29 @@ class ApiClient {
     return ScheduleDashboard.fromJson(json);
   }
 
+  Future<List<KoreanHoliday>> getKoreanHolidays(
+    String sessionToken, {
+    required String familyId,
+    required DateTime rangeStart,
+    required DateTime rangeEnd,
+  }) async {
+    final path = Uri(
+      path: '/api/mobile/families/$familyId/holidays',
+      queryParameters: {
+        'rangeStart': rangeStart.toUtc().toIso8601String(),
+        'rangeEnd': rangeEnd.toUtc().toIso8601String(),
+      },
+    ).toString();
+    final json = await _requestJson('GET', path, bearerToken: sessionToken);
+    final holidays = json['holidays'] as List<Object?>? ?? const <Object?>[];
+
+    return holidays
+        .map(
+          (holiday) => KoreanHoliday.fromJson(holiday as Map<String, Object?>),
+        )
+        .toList();
+  }
+
   Future<AppSchedule> createSchedule(
     String sessionToken, {
     required String familyId,

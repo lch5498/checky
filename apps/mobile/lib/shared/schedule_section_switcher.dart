@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import '../design_system/app_colors.dart';
 
-enum ScheduleSection { calendar, recurring, anniversary }
+enum ScheduleSection { calendar, recurring, anniversary, holiday }
 
 class ScheduleSectionSwitcher extends StatelessWidget {
   const ScheduleSectionSwitcher({
@@ -53,4 +53,5 @@ const _labels = {
   ScheduleSection.calendar: '일정',
   ScheduleSection.recurring: '반복 일정',
   ScheduleSection.anniversary: '기념일',
+  ScheduleSection.holiday: '공휴일',
 };
