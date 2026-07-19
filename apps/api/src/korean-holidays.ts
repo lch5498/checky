@@ -227,5 +227,8 @@ function toDateOnly(value: unknown) {
 }
 
 function normalizeHolidayName(value: string) {
-  return value.trim().replaceAll('기독탄신일', '크리스마스');
+  return value
+      .trim()
+      .replaceAll('기독탄신일', '크리스마스')
+      .replaceAll('1월1일', '새해');
 }
