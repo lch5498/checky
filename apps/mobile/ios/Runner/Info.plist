@@ -80,6 +80,7 @@
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.family.checky.mobile.homeWidgetRefresh</string>
+		<string>com.family.checky.mobile.widgetRefresh.v2</string>
 	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>

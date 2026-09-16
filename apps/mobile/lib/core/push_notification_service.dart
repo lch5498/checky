@@ -16,7 +16,10 @@ Future<void> checkyBackgroundMessage(RemoteMessage message) async {
   if (familyId is! String || familyId.isEmpty) return;
   WidgetsFlutterBinding.ensureInitialized();
   if (Firebase.apps.isEmpty) await Firebase.initializeApp();
-  await HomeWidgetBackgroundRefresh.refresh(changedFamilyId: familyId);
+  await HomeWidgetBackgroundRefresh.refresh(
+    changedFamilyId: familyId,
+    source: 'push',
+  );
 }
 
 bool _refreshMessage(RemoteMessage message) =>
@@ -114,7 +117,12 @@ class PushNotificationService {
       _refreshTimers.remove(familyId);
       if (_sessionToken == null) return;
       GroupRefresh.notify(familyId);
-      unawaited(HomeWidgetBackgroundRefresh.refresh(changedFamilyId: familyId));
+      unawaited(
+        HomeWidgetBackgroundRefresh.refresh(
+          changedFamilyId: familyId,
+          source: 'push',
+        ),
+      );
     });
   }
 

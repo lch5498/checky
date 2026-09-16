@@ -20,6 +20,12 @@ class SceneDelegate: FlutterSceneDelegate {
   override func sceneDidBecomeActive(_ scene: UIScene) {
     super.sceneDidBecomeActive(scene)
     configureDeepLinkChannel()
+    CheckyWidgetRefreshScheduler.restoreIfNeeded()
+  }
+
+  override func sceneDidEnterBackground(_ scene: UIScene) {
+    super.sceneDidEnterBackground(scene)
+    CheckyWidgetRefreshScheduler.restoreIfNeeded()
   }
 
   override func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
@@ -45,6 +51,7 @@ class SceneDelegate: FlutterSceneDelegate {
     appDelegate.configureShareChannel(controller: controller)
     appDelegate.configurePhoneChannel(controller: controller)
     appDelegate.configureContactChannel(controller: controller)
+    appDelegate.configureWidgetRefreshChannel(messenger: controller.binaryMessenger)
     appDelegate.deepLinkChannel = FlutterMethodChannel(
       name: "checky/deep_links",
       binaryMessenger: controller.binaryMessenger

@@ -4,13 +4,27 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter/services.dart';
 import 'package:workmanager/workmanager.dart';
 
 import 'api_client.dart';
 import 'auth_session_store.dart';
 import 'home_widget_service.dart';
+import 'widget_refresh_diagnostics.dart';
 
 const _homeWidgetRefreshTask = 'com.family.checky.mobile.homeWidgetRefresh';
+
+@pragma('vm:entry-point')
+void iosWidgetRefreshDispatcher() {
+  WidgetsFlutterBinding.ensureInitialized();
+  const channel = MethodChannel('checky/widget_worker');
+  channel.setMethodCallHandler((call) async {
+    if (call.method != 'refresh') throw MissingPluginException();
+    return HomeWidgetBackgroundRefresh.refresh(source: 'periodic');
+  });
+  // Native invokes refresh only after this handler has been installed.
+  unawaited(channel.invokeMethod<void>('ready'));
+}
 
 @pragma('vm:entry-point')
 void homeWidgetCallbackDispatcher() {
@@ -23,12 +37,13 @@ void homeWidgetCallbackDispatcher() {
       return true;
     }
 
-    return HomeWidgetBackgroundRefresh.refresh();
+    return HomeWidgetBackgroundRefresh.refresh(source: 'periodic');
   });
 }
 
 class HomeWidgetBackgroundRefresh {
   const HomeWidgetBackgroundRefresh._();
+  static const _iosScheduler = MethodChannel('checky/widget_refresh');
 
   static Future<void> initialize() async {
     if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
@@ -36,44 +51,124 @@ class HomeWidgetBackgroundRefresh {
     }
 
     try {
-      await Workmanager().initialize(homeWidgetCallbackDispatcher);
-      await Workmanager().registerPeriodicTask(
-        _homeWidgetRefreshTask,
-        _homeWidgetRefreshTask,
-        frequency: const Duration(minutes: 15),
-        initialDelay: const Duration(minutes: 15),
-        existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
-        constraints: Constraints(networkType: NetworkType.connected),
-      );
+      if (Platform.isIOS) {
+        // Native submission reports errors and preserves an existing pending
+        // request instead of moving its earliest date on every app launch.
+        final handle = PluginUtilities.getCallbackHandle(
+          iosWidgetRefreshDispatcher,
+        );
+        if (handle == null) throw StateError('missing_callback');
+        final scheduled = await _iosScheduler.invokeMethod<bool>('schedule', {
+          'callbackHandle': handle.toRawHandle(),
+        });
+        if (scheduled != true) throw StateError('schedule_failed');
+      } else {
+        await Workmanager().initialize(homeWidgetCallbackDispatcher);
+        await Workmanager().registerPeriodicTask(
+          _homeWidgetRefreshTask,
+          _homeWidgetRefreshTask,
+          frequency: const Duration(minutes: 15),
+          initialDelay: const Duration(minutes: 15),
+          existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+          constraints: Constraints(networkType: NetworkType.connected),
+        );
+      }
+      await WidgetRefreshDiagnostics.record('schedule', 'success');
     } catch (error, stackTrace) {
+      await WidgetRefreshDiagnostics.record('schedule', 'schedule_failed');
       debugPrint('Home widget background refresh registration failed: $error');
       debugPrintStack(stackTrace: stackTrace);
     }
   }
 
-  static Future<bool> refresh({String? changedFamilyId}) async {
+  static Future<Map<String, dynamic>> schedulingStatus() async {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      return Map<String, dynamic>.from(
+        await _iosScheduler.invokeMapMethod<String, dynamic>('status') ?? {},
+      );
+    }
+    return {
+      'pending': await Workmanager().isScheduledByUniqueName(
+        _homeWidgetRefreshTask,
+      ),
+    };
+  }
+
+  static Future<bool> refresh({
+    String? changedFamilyId,
+    String source = 'foreground',
+  }) {
+    return WidgetRefreshRunner().run(
+      changedFamilyId: changedFamilyId,
+      source: source,
+    );
+  }
+}
+
+/// Injectable dependencies allow the background path to be tested without a
+/// device scheduler, real credentials, push delivery or a live API.
+class WidgetRefreshRunner {
+  WidgetRefreshRunner({
+    ApiClient? apiClient,
+    Future<StoredAuthSession?> Function()? readSession,
+    Future<String?> Function()? readFamily,
+    Future<bool> Function(String, HomeWidgetPageData, HomeWidgetPageData)?
+    publish,
+    Future<void> Function(String, String)? record,
+  }) : _apiClient = apiClient ?? ApiClient(),
+       _readSession = readSession ?? AuthSessionStore().read,
+       _readFamily = readFamily ?? HomeWidgetService.readFamilyId,
+       _publish =
+           publish ??
+           ((family, today, tomorrow) => HomeWidgetService.update(
+             familyId: family,
+             schedule: today,
+             nextSchedule: tomorrow,
+           )),
+       _record = record ?? WidgetRefreshDiagnostics.record;
+
+  final ApiClient _apiClient;
+  final Future<StoredAuthSession?> Function() _readSession;
+  final Future<String?> Function() _readFamily;
+  final Future<bool> Function(String, HomeWidgetPageData, HomeWidgetPageData)
+  _publish;
+  final Future<void> Function(String, String) _record;
+
+  Future<bool> run({
+    String? changedFamilyId,
+    String source = 'periodic',
+  }) async {
+    await _record(source, 'started');
     try {
-      final session = await AuthSessionStore().read();
-      final familyId = await HomeWidgetService.readFamilyId();
-      if (session == null || session.isExpired || familyId == null) {
+      final session = await _readSession();
+      final familyId = await _readFamily();
+      if (session == null || session.isExpired) {
+        await _record(source, 'login_required');
+        return true; // Do not retry revoked credentials; this is not a success.
+      }
+      if (familyId == null) {
+        await _record(source, 'group_required');
         return true;
       }
-      if (changedFamilyId != null && changedFamilyId != familyId) return true;
+      if (changedFamilyId != null && changedFamilyId != familyId) {
+        await _record(source, 'other_group');
+        return true;
+      }
 
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final tomorrow = today.add(const Duration(days: 1));
       final dayAfterTomorrow = today.add(const Duration(days: 2));
-      final apiClient = ApiClient();
+      await _record(source, 'fetching');
       final results = await Future.wait<dynamic>([
-        apiClient.getScheduleDashboard(
+        _apiClient.getScheduleDashboard(
           session.accessToken,
           familyId: familyId,
           rangeStart: today,
           rangeEnd: dayAfterTomorrow,
           includeHolidays: false,
         ),
-        apiClient.getParkingDashboard(session.accessToken, familyId: familyId),
+        _apiClient.getParkingDashboard(session.accessToken, familyId: familyId),
       ]);
       final dashboard = results[0] as ScheduleDashboard;
       final parking = results[1] as ParkingDashboard;
@@ -81,32 +176,37 @@ class HomeWidgetBackgroundRefresh {
       final parkingItems = _parkingItems(parking);
 
       // Discard a response from a session/group that changed during the fetch.
-      final activeSession = await AuthSessionStore().read();
+      final activeSession = await _readSession();
       if (activeSession?.accessToken != session.accessToken ||
-          await HomeWidgetService.readFamilyId() != familyId) {
+          await _readFamily() != familyId) {
+        await _record(source, 'session_changed');
         return true;
       }
 
-      await HomeWidgetService.update(
-        familyId: familyId,
-        schedule: _pageData(
+      await _record(source, 'publishing');
+      final published = await _publish(
+        familyId,
+        _pageData(
           date: today,
           schedules: dashboard.schedules,
           memberColors: memberColors,
           parkingItems: parkingItems,
         ),
-        nextSchedule: _pageData(
+        _pageData(
           date: tomorrow,
           schedules: dashboard.schedules,
           memberColors: memberColors,
           parkingItems: parkingItems,
         ),
       );
-      return true;
+      await _record(source, published ? 'success' : 'publish_failed');
+      return published;
     } on ApiException catch (error) {
+      await _record(source, 'api_error_${error.statusCode}');
       // An expired or revoked session cannot recover by retrying in background.
       return error.statusCode == 401;
     } catch (error, stackTrace) {
+      await _record(source, 'refresh_failed');
       debugPrint('Home widget background refresh failed: $error');
       debugPrintStack(stackTrace: stackTrace);
       return false;

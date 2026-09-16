@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 
 import '../../core/api_client.dart';
 import '../../core/group_refresh.dart';
+import '../../core/home_widget_service.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/refreshable_scroll_view.dart';
 
@@ -93,6 +94,19 @@ class _ParkingScreenState extends State<ParkingScreen>
         setState(() {
           _dashboard = dashboard;
         });
+        final vehicleNames = {
+          for (final vehicle in dashboard.vehicles)
+            vehicle.id: vehicle.nickname,
+        };
+        await HomeWidgetService.updateParking(
+          familyId: familyId,
+          items: dashboard.currentLocations.map((record) {
+            return HomeWidgetParkingItem(
+              vehicleName: vehicleNames[record.vehicleId] ?? '차량',
+              location: record.locationText,
+            );
+          }).toList(),
+        );
       }
     } catch (error) {
       if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {

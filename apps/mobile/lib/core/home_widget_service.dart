@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/services.dart';
@@ -93,13 +91,18 @@ class HomeWidgetService {
     ),
   );
 
-  static Future<void> update({
+  static bool get _isSupported =>
+      !kIsWeb &&
+      (defaultTargetPlatform == TargetPlatform.android ||
+          defaultTargetPlatform == TargetPlatform.iOS);
+
+  static Future<bool> update({
     required HomeWidgetPageData schedule,
     required String familyId,
     HomeWidgetPageData? nextSchedule,
   }) async {
-    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
-      return;
+    if (!_isSupported) {
+      return false;
     }
 
     try {
@@ -107,6 +110,7 @@ class HomeWidgetService {
       await _storage.write(key: _familyIdKey, value: familyId);
       await HomeWidget.setAppGroupId(appGroupId);
       await _saveSchedule('schedule', schedule);
+      await _saveParking(schedule.parkingItems, schedule.parkingMoreCount);
       await HomeWidget.saveWidgetData<String>(
         'schedule.snapshotDate',
         _dateKey(DateTime.now()),
@@ -125,12 +129,13 @@ class HomeWidgetService {
         );
       }
 
-      await HomeWidget.updateWidget(
+      final updated = await HomeWidget.updateWidget(
         qualifiedAndroidName: androidProvider,
         iOSName: iosWidgetKind,
       );
+      if (updated != true) return false;
 
-      if (Platform.isAndroid) {
+      if (defaultTargetPlatform == TargetPlatform.android) {
         final nextMidnight = _dateOnly(
           DateTime.now(),
         ).add(const Duration(days: 1));
@@ -138,10 +143,39 @@ class HomeWidgetService {
           nextMidnight,
         ], qualifiedAndroidName: androidProvider);
       }
+      return true;
     } on MissingPluginException {
       // Native widget support is unavailable on development-only platforms.
+      return false;
     } on PlatformException {
       // The in-app home remains available even if a widget refresh fails.
+      return false;
+    }
+  }
+
+  /// Publish freshly loaded parking without refetching or replacing schedules.
+  /// Local saves must not depend on a push arriving or the home tab reopening.
+  static Future<void> updateParking({
+    required String familyId,
+    required List<HomeWidgetParkingItem> items,
+  }) async {
+    if (!_isSupported) return;
+
+    try {
+      // A retained screen from another group must not mix its parking with the
+      // schedule snapshot belonging to the currently selected widget group.
+      if (await readFamilyId() != familyId) return;
+      await HomeWidget.setAppGroupId(appGroupId);
+      await _saveParking(items, 0);
+      await HomeWidget.updateWidget(
+        qualifiedAndroidName: androidProvider,
+        iOSName: iosWidgetKind,
+      );
+    } on MissingPluginException {
+      // Native widget support is unavailable on development-only platforms.
+    } on PlatformException catch (error) {
+      // A successful parking save must not become an in-app error.
+      debugPrint('Home widget parking update failed: ${error.code}');
     }
   }
 
@@ -154,7 +188,6 @@ class HomeWidgetService {
     HomeWidgetPageData schedule,
   ) async {
     final items = schedule.items.take(5).toList();
-    final parkingItems = schedule.parkingItems.take(5).toList();
     final values = <String, Object?>{
       '$prefix.title': schedule.title,
       '$prefix.weekday': schedule.weekday,
@@ -163,11 +196,6 @@ class HomeWidgetService {
       '$prefix.itemCount': items.length,
       '$prefix.moreCount':
           schedule.moreCount + (schedule.items.length - items.length),
-      if (prefix == 'schedule') 'parking.itemCount': parkingItems.length,
-      if (prefix == 'schedule')
-        'parking.moreCount':
-            schedule.parkingMoreCount +
-            (schedule.parkingItems.length - parkingItems.length),
     };
 
     for (var index = 0; index < 5; index++) {
@@ -177,21 +205,43 @@ class HomeWidgetService {
       values['$prefix.item.$index.title'] = item?.title ?? '';
       values['$prefix.item.$index.memberName'] = item?.memberName ?? '';
       values['$prefix.item.$index.memberColor'] = item?.memberColor ?? 'gray';
-
-      if (prefix == 'schedule') {
-        final parking = index < parkingItems.length
-            ? parkingItems[index]
-            : null;
-        values['parking.item.$index.vehicleName'] = parking?.vehicleName ?? '';
-        values['parking.item.$index.location'] = parking?.location ?? '';
-      }
     }
 
-    await Future.wait(
+    final saved = await Future.wait(
       values.entries.map(
         (entry) => HomeWidget.saveWidgetData<Object?>(entry.key, entry.value),
       ),
     );
+    if (saved.any((value) => value != true)) {
+      throw PlatformException(code: 'widget_storage_failed');
+    }
+  }
+
+  static Future<void> _saveParking(
+    List<HomeWidgetParkingItem> allItems,
+    int moreCount,
+  ) async {
+    final items = allItems.take(5).toList();
+    final values = <String, Object>{
+      'parking.itemCount': items.length,
+      'parking.moreCount': moreCount + allItems.length - items.length,
+      for (var index = 0; index < 5; index++) ...{
+        'parking.item.$index.vehicleName': index < items.length
+            ? items[index].vehicleName
+            : '',
+        'parking.item.$index.location': index < items.length
+            ? items[index].location
+            : '',
+      },
+    };
+    final saved = await Future.wait(
+      values.entries.map(
+        (entry) => HomeWidget.saveWidgetData<Object>(entry.key, entry.value),
+      ),
+    );
+    if (saved.any((value) => value != true)) {
+      throw PlatformException(code: 'widget_storage_failed');
+    }
   }
 
   static String _dateKey(DateTime date) {

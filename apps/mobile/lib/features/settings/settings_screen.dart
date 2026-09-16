@@ -6,6 +6,7 @@ import '../../core/theme_preference.dart';
 import '../../design_system/app_colors.dart';
 import '../family/family_screen.dart';
 import '../profile/profile_screen.dart';
+import 'widget_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({
@@ -87,6 +88,16 @@ class SettingsScreen extends StatelessWidget {
               title: '화면 설정',
               subtitle: '라이트 모드와 다크 모드를 설정해요',
               onPressed: () => _openTheme(context),
+            ),
+            _SettingsMenuRow(
+              icon: CupertinoIcons.square_grid_2x2,
+              title: '위젯 갱신',
+              subtitle: '갱신 상태 확인과 지금 갱신',
+              onPressed: () => Navigator.of(context, rootNavigator: true).push(
+                CupertinoPageRoute<void>(
+                  builder: (_) => const WidgetSettingsScreen(),
+                ),
+              ),
             ),
           ],
         ),
