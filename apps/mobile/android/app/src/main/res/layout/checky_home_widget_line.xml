@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_item_summary"
+    android:layout_width="match_parent"
+    android:layout_height="20dp"
+    android:layout_marginBottom="2dp"
+    android:background="@drawable/checky_home_widget_event_background"
+    android:maxLines="1"
+    android:ellipsize="end"
+    android:gravity="center_vertical"
+    android:includeFontPadding="false"
+    android:paddingHorizontal="4dp"
+    android:textColor="#FF304C46"
+    android:textSize="9sp" />

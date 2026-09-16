@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
+import '../../core/group_refresh.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/alert_offset_picker.dart';
 import '../../shared/member_filter.dart';
@@ -42,7 +43,12 @@ class ScheduleScreen extends StatefulWidget {
   State<ScheduleScreen> createState() => _ScheduleScreenState();
 }
 
-class _ScheduleScreenState extends State<ScheduleScreen> {
+class _ScheduleScreenState extends State<ScheduleScreen>
+    with GroupRefreshListener<ScheduleScreen> {
+  @override
+  String get refreshFamilyId => _family.id;
+  @override
+  Future<void> refreshGroupContent() => _loadSchedules(silent: true);
   final _apiClient = ApiClient();
   final _calendarPageController = PageController(initialPage: 1);
 
@@ -222,15 +228,17 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     _anchorDate = _dateOnly(DateTime.now());
   }
 
-  Future<void> _loadSchedules() async {
+  Future<void> _loadSchedules({bool silent = false}) async {
     final loadToken = ++_scheduleLoadToken;
     final rangeStart = _prefetchRangeStart;
     final rangeEnd = _prefetchRangeEnd;
 
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _message = null;
+      });
+    }
 
     try {
       final results = await Future.wait([
@@ -261,7 +269,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     } catch (error) {
       if (mounted && loadToken == _scheduleLoadToken) {
         setState(() {
-          _message = error.toString();
+          if (!silent) _message = error.toString();
         });
       }
     } finally {
@@ -1325,8 +1333,7 @@ class _DayCalendarState extends State<_DayCalendar> {
   void didUpdateWidget(covariant _DayCalendar oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.date != widget.date ||
-        oldWidget.schedules != widget.schedules) {
+    if (oldWidget.date != widget.date) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
           _scrollController.jumpTo(_initialScrollOffset());
@@ -1434,8 +1441,7 @@ class _WeekCalendarState extends State<_WeekCalendar> {
   void didUpdateWidget(covariant _WeekCalendar oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.weekStart != widget.weekStart ||
-        oldWidget.schedules != widget.schedules) {
+    if (oldWidget.weekStart != widget.weekStart) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_scrollController.hasClients) {
           _scrollController.jumpTo(_initialScrollOffset());

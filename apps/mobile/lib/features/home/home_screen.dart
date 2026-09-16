@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
+import '../../core/group_refresh.dart';
+import '../../core/home_widget_background_refresh.dart';
 import '../../core/home_widget_service.dart';
 import '../../core/theme_preference.dart';
 import '../../design_system/app_colors.dart';
@@ -122,6 +124,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     super.didChangeAppLifecycleState(state);
 
     if (state == AppLifecycleState.resumed) {
+      final familyId = _selectedFamily?.id;
+      if (familyId != null) {
+        GroupRefresh.notify(familyId);
+        HomeWidgetBackgroundRefresh.refresh(changedFamilyId: familyId);
+      }
       setState(() {
         _notificationRefreshToken += 1;
       });
@@ -746,7 +753,12 @@ class _HomeNotificationButton extends StatefulWidget {
       _HomeNotificationButtonState();
 }
 
-class _HomeNotificationButtonState extends State<_HomeNotificationButton> {
+class _HomeNotificationButtonState extends State<_HomeNotificationButton>
+    with GroupRefreshListener<_HomeNotificationButton> {
+  @override
+  String get refreshFamilyId => widget.family.id;
+  @override
+  Future<void> refreshGroupContent() => _loadUnreadActivities();
   final _apiClient = ApiClient();
   bool _hasUnreadActivities = false;
 
@@ -767,6 +779,7 @@ class _HomeNotificationButtonState extends State<_HomeNotificationButton> {
   }
 
   Future<void> _loadUnreadActivities() async {
+    final loadVersion = beginGroupLoad();
     try {
       final familyId = widget.family.id;
       final activities = await _apiClient.getGroupActivities(
@@ -780,7 +793,7 @@ class _HomeNotificationButtonState extends State<_HomeNotificationButton> {
             (readAt == null || activity.createdAt.isAfter(readAt)),
       );
 
-      if (mounted && widget.family.id == familyId) {
+      if (isCurrentGroupLoad(loadVersion) && widget.family.id == familyId) {
         setState(() {
           _hasUnreadActivities = hasUnread;
         });
@@ -886,7 +899,12 @@ class _HomeDashboardTab extends StatefulWidget {
   State<_HomeDashboardTab> createState() => _HomeDashboardTabState();
 }
 
-class _HomeDashboardTabState extends State<_HomeDashboardTab> {
+class _HomeDashboardTabState extends State<_HomeDashboardTab>
+    with GroupRefreshListener<_HomeDashboardTab> {
+  @override
+  String get refreshFamilyId => widget.family.id;
+  @override
+  Future<void> refreshGroupContent() => _loadBriefing(silent: true);
   final _apiClient = ApiClient();
 
   ScheduleDashboard? _scheduleDashboard;
@@ -942,15 +960,17 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
     }
   }
 
-  Future<void> _loadBriefing() async {
+  Future<void> _loadBriefing({bool silent = false}) async {
     final loadToken = ++_briefingLoadToken;
     final familyId = widget.family.id;
 
-    setState(() {
-      _isLoading = true;
-      _isScheduleLoading = false;
-      _message = null;
-    });
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _isScheduleLoading = false;
+        _message = null;
+      });
+    }
 
     final dayStart = _scheduleDate;
     final dayEnd = dayStart.add(const Duration(days: 1));
@@ -985,17 +1005,18 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
         _recentScrapActivities = recentScrapActivities;
         _travelDashboard = travel;
       });
-      _updateHomeWidget();
+      if (!silent) _updateHomeWidget();
     } catch (error) {
       if (mounted && loadToken == _briefingLoadToken) {
         setState(() {
-          _message = error.toString();
+          if (!silent) _message = error.toString();
         });
       }
     } finally {
       if (mounted && loadToken == _briefingLoadToken) {
         setState(() {
           _isLoading = false;
+          _isScheduleLoading = false;
         });
       }
     }
@@ -1114,6 +1135,10 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
 
   void _updateHomeWidget() {
     final now = DateTime.now();
+    if (_scheduleDate != _dateOnly(now)) {
+      HomeWidgetBackgroundRefresh.refresh(changedFamilyId: widget.family.id);
+      return;
+    }
     final schedules = [...?_scheduleDashboard?.schedules]
       ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
     final memberColors = _homeMemberColors(
@@ -1131,7 +1156,20 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
         )
         .toList();
 
+    final parkingRecords = _parkingDashboard?.currentLocations ?? const [];
+    final vehicleNames = {
+      for (final vehicle in _parkingDashboard?.vehicles ?? const <Vehicle>[])
+        vehicle.id: vehicle.nickname,
+    };
+    final parkingItems = parkingRecords.take(5).map((record) {
+      return HomeWidgetParkingItem(
+        vehicleName: vehicleNames[record.vehicleId] ?? '차량',
+        location: record.locationText,
+      );
+    }).toList();
+
     HomeWidgetService.update(
+      familyId: widget.family.id,
       schedule: HomeWidgetPageData(
         title: '체키 오늘 일정',
         weekday: _homeWidgetWeekday(now),
@@ -1139,6 +1177,8 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab> {
         fullDate: '${now.month}월 ${now.day}일 ${_homeWidgetWeekday(now)}',
         items: scheduleItems,
         moreCount: schedules.length - scheduleItems.length,
+        parkingItems: parkingItems,
+        parkingMoreCount: parkingRecords.length - parkingItems.length,
       ),
     );
   }
@@ -1276,8 +1316,7 @@ class _ScheduleBriefingSectionState extends State<_ScheduleBriefingSection> {
   void didUpdateWidget(covariant _ScheduleBriefingSection oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    if (oldWidget.schedules.length != widget.schedules.length ||
-        !_isSameDate(oldWidget.selectedDate, widget.selectedDate)) {
+    if (!_isSameDate(oldWidget.selectedDate, widget.selectedDate)) {
       _isExpanded = false;
     }
   }

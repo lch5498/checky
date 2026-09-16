@@ -2,6 +2,7 @@ import { Lunar } from 'lunar-javascript';
 
 import { normalizeAlertOffsetMinutes } from './alert-offset';
 import { requireFamilyManager, requireMembership } from './families';
+import { scheduleGroupRefresh } from './group-refresh';
 import { HttpError } from './http';
 import { getSupabaseAdmin } from './supabase';
 
@@ -149,6 +150,7 @@ export async function createAnniversary(
       normalized,
     );
 
+    scheduleGroupRefresh(familyId);
     return {
       anniversary: {
         ...(data as unknown as Anniversary),
@@ -208,6 +210,7 @@ export async function updateAnniversary(
     normalized,
   );
 
+  scheduleGroupRefresh(familyId);
   return {
     anniversary: {
       ...(data as unknown as Anniversary),
@@ -247,6 +250,7 @@ export async function deleteAnniversary(
   if (error) {
     throw error;
   }
+  scheduleGroupRefresh(familyId);
 }
 
 async function replaceGeneratedSchedules(

@@ -1,4 +1,5 @@
 import { requireMembership } from './families';
+import { scheduleGroupRefresh } from './group-refresh';
 import { HttpError } from './http';
 import { getSupabaseAdmin } from './supabase';
 
@@ -90,6 +91,7 @@ export async function recordGroupActivity(input: {
       cleanupError,
     });
   }
+  scheduleGroupRefresh(input.familyId);
 }
 
 export async function listGroupActivities(

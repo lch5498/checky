@@ -3,15 +3,49 @@ import 'dart:async';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 
 import 'api_client.dart';
+import 'group_refresh.dart';
+import 'home_widget_background_refresh.dart';
+
+@pragma('vm:entry-point')
+Future<void> checkyBackgroundMessage(RemoteMessage message) async {
+  if (!_refreshMessage(message)) return;
+  final familyId = message.data['familyId'];
+  if (familyId is! String || familyId.isEmpty) return;
+  WidgetsFlutterBinding.ensureInitialized();
+  if (Firebase.apps.isEmpty) await Firebase.initializeApp();
+  await HomeWidgetBackgroundRefresh.refresh(changedFamilyId: familyId);
+}
+
+bool _refreshMessage(RemoteMessage message) =>
+    message.data['type'] == 'group_refresh' ||
+    message.data['type'] == 'schedule_alert';
 
 class PushNotificationService {
+  static Future<void> initializeBackgroundMessages() async {
+    if (kIsWeb ||
+        (defaultTargetPlatform != TargetPlatform.iOS &&
+            defaultTargetPlatform != TargetPlatform.android)) {
+      return;
+    }
+    try {
+      if (Firebase.apps.isEmpty) await Firebase.initializeApp();
+      FirebaseMessaging.onBackgroundMessage(checkyBackgroundMessage);
+    } catch (_) {
+      // Local builds may not have Firebase configuration.
+    }
+  }
+
   PushNotificationService({ApiClient? apiClient})
     : _apiClient = apiClient ?? ApiClient();
 
   final ApiClient _apiClient;
   StreamSubscription<String>? _tokenRefreshSubscription;
+  StreamSubscription<RemoteMessage>? _messageSubscription;
+  StreamSubscription<RemoteMessage>? _openedSubscription;
+  final Map<String, Timer> _refreshTimers = {};
   String? _sessionToken;
   bool _firebaseReady = false;
 
@@ -22,6 +56,14 @@ class PushNotificationService {
 
     final ready = await _ensureFirebaseReady();
     if (!ready) return;
+
+    FirebaseMessaging.onBackgroundMessage(checkyBackgroundMessage);
+    await _messageSubscription?.cancel();
+    await _openedSubscription?.cancel();
+    _messageSubscription = FirebaseMessaging.onMessage.listen(_handleMessage);
+    _openedSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
+      _handleMessage,
+    );
 
     await _requestPermission();
     await _registerCurrentToken(sessionToken, platform);
@@ -41,6 +83,7 @@ class PushNotificationService {
     _sessionToken = null;
     await _tokenRefreshSubscription?.cancel();
     _tokenRefreshSubscription = null;
+    await _stopMessages();
 
     if (activeSession == null || _platformName() == null || !_firebaseReady) {
       return;
@@ -59,6 +102,31 @@ class PushNotificationService {
 
   Future<void> dispose() async {
     await _tokenRefreshSubscription?.cancel();
+    await _stopMessages();
+  }
+
+  void _handleMessage(RemoteMessage message) {
+    if (_sessionToken == null || !_refreshMessage(message)) return;
+    final familyId = message.data['familyId'];
+    if (familyId is! String || familyId.isEmpty) return;
+    _refreshTimers[familyId]?.cancel();
+    _refreshTimers[familyId] = Timer(const Duration(milliseconds: 500), () {
+      _refreshTimers.remove(familyId);
+      if (_sessionToken == null) return;
+      GroupRefresh.notify(familyId);
+      unawaited(HomeWidgetBackgroundRefresh.refresh(changedFamilyId: familyId));
+    });
+  }
+
+  Future<void> _stopMessages() async {
+    await _messageSubscription?.cancel();
+    await _openedSubscription?.cancel();
+    _messageSubscription = null;
+    _openedSubscription = null;
+    for (final timer in _refreshTimers.values) {
+      timer.cancel();
+    }
+    _refreshTimers.clear();
   }
 
   Future<bool> _ensureFirebaseReady() async {

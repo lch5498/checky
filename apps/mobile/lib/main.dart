@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:kakao_flutter_sdk_user/kakao_flutter_sdk_user.dart';
 
 import 'core/api_config.dart';
+import 'core/home_widget_background_refresh.dart';
+import 'core/push_notification_service.dart';
 import 'core/theme_preference.dart';
 import 'design_system/app_colors.dart';
 import 'design_system/app_theme.dart';
@@ -16,6 +18,9 @@ void main() async {
   if (ApiConfig.kakaoNativeAppKey.isNotEmpty) {
     KakaoSdk.init(nativeAppKey: ApiConfig.kakaoNativeAppKey);
   }
+
+  await HomeWidgetBackgroundRefresh.initialize();
+  await PushNotificationService.initializeBackgroundMessages();
 
   runApp(const CheckyApp());
 }

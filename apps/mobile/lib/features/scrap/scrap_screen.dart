@@ -6,6 +6,7 @@ import 'package:flutter/material.dart'
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
+import '../../core/group_refresh.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/refreshable_scroll_view.dart';
 import 'scrap_read_state.dart';
@@ -28,7 +29,12 @@ class ScrapScreen extends StatefulWidget {
   State<ScrapScreen> createState() => _ScrapScreenState();
 }
 
-class _ScrapScreenState extends State<ScrapScreen> {
+class _ScrapScreenState extends State<ScrapScreen>
+    with GroupRefreshListener<ScrapScreen> {
+  @override
+  String get refreshFamilyId => _family.id;
+  @override
+  Future<void> refreshGroupContent() => _loadScraps(silent: true);
   final _apiClient = ApiClient();
 
   late AppFamily _family;
@@ -53,16 +59,20 @@ class _ScrapScreenState extends State<ScrapScreen> {
     }
   }
 
-  Future<void> _loadScraps() async {
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
+  Future<void> _loadScraps({bool silent = false}) async {
+    final loadVersion = beginGroupLoad();
+    final familyId = refreshFamilyId;
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _message = null;
+      });
+    }
 
     try {
       final dashboard = await _apiClient.getScrapDashboard(
         widget.sessionToken,
-        familyId: _family.id,
+        familyId: familyId,
       );
       final channels = await Future.wait(
         dashboard.channels.map((channel) async {
@@ -73,7 +83,7 @@ class _ScrapScreenState extends State<ScrapScreen> {
           }
 
           final readAt = await ScrapReadState.readAt(
-            familyId: _family.id,
+            familyId: familyId,
             channelId: channel.id,
           );
 
@@ -84,19 +94,19 @@ class _ScrapScreenState extends State<ScrapScreen> {
         }),
       );
 
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _dashboard = ScrapDashboard(channels: channels);
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
-          _message = error.toString();
+          if (!silent) _message = error.toString();
         });
       }
     } finally {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _isLoading = false;
         });
@@ -319,7 +329,12 @@ class ScrapChannelScreen extends StatefulWidget {
   State<ScrapChannelScreen> createState() => _ScrapChannelScreenState();
 }
 
-class _ScrapChannelScreenState extends State<ScrapChannelScreen> {
+class _ScrapChannelScreenState extends State<ScrapChannelScreen>
+    with GroupRefreshListener<ScrapChannelScreen> {
+  @override
+  String get refreshFamilyId => widget.family.id;
+  @override
+  Future<void> refreshGroupContent() => _loadChannel(silent: true);
   final _apiClient = ApiClient();
 
   ScrapChannelDetail? _detail;
@@ -340,32 +355,36 @@ class _ScrapChannelScreenState extends State<ScrapChannelScreen> {
     await _loadChannel();
   }
 
-  Future<void> _loadChannel() async {
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
+  Future<void> _loadChannel({bool silent = false}) async {
+    final loadVersion = beginGroupLoad();
+    final familyId = refreshFamilyId;
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _message = null;
+      });
+    }
 
     try {
       final detail = await _apiClient.getScrapChannel(
         widget.sessionToken,
-        familyId: widget.family.id,
+        familyId: familyId,
         channelId: widget.channel.id,
       );
 
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _detail = detail;
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
-          _message = error.toString();
+          if (!silent) _message = error.toString();
         });
       }
     } finally {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _isLoading = false;
         });

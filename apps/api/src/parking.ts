@@ -1,5 +1,6 @@
 import { requireFamilyManager, requireMembership } from './families';
 import { recordGroupActivity } from './group-activity-logs';
+import { scheduleGroupRefresh } from './group-refresh';
 import { HttpError } from './http';
 import { getSupabaseAdmin } from './supabase';
 
@@ -115,6 +116,7 @@ export async function createVehicle(
     throw error;
   }
 
+  scheduleGroupRefresh(familyId);
   return data as Vehicle;
 }
 
@@ -146,6 +148,7 @@ export async function updateVehicle(
     throw new HttpError(404, { error: 'vehicle_not_found' });
   }
 
+  scheduleGroupRefresh(familyId);
   return data as Vehicle;
 }
 
@@ -166,6 +169,7 @@ export async function deleteVehicle(
   if (error) {
     throw error;
   }
+  scheduleGroupRefresh(familyId);
 }
 
 export async function listParkingLocationPresets(

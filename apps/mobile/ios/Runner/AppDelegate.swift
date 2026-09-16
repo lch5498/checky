@@ -1,7 +1,7 @@
 import ContactsUI
 import Flutter
 import UIKit
-import WidgetKit
+import workmanager_apple
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, CNContactPickerDelegate {
@@ -15,6 +15,15 @@ import WidgetKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    WorkmanagerPlugin.registerPeriodicTask(
+      withIdentifier: "com.family.checky.mobile.homeWidgetRefresh",
+      earliestBeginInSeconds: NSNumber(value: 15 * 60)
+    )
+    WorkmanagerPlugin.registerLaunchHandlers()
+    WorkmanagerPlugin.setPluginRegistrantCallback { registry in
+      GeneratedPluginRegistrant.register(with: registry)
+    }
+
     if let url = launchOptions?[.url] as? URL {
       handleDeepLink(url, isInitial: true)
     }
@@ -23,7 +32,6 @@ import WidgetKit
       configureShareChannel(controller: controller)
       configurePhoneChannel(controller: controller)
       configureContactChannel(controller: controller)
-      configureHomeWidgetChannel(controller: controller)
       let preferencesChannel = FlutterMethodChannel(
         name: "checky/preferences",
         binaryMessenger: controller.binaryMessenger
@@ -85,58 +93,6 @@ import WidgetKit
     }
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
-  }
-
-  func configureHomeWidgetChannel(controller: FlutterViewController) {
-    let homeWidgetChannel = FlutterMethodChannel(
-      name: "checky/home_widget",
-      binaryMessenger: controller.binaryMessenger
-    )
-
-    homeWidgetChannel.setMethodCallHandler { call, result in
-      guard call.method == "update" else {
-        result(FlutterMethodNotImplemented)
-        return
-      }
-
-      guard
-        let values = call.arguments as? [String: Any],
-        let defaults = UserDefaults(suiteName: "group.com.family.checky.mobile")
-      else {
-        result(
-          FlutterError(
-            code: "home_widget_unavailable",
-            message: "Home widget shared storage is unavailable",
-            details: nil
-          )
-        )
-        return
-      }
-
-      let schedule = values["schedule"] as? [String: Any]
-      let rawItems = schedule?["items"] as? [Any] ?? []
-      let items = rawItems.compactMap { $0 as? [String: Any] }
-      let displayedItems = Array(items.prefix(5))
-      let sourceMoreCount = schedule?["moreCount"] as? Int ?? 0
-      defaults.set(schedule?["title"] as? String ?? "체키 오늘 일정", forKey: "schedule.title")
-      defaults.set(schedule?["weekday"] as? String ?? "오늘", forKey: "schedule.weekday")
-      defaults.set(schedule?["day"] as? String ?? "", forKey: "schedule.day")
-      defaults.set(schedule?["fullDate"] as? String ?? "오늘", forKey: "schedule.fullDate")
-      defaults.set(displayedItems.count, forKey: "schedule.itemCount")
-      defaults.set(sourceMoreCount + max(items.count - displayedItems.count, 0), forKey: "schedule.moreCount")
-
-      for index in 0..<5 {
-        let item = index < displayedItems.count ? displayedItems[index] : nil
-        defaults.set(item?["startsAt"] as? String ?? "", forKey: "schedule.item.\(index).startsAt")
-        defaults.set(item?["endsAt"] as? String ?? "", forKey: "schedule.item.\(index).endsAt")
-        defaults.set(item?["title"] as? String ?? "", forKey: "schedule.item.\(index).title")
-        defaults.set(item?["memberName"] as? String ?? "", forKey: "schedule.item.\(index).memberName")
-        defaults.set(item?["memberColor"] as? String ?? "gray", forKey: "schedule.item.\(index).memberColor")
-      }
-
-      WidgetCenter.shared.reloadAllTimelines()
-      result(nil)
-    }
   }
 
   func configureShareChannel(controller: FlutterViewController) {

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../core/api_client.dart';
+import '../../core/group_refresh.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/refreshable_scroll_view.dart';
 
@@ -29,7 +30,12 @@ class ParkingScreen extends StatefulWidget {
   State<ParkingScreen> createState() => _ParkingScreenState();
 }
 
-class _ParkingScreenState extends State<ParkingScreen> {
+class _ParkingScreenState extends State<ParkingScreen>
+    with GroupRefreshListener<ParkingScreen> {
+  @override
+  String get refreshFamilyId => _family.id;
+  @override
+  Future<void> refreshGroupContent() => _loadParking(silent: true);
   final _apiClient = ApiClient();
 
   late AppFamily _family;
@@ -67,31 +73,35 @@ class _ParkingScreenState extends State<ParkingScreen> {
     }
   }
 
-  Future<void> _loadParking() async {
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
+  Future<void> _loadParking({bool silent = false}) async {
+    final loadVersion = beginGroupLoad();
+    final familyId = refreshFamilyId;
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _message = null;
+      });
+    }
 
     try {
       final dashboard = await _apiClient.getParkingDashboard(
         widget.sessionToken,
-        familyId: _family.id,
+        familyId: familyId,
       );
 
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _dashboard = dashboard;
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
-          _message = error.toString();
+          if (!silent) _message = error.toString();
         });
       }
     } finally {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _isLoading = false;
         });

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import '../../core/api_client.dart';
+import '../../core/group_refresh.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/refreshable_scroll_view.dart';
 import '../../shared/schedule_section_switcher.dart';
@@ -27,7 +28,12 @@ class AnniversaryScreen extends StatefulWidget {
   State<AnniversaryScreen> createState() => _AnniversaryScreenState();
 }
 
-class _AnniversaryScreenState extends State<AnniversaryScreen> {
+class _AnniversaryScreenState extends State<AnniversaryScreen>
+    with GroupRefreshListener<AnniversaryScreen> {
+  @override
+  String get refreshFamilyId => _family.id;
+  @override
+  Future<void> refreshGroupContent() => _loadAnniversaries(silent: true);
   final _apiClient = ApiClient();
 
   late AppFamily _family;
@@ -53,31 +59,35 @@ class _AnniversaryScreenState extends State<AnniversaryScreen> {
     }
   }
 
-  Future<void> _loadAnniversaries() async {
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
+  Future<void> _loadAnniversaries({bool silent = false}) async {
+    final loadVersion = beginGroupLoad();
+    final familyId = refreshFamilyId;
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _message = null;
+      });
+    }
 
     try {
       final dashboard = await _apiClient.getAnniversaryDashboard(
         widget.sessionToken,
-        familyId: _family.id,
+        familyId: familyId,
       );
 
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _dashboard = dashboard;
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
-          _message = error.toString();
+          if (!silent) _message = error.toString();
         });
       }
     } finally {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _isLoading = false;
         });

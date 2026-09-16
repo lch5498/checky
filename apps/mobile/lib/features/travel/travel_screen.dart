@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/api_client.dart';
+import '../../core/group_refresh.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/member_filter.dart';
 import '../../shared/refreshable_scroll_view.dart';
@@ -24,7 +25,12 @@ class TravelScreen extends StatefulWidget {
   State<TravelScreen> createState() => _TravelScreenState();
 }
 
-class _TravelScreenState extends State<TravelScreen> {
+class _TravelScreenState extends State<TravelScreen>
+    with GroupRefreshListener<TravelScreen> {
+  @override
+  String get refreshFamilyId => _family.id;
+  @override
+  Future<void> refreshGroupContent() => _loadTravels(silent: true);
   final _apiClient = ApiClient();
 
   late AppFamily _family;
@@ -49,31 +55,35 @@ class _TravelScreenState extends State<TravelScreen> {
     }
   }
 
-  Future<void> _loadTravels() async {
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
+  Future<void> _loadTravels({bool silent = false}) async {
+    final loadVersion = beginGroupLoad();
+    final familyId = refreshFamilyId;
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _message = null;
+      });
+    }
 
     try {
       final dashboard = await _apiClient.getTravelDashboard(
         widget.sessionToken,
-        familyId: _family.id,
+        familyId: familyId,
       );
 
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _dashboard = dashboard;
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
-          _message = error.toString();
+          if (!silent) _message = error.toString();
         });
       }
     } finally {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _isLoading = false;
         });
@@ -989,7 +999,15 @@ class TravelDetailScreen extends StatefulWidget {
   State<TravelDetailScreen> createState() => _TravelDetailScreenState();
 }
 
-class _TravelDetailScreenState extends State<TravelDetailScreen> {
+class _TravelDetailScreenState extends State<TravelDetailScreen>
+    with GroupRefreshListener<TravelDetailScreen> {
+  @override
+  String get refreshFamilyId => widget.family.id;
+  @override
+  Future<void> refreshGroupContent() async {
+    if (_draggingItineraryId == null) await _loadTrip(silent: true);
+  }
+
   final _apiClient = ApiClient();
 
   TravelTripDetail? _detail;
@@ -1014,18 +1032,25 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
     _loadTrip();
   }
 
-  Future<void> _loadTrip() async {
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
+  Future<void> _loadTrip({bool silent = false}) async {
+    final loadVersion = beginGroupLoad();
+    final familyId = refreshFamilyId;
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _message = null;
+      });
+    }
 
     try {
       final detail = await _apiClient.getTravelTripDetail(
         widget.sessionToken,
-        familyId: widget.family.id,
+        familyId: familyId,
         tripId: widget.trip.id,
       );
+      if (!isCurrentGroupLoad(loadVersion) || familyId != refreshFamilyId) {
+        return;
+      }
       TravelItinerary? initialItinerary;
 
       if (!_didOpenInitialItinerary && widget.initialItineraryId != null) {
@@ -1038,7 +1063,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
         }
       }
 
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _detail = detail;
           if (_selectedItineraryTagName != null &&
@@ -1054,7 +1079,7 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
 
         if (initialItinerary != null) {
           await _openItinerary(initialItinerary);
-          if (mounted) {
+          if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
             setState(() {
               _isOpeningInitialItinerary = false;
             });
@@ -1062,14 +1087,14 @@ class _TravelDetailScreenState extends State<TravelDetailScreen> {
         }
       }
     } catch (error) {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
-          _message = error.toString();
+          if (!silent) _message = error.toString();
           _isOpeningInitialItinerary = false;
         });
       }
     } finally {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _isLoading = false;
         });

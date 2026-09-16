@@ -13,6 +13,12 @@ struct CheckyHomeWidgetScheduleItem: Identifiable {
   let memberColor: String
 }
 
+struct CheckyHomeWidgetParkingItem: Identifiable {
+  let id: Int
+  let vehicleName: String
+  let location: String
+}
+
 struct CheckyHomeWidgetEntry: TimelineEntry {
   let date: Date
   let title: String
@@ -21,6 +27,8 @@ struct CheckyHomeWidgetEntry: TimelineEntry {
   let fullDate: String
   let items: [CheckyHomeWidgetScheduleItem]
   let moreCount: Int
+  var parkingItems: [CheckyHomeWidgetParkingItem] = []
+  var parkingMoreCount: Int = 0
 }
 
 struct CheckyHomeWidgetProvider: TimelineProvider {
@@ -33,34 +41,65 @@ struct CheckyHomeWidgetProvider: TimelineProvider {
   }
 
   func getTimeline(in context: Context, completion: @escaping (Timeline<CheckyHomeWidgetEntry>) -> Void) {
-    completion(Timeline(entries: [entry()], policy: .never))
+    let now = Date()
+    let nextMidnight = Calendar.current.date(
+      byAdding: .day,
+      value: 1,
+      to: Calendar.current.startOfDay(for: now)
+    ) ?? now.addingTimeInterval(24 * 60 * 60)
+    completion(
+      Timeline(
+        entries: [entry(at: now), entry(at: nextMidnight)],
+        policy: .after(nextMidnight.addingTimeInterval(60 * 60))
+      )
+    )
   }
 
-  private func entry() -> CheckyHomeWidgetEntry {
+  private func entry(at date: Date = Date()) -> CheckyHomeWidgetEntry {
     let defaults = UserDefaults(suiteName: appGroupIdentifier) ?? .standard
-    let count = defaults.integer(forKey: "schedule.itemCount").clamped(to: 0...5)
+    let prefix = defaults.string(forKey: "nextSchedule.snapshotDate") == dateKey(date)
+      ? "nextSchedule"
+      : "schedule"
+    let count = defaults.integer(forKey: "\(prefix).itemCount").clamped(to: 0...5)
     let items = (0..<count).compactMap { index -> CheckyHomeWidgetScheduleItem? in
-      guard let title = defaults.string(forKey: "schedule.item.\(index).title"), !title.isEmpty else {
+      guard let title = defaults.string(forKey: "\(prefix).item.\(index).title"), !title.isEmpty else {
         return nil
       }
       return CheckyHomeWidgetScheduleItem(
         id: index,
-        startsAt: defaults.string(forKey: "schedule.item.\(index).startsAt") ?? "종일",
-        endsAt: defaults.string(forKey: "schedule.item.\(index).endsAt") ?? "",
+        startsAt: defaults.string(forKey: "\(prefix).item.\(index).startsAt") ?? "종일",
+        endsAt: defaults.string(forKey: "\(prefix).item.\(index).endsAt") ?? "",
         title: title,
-        memberName: defaults.string(forKey: "schedule.item.\(index).memberName") ?? "",
-        memberColor: defaults.string(forKey: "schedule.item.\(index).memberColor") ?? "gray"
+        memberName: defaults.string(forKey: "\(prefix).item.\(index).memberName") ?? "",
+        memberColor: defaults.string(forKey: "\(prefix).item.\(index).memberColor") ?? "gray"
       )
     }
     return CheckyHomeWidgetEntry(
-      date: Date(),
-      title: defaults.string(forKey: "schedule.title")?.nonEmpty ?? "체키 오늘 일정",
-      weekday: defaults.string(forKey: "schedule.weekday")?.nonEmpty ?? "오늘",
-      day: defaults.string(forKey: "schedule.day")?.nonEmpty ?? "",
-      fullDate: defaults.string(forKey: "schedule.fullDate")?.nonEmpty ?? "오늘",
+      date: date,
+      title: defaults.string(forKey: "\(prefix).title")?.nonEmpty ?? "체키 오늘 일정",
+      weekday: defaults.string(forKey: "\(prefix).weekday")?.nonEmpty ?? "오늘",
+      day: defaults.string(forKey: "\(prefix).day")?.nonEmpty ?? "",
+      fullDate: defaults.string(forKey: "\(prefix).fullDate")?.nonEmpty ?? "오늘",
       items: items,
-      moreCount: defaults.integer(forKey: "schedule.moreCount")
+      moreCount: defaults.integer(forKey: "\(prefix).moreCount"),
+      parkingItems: (0..<defaults.integer(forKey: "parking.itemCount").clamped(to: 0...5)).map { index in
+        CheckyHomeWidgetParkingItem(
+          id: index,
+          vehicleName: defaults.string(forKey: "parking.item.\(index).vehicleName") ?? "차량",
+          location: defaults.string(forKey: "parking.item.\(index).location") ?? ""
+        )
+      },
+      parkingMoreCount: defaults.integer(forKey: "parking.moreCount")
     )
+  }
+
+  private func dateKey(_ date: Date) -> String {
+    let formatter = DateFormatter()
+    formatter.calendar = Calendar(identifier: .gregorian)
+    formatter.locale = Locale(identifier: "en_US_POSIX")
+    formatter.timeZone = .current
+    formatter.dateFormat = "yyyy-MM-dd"
+    return formatter.string(from: date)
   }
 
   private var exampleEntry: CheckyHomeWidgetEntry {
@@ -74,7 +113,11 @@ struct CheckyHomeWidgetProvider: TimelineProvider {
         CheckyHomeWidgetScheduleItem(id: 0, startsAt: "09:00", endsAt: "09:50", title: "가족 일정", memberName: "엄마", memberColor: "blue"),
         CheckyHomeWidgetScheduleItem(id: 1, startsAt: "14:00", endsAt: "15:00", title: "약속", memberName: "아빠", memberColor: "orange"),
       ],
-      moreCount: 1
+      moreCount: 1,
+      parkingItems: [
+        CheckyHomeWidgetParkingItem(id: 0, vehicleName: "우리 차", location: "아파트 B2 · A구역"),
+        CheckyHomeWidgetParkingItem(id: 1, vehicleName: "출퇴근 차", location: "회사 B1 · 12번")
+      ]
     )
   }
 }
@@ -86,7 +129,7 @@ struct CheckyHomeWidgetView: View {
 
   private var isSmall: Bool { widgetFamily == .systemSmall }
   private var displayedItems: [CheckyHomeWidgetScheduleItem] {
-    Array(entry.items.prefix(isSmall ? 2 : 5))
+    Array(entry.items.prefix(isSmall ? 2 : 3))
   }
   private var displayedMoreCount: Int {
     entry.moreCount + max(entry.items.count - displayedItems.count, 0)
@@ -171,16 +214,66 @@ struct CheckyHomeWidgetView: View {
     .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
   }
 
-  private var dateColumn: some View {
-    VStack(alignment: .leading, spacing: -3) {
-      Text(entry.weekday)
-        .font(.system(size: isSmall ? 13 : 14, weight: .bold))
-        .foregroundStyle(Color(red: 0.18, green: 0.13, blue: 0.10))
-        .lineLimit(1)
-      Text(entry.day)
-        .font(.system(size: isSmall ? 38 : 40, weight: .regular))
-        .foregroundStyle(Color(red: 0.10, green: 0.08, blue: 0.07))
+  private var displayedParking: [CheckyHomeWidgetParkingItem] {
+    Array(entry.parkingItems.prefix(isSmall ? 2 : 3))
+  }
+
+  private func heading(_ title: String, more: Int) -> some View {
+    HStack(spacing: 2) {
+      Text(title).font(.system(size: isSmall ? 10 : 12, weight: .bold))
+      Spacer(minLength: 0)
+      if more > 0 {
+        Text("+\(more)").font(.system(size: 8, weight: .medium))
+      }
     }
+    .foregroundStyle(Color(red: 0.08, green: 0.38, blue: 0.35))
+    .lineLimit(1)
+  }
+
+  private var scheduleSection: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      heading("오늘 일정", more: displayedMoreCount)
+      eventList
+      Spacer(minLength: 0)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+  }
+
+  private var parkingSection: some View {
+    VStack(alignment: .leading, spacing: 3) {
+      heading("주차 위치", more: entry.parkingMoreCount + entry.parkingItems.count - displayedParking.count)
+      if displayedParking.isEmpty {
+        Text("등록된 주차 위치가 없습니다.")
+          .font(.system(size: isSmall ? 8 : 10))
+          .foregroundStyle(.secondary)
+      }
+      ForEach(displayedParking) { item in
+        Group {
+          if isSmall {
+            HStack(spacing: 4) {
+              Text(item.vehicleName).fontWeight(.bold)
+                .frame(maxWidth: 44, alignment: .leading)
+              Text(item.location).frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .font(.system(size: 9))
+          } else {
+            VStack(alignment: .leading, spacing: 2) {
+              Text(item.vehicleName).font(.system(size: 10, weight: .bold))
+              Text(item.location).font(.system(size: 9))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+          }
+        }
+        .lineLimit(1)
+        .foregroundStyle(Color(red: 0.12, green: 0.33, blue: 0.30))
+        .padding(.horizontal, 5)
+        .padding(.vertical, 3)
+        .background(Color(red: 0.95, green: 0.99, blue: 0.97))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+      }
+      Spacer(minLength: 0)
+    }
+    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
   }
 
   @ViewBuilder
@@ -196,41 +289,30 @@ struct CheckyHomeWidgetView: View {
       }
     }
 
-    if displayedMoreCount > 0 {
-      Text("더 보기 +\(displayedMoreCount)개")
-        .font(.system(size: isSmall ? 8 : 9, weight: .bold))
-        .foregroundStyle(Color(red: 0.60, green: 0.41, blue: 0.30))
-    }
   }
 
   var body: some View {
     Group {
-      if isSmall {
-        VStack(alignment: .leading, spacing: 0) {
-          dateColumn
-          VStack(alignment: .leading, spacing: 3) {
-            eventList
-          }
-          .padding(.top, 8)
-          Spacer(minLength: 0)
+      if !entry.items.isEmpty && entry.parkingItems.isEmpty {
+        scheduleSection
+      } else if entry.items.isEmpty && !entry.parkingItems.isEmpty {
+        parkingSection
+      } else if isSmall {
+        VStack(alignment: .leading, spacing: 5) {
+          scheduleSection
+          Divider()
+          parkingSection
         }
       } else {
-        HStack(alignment: .top, spacing: 9) {
-          dateColumn
-            .frame(width: 48, alignment: .leading)
-          VStack(alignment: .leading, spacing: 3) {
-            Text(entry.fullDate)
-              .font(.system(size: 12, weight: .bold))
-              .foregroundStyle(Color(red: 0.51, green: 0.49, blue: 0.48))
-              .lineLimit(1)
-            eventList
-          }
-          .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        HStack(alignment: .top, spacing: 8) {
+          scheduleSection
+          Divider()
+          parkingSection
         }
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    .padding(isSmall ? 8 : 10)
+    .padding(isSmall ? 0 : 2)
     .widgetBackground()
   }
 }
@@ -245,8 +327,8 @@ struct CheckyHomeWidget: Widget {
     StaticConfiguration(kind: widgetKind, provider: CheckyHomeWidgetProvider()) { entry in
       CheckyHomeWidgetView(entry: entry)
     }
-    .configurationDisplayName("체키 오늘 일정")
-    .description("오늘 등록된 일정을 빠르게 확인합니다.")
+    .configurationDisplayName("체키 일정 · 주차")
+    .description("오늘 일정과 차량별 주차 위치를 함께 확인합니다.")
     .supportedFamilies([.systemSmall, .systemMedium])
   }
 }

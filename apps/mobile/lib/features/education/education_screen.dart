@@ -2,6 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
+import '../../core/group_refresh.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/alert_offset_picker.dart';
 import '../../shared/member_filter.dart';
@@ -38,7 +39,12 @@ class EducationScreen extends StatefulWidget {
   State<EducationScreen> createState() => _EducationScreenState();
 }
 
-class _EducationScreenState extends State<EducationScreen> {
+class _EducationScreenState extends State<EducationScreen>
+    with GroupRefreshListener<EducationScreen> {
+  @override
+  String get refreshFamilyId => _family.id;
+  @override
+  Future<void> refreshGroupContent() => _loadPrograms(silent: true);
   final _apiClient = ApiClient();
 
   late AppFamily _family;
@@ -86,19 +92,23 @@ class _EducationScreenState extends State<EducationScreen> {
     }
   }
 
-  Future<void> _loadPrograms() async {
-    setState(() {
-      _isLoading = true;
-      _message = null;
-    });
+  Future<void> _loadPrograms({bool silent = false}) async {
+    final loadVersion = beginGroupLoad();
+    final familyId = refreshFamilyId;
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _message = null;
+      });
+    }
 
     try {
       final dashboard = await _apiClient.getEducationProgramDashboard(
         widget.sessionToken,
-        familyId: _family.id,
+        familyId: familyId,
       );
 
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _dashboard = dashboard;
           _hiddenMemberIds.removeWhere(
@@ -108,13 +118,13 @@ class _EducationScreenState extends State<EducationScreen> {
         });
       }
     } catch (error) {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
-          _message = error.toString();
+          if (!silent) _message = error.toString();
         });
       }
     } finally {
-      if (mounted) {
+      if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _isLoading = false;
         });

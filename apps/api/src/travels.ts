@@ -1,5 +1,6 @@
 import { listFamilyMembers, requireMembership } from './families';
 import { recordGroupActivity } from './group-activity-logs';
+import { scheduleGroupRefresh } from './group-refresh';
 import { HttpError } from './http';
 import { getSupabaseAdmin } from './supabase';
 
@@ -568,6 +569,7 @@ export async function createTravelTripChecklistItem(
     throw error;
   }
 
+  scheduleGroupRefresh(familyId);
   return data as TravelTripChecklistItem;
 }
 
@@ -621,6 +623,7 @@ export async function updateTravelTripChecklistItem(
   const [item] = await attachChecklistCompletionMembers(userId, familyId, [
     data as TravelTripChecklistItem,
   ]);
+  scheduleGroupRefresh(familyId);
   return item;
 }
 
@@ -644,6 +647,7 @@ export async function deleteTravelTripChecklistItem(
   if (error) {
     throw error;
   }
+  scheduleGroupRefresh(familyId);
 }
 
 export async function createTravelItinerary(
@@ -883,6 +887,7 @@ export async function reorderTravelItineraries(
     throw updateError;
   }
 
+  scheduleGroupRefresh(familyId);
   return getTravelTripDetail(userId, familyId, tripId);
 }
 

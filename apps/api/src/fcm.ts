@@ -31,6 +31,32 @@ export type FcmSendResult =
   | { ok: false; status: number; error: string };
 
 export async function sendFcmNotification(input: FcmSendInput) {
+  return sendFcmMessage({
+    token: input.token,
+    notification: { title: input.title, body: input.body },
+    data: input.data ?? {},
+  }, input.validateOnly);
+}
+
+// Data-only messages refresh content without displaying a new notification.
+export async function sendFcmRefresh(token: string, familyId: string) {
+  return sendFcmMessage({
+    token,
+    data: { type: 'group_refresh', familyId },
+    android: { priority: 'NORMAL', collapse_key: `group_refresh.${familyId}`, ttl: '900s' },
+    apns: {
+      headers: {
+        'apns-push-type': 'background',
+        'apns-priority': '5',
+        'apns-collapse-id': `group_refresh.${familyId}`,
+        'apns-expiration': String(Math.floor(Date.now() / 1000) + 900),
+      },
+      payload: { aps: { 'content-available': 1 } },
+    },
+  });
+}
+
+async function sendFcmMessage(message: Record<string, unknown>, validateOnly = false) {
   const serviceAccount = getFirebaseServiceAccount();
   const accessToken = await getFirebaseAccessToken(serviceAccount);
   const response = await fetch(
@@ -44,15 +70,8 @@ export async function sendFcmNotification(input: FcmSendInput) {
         'content-type': 'application/json',
       },
       body: JSON.stringify({
-        validate_only: input.validateOnly ?? false,
-        message: {
-          token: input.token,
-          notification: {
-            title: input.title,
-            body: input.body,
-          },
-          data: input.data ?? {},
-        },
+        validate_only: validateOnly,
+        message,
       }),
     },
   );

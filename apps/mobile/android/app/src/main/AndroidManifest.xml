@@ -57,9 +57,12 @@
         <receiver
             android:name=".CheckyHomeWidgetProvider"
             android:exported="true"
-            android:label="체키 오늘 일정">
+            android:label="체키 일정 · 주차">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
