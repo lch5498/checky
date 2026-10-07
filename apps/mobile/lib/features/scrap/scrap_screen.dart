@@ -10,6 +10,7 @@ import '../../core/group_refresh.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/refreshable_scroll_view.dart';
 import 'scrap_read_state.dart';
+import 'coupon_screen.dart';
 
 class ScrapScreen extends StatefulWidget {
   const ScrapScreen({
@@ -31,6 +32,19 @@ class ScrapScreen extends StatefulWidget {
 
 class _ScrapScreenState extends State<ScrapScreen>
     with GroupRefreshListener<ScrapScreen> {
+  int _section = 0;
+
+  Future<void> _createCoupon() async {
+    await Navigator.of(context).push(
+      CupertinoPageRoute<void>(
+        builder: (_) => CouponEditorScreen(
+          family: _family,
+          sessionToken: widget.sessionToken,
+        ),
+      ),
+    );
+  }
+
   @override
   String get refreshFamilyId => _family.id;
   @override
@@ -264,46 +278,74 @@ class _ScrapScreenState extends State<ScrapScreen>
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
           minimumSize: const Size(32, 32),
-          onPressed: _isLoading ? null : _createChannel,
+          onPressed: _section == 1
+              ? _createCoupon
+              : (_isLoading ? null : _createChannel),
           child: const Icon(CupertinoIcons.plus),
         ),
       ),
       child: SafeArea(
-        child: RefreshableScrollView(
-          onRefresh: _loadScraps,
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+        child: Column(
           children: [
-            if (_message != null) ...[
-              _InlineMessage(message: _message!),
-              const SizedBox(height: 16),
-            ],
-            if (_isLoading && dashboard == null)
-              const Padding(
-                padding: EdgeInsets.only(top: 72),
-                child: Center(child: CupertinoActivityIndicator()),
-              )
-            else if (dashboard == null)
-              _EmptyState(
-                icon: CupertinoIcons.exclamationmark_circle,
-                title: '스크랩을 불러오지 못했습니다.',
-                subtitle: '잠시 후 다시 시도해 주세요.',
-                actionLabel: '다시 불러오기',
-                onPressed: _loadScraps,
-              )
-            else if (dashboard.channels.isEmpty)
-              _EmptyState(
-                icon: CupertinoIcons.bookmark,
-                title: '함께 보고 싶은 링크를 모아두세요.',
-                subtitle: '맛집, 장소, 읽을거리처럼 나중에 다시 볼 내용을 채널별로 정리할 수 있어요.',
-                actionLabel: '새 채널 만들기',
-                onPressed: _createChannel,
-              )
-            else
-              _ChannelReorderList(
-                channels: dashboard.channels,
-                onOpen: _openChannel,
-                onReorder: _reorderChannels,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+              child: SizedBox(
+                width: double.infinity,
+                child: CupertinoSlidingSegmentedControl<int>(
+                  groupValue: _section,
+                  children: const {0: Text('글·링크'), 1: Text('쿠폰')},
+                  onValueChanged: (value) {
+                    if (value != null) setState(() => _section = value);
+                  },
+                ),
               ),
+            ),
+            Expanded(
+              child: _section == 1
+                  ? CouponContent(
+                      key: ValueKey('coupons-${_family.id}'),
+                      family: _family,
+                      sessionToken: widget.sessionToken,
+                    )
+                  : RefreshableScrollView(
+                      onRefresh: _loadScraps,
+                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+                      children: [
+                        if (_message != null) ...[
+                          _InlineMessage(message: _message!),
+                          const SizedBox(height: 16),
+                        ],
+                        if (_isLoading && dashboard == null)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 72),
+                            child: Center(child: CupertinoActivityIndicator()),
+                          )
+                        else if (dashboard == null)
+                          _EmptyState(
+                            icon: CupertinoIcons.exclamationmark_circle,
+                            title: '스크랩을 불러오지 못했습니다.',
+                            subtitle: '잠시 후 다시 시도해 주세요.',
+                            actionLabel: '다시 불러오기',
+                            onPressed: _loadScraps,
+                          )
+                        else if (dashboard.channels.isEmpty)
+                          _EmptyState(
+                            icon: CupertinoIcons.bookmark,
+                            title: '함께 보고 싶은 링크를 모아두세요.',
+                            subtitle:
+                                '맛집, 장소, 읽을거리처럼 나중에 다시 볼 내용을 채널별로 정리할 수 있어요.',
+                            actionLabel: '새 채널 만들기',
+                            onPressed: _createChannel,
+                          )
+                        else
+                          _ChannelReorderList(
+                            channels: dashboard.channels,
+                            onOpen: _openChannel,
+                            onReorder: _reorderChannels,
+                          ),
+                      ],
+                    ),
+            ),
           ],
         ),
       ),

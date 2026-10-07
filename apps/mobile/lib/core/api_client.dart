@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'api_config.dart';
+import 'coupon.dart';
 
 class ApiClient {
   ApiClient({String? baseUrl, Duration timeout = const Duration(seconds: 8)})
@@ -11,6 +12,80 @@ class ApiClient {
 
   final Uri _baseUrl;
   final Duration _timeout;
+
+  String couponImageUrl(String familyId, String couponId) => _baseUrl
+      .resolve('/api/mobile/families/$familyId/coupons/$couponId/image')
+      .toString();
+
+  Future<List<Coupon>> getCoupons(String token, String familyId) async {
+    final json = await _requestJson(
+      'GET',
+      '/api/mobile/families/$familyId/coupons',
+      bearerToken: token,
+    );
+    return (json['coupons'] as List<Object?>)
+        .map((e) => Coupon.fromJson(e as Map<String, Object?>))
+        .toList();
+  }
+
+  Future<Coupon> getCoupon(String token, String familyId, String id) async =>
+      Coupon.fromJson(
+        await _requestJson(
+          'GET',
+          '/api/mobile/families/$familyId/coupons/$id',
+          bearerToken: token,
+        ),
+      );
+
+  Future<Coupon> saveCoupon(
+    String token,
+    String familyId, {
+    Coupon? existing,
+    required String title,
+    required String memo,
+    DateTime? expiresOn,
+    List<int>? imageBytes,
+  }) async => Coupon.fromJson(
+    await _requestJson(
+      existing == null ? 'POST' : 'PATCH',
+      '/api/mobile/families/$familyId/coupons${existing == null ? '' : '/${existing.id}'}',
+      bearerToken: token,
+      body: {
+        'title': title,
+        'memo': memo,
+        'expiresOn': expiresOn == null ? null : couponDate(expiresOn),
+        if (existing != null) 'version': existing.version,
+        if (imageBytes != null) 'imageBase64': base64Encode(imageBytes),
+      },
+    ),
+  );
+
+  Future<Coupon> setCouponUsed(
+    String token,
+    String familyId,
+    Coupon coupon,
+    bool used,
+  ) async => Coupon.fromJson(
+    await _requestJson(
+      'PATCH',
+      '/api/mobile/families/$familyId/coupons/${coupon.id}',
+      bearerToken: token,
+      body: {'version': coupon.version, 'used': used},
+    ),
+  );
+
+  Future<void> deleteCoupon(
+    String token,
+    String familyId,
+    Coupon coupon,
+  ) async {
+    await _requestJson(
+      'DELETE',
+      '/api/mobile/families/$familyId/coupons/${coupon.id}',
+      bearerToken: token,
+      body: {'version': coupon.version},
+    );
+  }
 
   Future<Map<String, Object?>> getHealth() {
     return _requestJson('GET', '/api/health');
