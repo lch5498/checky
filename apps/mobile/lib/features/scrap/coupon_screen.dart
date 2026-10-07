@@ -1,18 +1,22 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/cupertino.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../../core/api_client.dart';
 import '../../core/coupon.dart';
+import '../../core/coupon_ocr.dart';
 import '../../core/group_refresh.dart';
 import '../../design_system/app_colors.dart';
 import '../../shared/refreshable_scroll_view.dart';
 
 String couponError(Object error) {
   if (error is ApiException) {
+    if (error.errorCode == 'coupon_limit_reached') {
+      return '그룹당 쿠폰 이미지는 최대 100장까지 보관할 수 있어요. 기존 쿠폰을 삭제한 뒤 다시 등록해 주세요.';
+    }
     if (error.statusCode == 409) {
       return '다른 구성원이 쿠폰을 변경했어요. 최신 내용을 확인한 뒤 다시 시도해 주세요.';
     }
@@ -321,6 +325,18 @@ class _CouponContentState extends State<CouponContent>
                                               : AppColors.darkTextSecondary,
                                         ),
                                       ),
+                                      if (coupon.completionLabel != null) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          coupon.completionLabel!,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: AppColors.darkTextSecondary,
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),
@@ -357,19 +373,22 @@ class CouponDetailScreen extends StatefulWidget {
     required this.family,
     required this.sessionToken,
     required this.coupon,
+    this.apiClient,
   });
   final AppFamily family;
   final String sessionToken;
   final Coupon coupon;
+  final ApiClient? apiClient;
   @override
   State<CouponDetailScreen> createState() => _CouponDetailScreenState();
 }
 
 class _CouponDetailScreenState extends State<CouponDetailScreen> {
-  final _api = ApiClient();
+  late final _api = widget.apiClient ?? ApiClient();
   late Coupon _coupon = widget.coupon;
   bool _busy = false;
   bool _ready = false;
+  bool _loadingDetail = true;
   String? _error;
   @override
   void initState() {
@@ -378,6 +397,7 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
   }
 
   Future<void> _reload() async {
+    setState(() => _loadingDetail = true);
     try {
       final coupon = await _api.getCoupon(
         widget.sessionToken,
@@ -398,6 +418,8 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
           _ready = false;
         });
       }
+    } finally {
+      if (mounted) setState(() => _loadingDetail = false);
     }
   }
 
@@ -495,6 +517,16 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
             '${widget.family.name} · ${_coupon.status(DateTime.now())}',
             style: TextStyle(color: AppColors.darkPrimary),
           ),
+          if (_coupon.completionLabel != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              _coupon.completionLabel!,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.darkTextSecondary,
+              ),
+            ),
+          ],
           const SizedBox(height: 8),
           Text(
             _coupon.expiresOn == null
@@ -502,6 +534,7 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                 : '${couponDate(_coupon.expiresOn!).replaceAll('-', '.')}까지',
           ),
           const SizedBox(height: 16),
+          if (!_ready && _loadingDetail) const _CouponImageLoading(),
           if (_ready)
             GestureDetector(
               onTap: () => Navigator.push(
@@ -572,12 +605,10 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
     _api.couponImageUrl(widget.family.id, _coupon.id),
     headers: {'Authorization': 'Bearer ${widget.sessionToken}'},
     fit: BoxFit.contain,
-    loadingBuilder: (_, child, loading) => loading == null
-        ? child
-        : const SizedBox(
-            height: 200,
-            child: Center(child: CupertinoActivityIndicator()),
-          ),
+    // A null chunk event can mean we're still waiting for response headers.
+    // Wait for the first decoded frame, covering request, transfer and decoding.
+    frameBuilder: (_, child, frame, synchronous) =>
+        synchronous || frame != null ? child : const _CouponImageLoading(),
     errorBuilder: (_, error, stack) => SizedBox(
       height: 160,
       child: Center(
@@ -590,6 +621,32 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
   );
 }
 
+class _CouponImageLoading extends StatelessWidget {
+  const _CouponImageLoading();
+
+  @override
+  Widget build(BuildContext context) => Container(
+    key: const ValueKey('coupon-image-loading'),
+    height: 200,
+    width: double.infinity,
+    color: CupertinoColors.white,
+    child: Semantics(
+      label: '쿠폰 이미지 불러오는 중',
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CupertinoActivityIndicator(radius: 14, color: AppColors.lightPrimary),
+          const SizedBox(height: 12),
+          Text(
+            '이미지를 불러오고 있어요',
+            style: TextStyle(fontSize: 13, color: AppColors.lightTextSecondary),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
 class CouponEditorScreen extends StatefulWidget {
   const CouponEditorScreen({
     super.key,
@@ -597,23 +654,33 @@ class CouponEditorScreen extends StatefulWidget {
     required this.sessionToken,
     this.existing,
     this.recoveredImage,
+    this.ocr,
   });
   final AppFamily family;
   final String sessionToken;
   final Coupon? existing;
   final XFile? recoveredImage;
+  final CouponOcr? ocr;
   @override
   State<CouponEditorScreen> createState() => _CouponEditorScreenState();
 }
 
 class _CouponEditorScreenState extends State<CouponEditorScreen> {
   final _api = ApiClient(timeout: const Duration(seconds: 30));
+  late final _ocr = widget.ocr ?? CouponOcr();
   late final _title = TextEditingController(text: widget.existing?.title ?? '');
   late final _memo = TextEditingController(text: widget.existing?.memo ?? '');
   late DateTime? _expires = widget.existing?.expiresOn;
   Uint8List? _image;
   bool _busy = false;
   String? _error;
+  bool _analyzing = false;
+  int _analysisVersion = 0;
+  String? _analysisMessage;
+  String? _autoTitle;
+  String? _autoMemo;
+  DateTime? _autoExpiry;
+  bool _expiryEdited = false;
   @override
   void initState() {
     super.initState();
@@ -636,9 +703,17 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
       final bytes = await file.readAsBytes();
       if (mounted) {
         setState(() {
+          // Replacing an image clears only untouched suggestions from the old image.
+          if (_title.text == _autoTitle) _title.clear();
+          if (_memo.text == _autoMemo) _memo.clear();
+          if (!_expiryEdited && _expires == _autoExpiry) _expires = null;
+          _autoTitle = null;
+          _autoMemo = null;
+          _autoExpiry = null;
           _image = bytes;
           _error = null;
         });
+        unawaited(_analyze(bytes));
       }
     } catch (_) {
       if (mounted) setState(() => _error = '사진을 읽지 못했어요. 다시 선택해 주세요.');
@@ -661,6 +736,59 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _analyze(Uint8List bytes) async {
+    final version = ++_analysisVersion;
+    setState(() {
+      _analyzing = true;
+      _analysisMessage = null;
+    });
+    try {
+      final suggestions = await _ocr.recognize(bytes);
+      if (!mounted || version != _analysisVersion) return;
+      setState(() {
+        if (_title.text.trim().isEmpty && suggestions.title != null) {
+          _title.text = suggestions.title!;
+          _autoTitle = _title.text;
+        }
+        if (_memo.text.trim().isEmpty && suggestions.memo != null) {
+          _memo.text = suggestions.memo!;
+          _autoMemo = _memo.text;
+        }
+        if (_expires == null &&
+            !_expiryEdited &&
+            suggestions.expiresOn != null) {
+          _expires = suggestions.expiresOn;
+          _autoExpiry = _expires;
+        }
+        _analysisMessage = suggestions.isEmpty
+            ? '쿠폰 정보를 찾지 못했어요. 직접 입력해 주세요.'
+            : '사진에서 찾은 정보를 채웠어요. 이름과 만료일을 꼭 확인해 주세요.';
+      });
+    } catch (error) {
+      if (!mounted || version != _analysisVersion) return;
+      final unsupported =
+          error is MissingPluginException ||
+          (error is PlatformException && error.code == 'ocr_unsupported');
+      setState(
+        () => _analysisMessage = unsupported
+            ? '이 기기에서는 한국어 자동 입력을 지원하지 않아요. 직접 입력해 주세요.'
+            : '사진의 글자를 읽지 못했어요. 직접 입력하거나 다른 사진을 선택해 주세요.',
+      );
+    } finally {
+      if (mounted && version == _analysisVersion) {
+        setState(() => _analyzing = false);
+      }
+    }
+  }
+
+  void _stopAnalysis() {
+    _analysisVersion++;
+    setState(() {
+      _analyzing = false;
+      _analysisMessage = '쿠폰 정보를 직접 입력해 주세요.';
+    });
   }
 
   Future<void> _pickDate() async {
@@ -700,7 +828,12 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
         ),
       ),
     );
-    if (mounted && picked != null) setState(() => _expires = picked);
+    if (mounted && picked != null) {
+      setState(() {
+        _expires = picked;
+        _expiryEdited = true;
+      });
+    }
   }
 
   Future<void> _save() async {
@@ -741,7 +874,7 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
         middle: Text(widget.existing == null ? '쿠폰 등록' : '쿠폰 수정'),
         trailing: CupertinoButton(
           padding: EdgeInsets.zero,
-          onPressed: _busy ? null : _save,
+          onPressed: _busy || _analyzing ? null : _save,
           child: const Text('저장'),
         ),
       ),
@@ -794,6 +927,44 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 12, color: AppColors.darkTextMuted),
               ),
+              const SizedBox(height: 6),
+              Text(
+                '사용 완료·만료 포함, 그룹당 최대 100장',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: AppColors.darkTextMuted),
+              ),
+              if (_analyzing)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CupertinoActivityIndicator(),
+                    const SizedBox(width: 8),
+                    const Flexible(
+                      child: Text(
+                        '사진에서 쿠폰 정보를 찾고 있어요',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                    CupertinoButton(
+                      onPressed: _stopAnalysis,
+                      child: const Text(
+                        '직접 입력',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              if (_analysisMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 10),
+                  child: Text(
+                    _analysisMessage!,
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.darkTextSecondary,
+                    ),
+                  ),
+                ),
             ],
             const SizedBox(height: 20),
             Row(
@@ -811,7 +982,10 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
                     padding: EdgeInsets.zero,
                     onPressed: _busy
                         ? null
-                        : () => setState(() => _expires = null),
+                        : () => setState(() {
+                            _expires = null;
+                            _expiryEdited = true;
+                          }),
                     child: const Icon(CupertinoIcons.clear_circled, size: 20),
                   ),
               ],

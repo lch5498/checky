@@ -85,3 +85,8 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Bundled Korean/Latin OCR: works offline without a model download or Gemini Nano.
+    implementation("com.google.mlkit:text-recognition-korean:16.0.1")
+}

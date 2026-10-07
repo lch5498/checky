@@ -2,6 +2,7 @@ import ContactsUI
 import BackgroundTasks
 import Flutter
 import UIKit
+import Vision
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, CNContactPickerDelegate {
@@ -11,6 +12,7 @@ import UIKit
   var deepLinkChannel: FlutterMethodChannel?
   var pendingContactResult: FlutterResult?
   private var widgetRefreshChannel: FlutterMethodChannel?
+  private var couponTextChannel: FlutterMethodChannel?
 
   override func application(
     _ application: UIApplication,
@@ -23,6 +25,7 @@ import UIKit
     }
 
     if let controller = window?.rootViewController as? FlutterViewController {
+      configureCouponTextChannel(messenger: controller.binaryMessenger)
       configureWidgetRefreshChannel(messenger: controller.binaryMessenger)
       configureShareChannel(controller: controller)
       configurePhoneChannel(controller: controller)
@@ -354,7 +357,48 @@ import UIKit
 
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+    configureCouponTextChannel(messenger: engineBridge.applicationRegistrar.messenger())
     configureWidgetRefreshChannel(messenger: engineBridge.applicationRegistrar.messenger())
+  }
+
+  func configureCouponTextChannel(messenger: FlutterBinaryMessenger) {
+    couponTextChannel = FlutterMethodChannel(name: "checky/coupon_text", binaryMessenger: messenger)
+    couponTextChannel?.setMethodCallHandler { call, result in
+      guard call.method == "recognize" else { result(FlutterMethodNotImplemented); return }
+      guard let bytes = call.arguments as? FlutterStandardTypedData,
+            !bytes.data.isEmpty, bytes.data.count <= 2 * 1024 * 1024 else {
+        result(FlutterError(code: "invalid_image", message: "Invalid coupon image", details: nil))
+        return
+      }
+      // Vision runs entirely on the device; no Apple Intelligence entitlement/model is required.
+      DispatchQueue.global(qos: .userInitiated).async {
+        do {
+          let request = VNRecognizeTextRequest()
+          request.recognitionLevel = .accurate
+          let supported = try request.supportedRecognitionLanguages()
+          guard let korean = supported.first(where: { $0.hasPrefix("ko") }) else {
+            DispatchQueue.main.async {
+              result(FlutterError(code: "ocr_unsupported", message: "Korean text recognition is unavailable", details: nil))
+            }
+            return
+          }
+          request.recognitionLanguages = [korean] + supported.filter { $0 == "en-US" }
+          request.usesLanguageCorrection = true
+          try VNImageRequestHandler(data: bytes.data, options: [:]).perform([request])
+          let lines: [[String: Any]] = (request.results ?? []).compactMap { observation in
+            guard let candidate = observation.topCandidates(1).first, candidate.confidence >= 0.25 else { return nil }
+            let box = observation.boundingBox
+            return ["text": candidate.string, "top": 1 - box.maxY,
+                    "left": box.minX, "height": box.height]
+          }
+          DispatchQueue.main.async { result(lines) }
+        } catch {
+          DispatchQueue.main.async {
+            result(FlutterError(code: "ocr_failed", message: "Could not read coupon text", details: nil))
+          }
+        }
+      }
+    }
   }
 
   func configureWidgetRefreshChannel(messenger: FlutterBinaryMessenger) {

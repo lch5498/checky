@@ -11,6 +11,7 @@ Coupon coupon(
   String id, {
   String? expiry,
   bool used = false,
+  String? usedByName,
   String created = '2026-10-01',
 }) => Coupon(
   id: id,
@@ -18,6 +19,7 @@ Coupon coupon(
   memo: '',
   expiresOn: expiry == null ? null : DateTime.parse(expiry),
   usedAt: used ? DateTime(2026, 10, 1) : null,
+  usedByName: usedByName,
   createdAt: DateTime.parse(created),
   version: 1,
   canManage: true,
@@ -25,6 +27,25 @@ Coupon coupon(
 
 void main() {
   final now = DateTime(2026, 10, 7, 23, 59);
+  test('completion attribution parses API name and falls back safely', () {
+    final json = <String, Object?>{
+      'id': 'id',
+      'title': '커피',
+      'memo': '',
+      'expires_on': null,
+      'used_at': '2026-10-08T00:00:00Z',
+      'used_by_name': '민수',
+      'created_at': '2026-10-01',
+      'version': 1,
+      'can_manage': false,
+    };
+    expect(Coupon.fromJson(json).completionLabel, '사용 완료: 민수');
+    expect(
+      Coupon.fromJson({...json, 'used_by_name': null}).completionLabel,
+      '사용 완료: 알 수 없는 구성원',
+    );
+    expect(Coupon.fromJson({...json, 'used_at': null}).completionLabel, isNull);
+  });
   test('expiry remains usable through its whole calendar day', () {
     final item = coupon('today', expiry: '2026-10-07');
     expect(item.isExpired(now), false);
@@ -156,7 +177,7 @@ void main() {
     final data = [
       coupon('기한 없음'),
       coupon('오늘 쿠폰', expiry: couponDate(today)),
-      coupon('사용한 쿠폰', used: true),
+      coupon('사용한 쿠폰', used: true, usedByName: '민수'),
     ];
     await tester.pumpWidget(
       CupertinoApp(
@@ -186,6 +207,7 @@ void main() {
     await tester.tap(find.text('사용 완료').first);
     await tester.pumpAndSettle();
     expect(find.text('사용한 쿠폰'), findsOneWidget);
+    expect(find.text('사용 완료: 민수'), findsOneWidget);
     expect(find.text('오늘 쿠폰'), findsNothing);
     await tester.tap(find.text('만료일순 ▾'));
     await tester.pumpAndSettle();

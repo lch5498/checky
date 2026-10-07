@@ -19,6 +19,7 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        CouponTextRecognizer.register(this, flutterEngine.dartExecutor.binaryMessenger)
 
         captureDeepLink(intent, isInitial = true)
 

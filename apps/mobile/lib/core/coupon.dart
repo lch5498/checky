@@ -12,6 +12,7 @@ class Coupon {
     required this.createdAt,
     required this.version,
     required this.canManage,
+    this.usedByName,
   });
 
   final String id;
@@ -22,6 +23,11 @@ class Coupon {
   final DateTime createdAt;
   final int version;
   final bool canManage;
+  final String? usedByName;
+
+  String? get completionLabel => usedAt == null
+      ? null
+      : '사용 완료: ${usedByName?.trim().isNotEmpty == true ? usedByName!.trim() : '알 수 없는 구성원'}';
 
   factory Coupon.fromJson(Map<String, Object?> json) => Coupon(
     id: json['id'] as String,
@@ -32,6 +38,7 @@ class Coupon {
     createdAt: DateTime.parse(json['created_at'] as String),
     version: json['version'] as int,
     canManage: json['can_manage'] as bool? ?? false,
+    usedByName: json['used_by_name'] as String?,
   );
 
   bool isExpired(DateTime now) =>
