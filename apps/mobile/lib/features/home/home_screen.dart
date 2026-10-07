@@ -6,6 +6,7 @@ import '../../core/api_client.dart';
 import '../../core/group_refresh.dart';
 import '../../core/home_widget_background_refresh.dart';
 import '../../core/home_widget_service.dart';
+import '../../core/incoming_share_service.dart';
 import '../../core/theme_preference.dart';
 import '../../design_system/app_colors.dart';
 import '../family/family_screen.dart';
@@ -59,6 +60,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   final _apiClient = ApiClient();
+  final _incomingShareService = IncomingShareService();
   late final CupertinoTabController _tabController;
 
   List<FamilySummary> _families = const [];
@@ -70,6 +72,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   int _todayScheduleRequestToken = 0;
   int _notificationRefreshToken = 0;
   final Set<String> _handledInviteTokens = <String>{};
+  final Set<String> _handledIncomingShareIds = <String>{};
+  IncomingSharePayload? _pendingIncomingShare;
+  bool _isPresentingIncomingShare = false;
 
   AppFamily? get _selectedFamily {
     if (_families.isEmpty) {
@@ -92,6 +97,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _tabController = CupertinoTabController();
     _tabController.addListener(_handleTabChange);
     _deepLinkChannel.setMethodCallHandler(_handleDeepLinkMethodCall);
+    _incomingShareService.listen(_queueIncomingShare);
     final initialFamilies = widget.initialFamilies;
     if (initialFamilies != null) {
       _families = initialFamilies;
@@ -107,6 +113,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       _consumeInviteLinkFromChannel('getInitialLink');
       _consumeInviteLinkFromChannel('getLatestLink');
       _consumeInviteLinkFromChannelLater('getLatestLink');
+      _consumePendingIncomingShare();
+      _consumePendingIncomingShareLater();
     });
   }
 
@@ -114,6 +122,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _deepLinkChannel.setMethodCallHandler(null);
+    _incomingShareService.stopListening();
     _tabController.removeListener(_handleTabChange);
     _tabController.dispose();
     super.dispose();
@@ -134,6 +143,102 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       });
       _consumeInviteLinkFromChannel('getLatestLink');
       _consumeInviteLinkFromChannelLater('getLatestLink');
+      _consumePendingIncomingShare();
+      _consumePendingIncomingShareLater();
+    }
+  }
+
+  Future<void> _consumePendingIncomingShare() async {
+    final payload = await _incomingShareService.consumePending();
+
+    if (mounted && payload != null) {
+      await _queueIncomingShare(payload);
+    }
+  }
+
+  Future<void> _consumePendingIncomingShareLater() async {
+    await Future<void>.delayed(const Duration(milliseconds: 450));
+
+    if (mounted) {
+      await _consumePendingIncomingShare();
+    }
+  }
+
+  Future<void> _queueIncomingShare(IncomingSharePayload payload) async {
+    if (_handledIncomingShareIds.contains(payload.id) ||
+        _pendingIncomingShare?.id == payload.id) {
+      return;
+    }
+
+    _pendingIncomingShare = payload;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _presentPendingIncomingShare();
+    });
+  }
+
+  Future<void> _presentPendingIncomingShare() async {
+    final payload = _pendingIncomingShare;
+    final family = _selectedFamily;
+
+    if (!mounted ||
+        payload == null ||
+        family == null ||
+        _isLoadingFamilies ||
+        _isPresentingIncomingShare) {
+      return;
+    }
+
+    _pendingIncomingShare = null;
+    _isPresentingIncomingShare = true;
+    _handledIncomingShareIds.add(payload.id);
+
+    try {
+      final result = await Navigator.of(context, rootNavigator: true)
+          .push<IncomingScrapSaveResult>(
+            CupertinoPageRoute<IncomingScrapSaveResult>(
+              fullscreenDialog: true,
+              builder: (_) => IncomingScrapScreen(
+                family: family,
+                families: _families.map((summary) => summary.family).toList(),
+                sessionToken: widget.sessionToken,
+                sharedText: payload.text,
+              ),
+            ),
+          );
+
+      if (!mounted || result == null) {
+        return;
+      }
+
+      if (result.family.id != family.id) {
+        await _selectFamily(result.family);
+      }
+      if (!mounted) {
+        return;
+      }
+      GroupRefresh.notify(result.family.id);
+      setState(() {
+        _homeRefreshToken += 1;
+        _tabController.index = 3;
+      });
+
+      await Navigator.of(context, rootNavigator: true).push<void>(
+        CupertinoPageRoute<void>(
+          builder: (_) => ScrapChannelScreen(
+            family: result.family,
+            sessionToken: widget.sessionToken,
+            channel: result.channel,
+            initialPostId: result.post.id,
+          ),
+        ),
+      );
+    } finally {
+      _isPresentingIncomingShare = false;
+      if (_pendingIncomingShare != null && mounted) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _presentPendingIncomingShare();
+        });
+      }
     }
   }
 
@@ -355,6 +460,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
       if (selectedFamilyId != null) {
         await _saveSelectedFamilyId(selectedFamilyId);
+      }
+
+      if (mounted && _pendingIncomingShare != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _presentPendingIncomingShare();
+        });
       }
     } catch (error) {
       if (mounted) {

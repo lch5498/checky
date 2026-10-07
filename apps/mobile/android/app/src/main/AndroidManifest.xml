@@ -34,6 +34,11 @@
                 <data android:scheme="checky" android:host="family-invite"/>
                 <data android:scheme="favis" android:host="family-invite"/>
             </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
         </activity>
         <activity
             android:name="com.kakao.sdk.flutter.auth.AuthCodeHandlerActivity"

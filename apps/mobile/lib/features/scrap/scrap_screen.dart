@@ -12,6 +12,487 @@ import '../../shared/refreshable_scroll_view.dart';
 import 'scrap_read_state.dart';
 import 'coupon_screen.dart';
 
+class IncomingScrapSaveResult {
+  const IncomingScrapSaveResult({
+    required this.family,
+    required this.channel,
+    required this.post,
+  });
+
+  final AppFamily family;
+  final ScrapChannel channel;
+  final ScrapPost post;
+}
+
+class IncomingScrapScreen extends StatefulWidget {
+  const IncomingScrapScreen({
+    super.key,
+    required this.family,
+    required this.families,
+    required this.sessionToken,
+    required this.sharedText,
+  });
+
+  final AppFamily family;
+  final List<AppFamily> families;
+  final String sessionToken;
+  final String sharedText;
+
+  @override
+  State<IncomingScrapScreen> createState() => _IncomingScrapScreenState();
+}
+
+class _IncomingScrapScreenState extends State<IncomingScrapScreen> {
+  final _apiClient = ApiClient();
+  late final TextEditingController _contentController;
+  late AppFamily _family;
+
+  List<ScrapChannel> _channels = const [];
+  ScrapChannel? _selectedChannel;
+  String? _message;
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _family = widget.family;
+    _contentController = TextEditingController(
+      text: _normalizeSharedScrapText(widget.sharedText),
+    );
+    _loadChannels();
+  }
+
+  @override
+  void dispose() {
+    _contentController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadChannels() async {
+    setState(() {
+      _isLoading = true;
+      _message = null;
+    });
+
+    try {
+      final dashboard = await _apiClient.getScrapDashboard(
+        widget.sessionToken,
+        familyId: _family.id,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _channels = dashboard.channels;
+        if (dashboard.channels.length == 1) {
+          _selectedChannel = dashboard.channels.first;
+        }
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _selectFamily() async {
+    if (widget.families.length < 2 || _isLoading || _isSaving) {
+      return;
+    }
+
+    final selected = await showCupertinoModalPopup<AppFamily>(
+      context: context,
+      builder: (popupContext) => CupertinoActionSheet(
+        title: const Text('저장할 그룹 선택'),
+        actions: widget.families
+            .map(
+              (family) => CupertinoActionSheetAction(
+                isDefaultAction: family.id == _family.id,
+                onPressed: () => Navigator.of(popupContext).pop(family),
+                child: Text(family.name),
+              ),
+            )
+            .toList(),
+        cancelButton: CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(popupContext).pop(),
+          child: const Text('취소'),
+        ),
+      ),
+    );
+
+    if (selected == null || selected.id == _family.id || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _family = selected;
+      _channels = const [];
+      _selectedChannel = null;
+    });
+    await _loadChannels();
+  }
+
+  Future<void> _createChannel() async {
+    final name = await _showTextSheet(
+      context,
+      title: '새 채널 만들기',
+      placeholder: '예: 나중에 볼 링크',
+      actionLabel: '만들기',
+      maxLines: 1,
+      heightFactor: 0.46,
+      minHeightFactor: 0.34,
+    );
+
+    if (name == null || !mounted) {
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _message = null;
+    });
+
+    try {
+      final channel = await _apiClient.createScrapChannel(
+        widget.sessionToken,
+        familyId: _family.id,
+        name: name,
+      );
+
+      if (mounted) {
+        setState(() {
+          _channels = [..._channels, channel];
+          _selectedChannel = channel;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _save() async {
+    final content = _contentController.text.trim();
+    final channel = _selectedChannel;
+
+    if (content.isEmpty) {
+      setState(() {
+        _message = '저장할 내용을 입력해 주세요.';
+      });
+      return;
+    }
+
+    if (channel == null) {
+      setState(() {
+        _message = '저장할 채널을 선택해 주세요.';
+      });
+      return;
+    }
+
+    setState(() {
+      _isSaving = true;
+      _message = null;
+    });
+
+    try {
+      final post = await _apiClient.createScrapPost(
+        widget.sessionToken,
+        familyId: _family.id,
+        channelId: channel.id,
+        content: content,
+      );
+
+      if (mounted) {
+        Navigator.of(context).pop(
+          IncomingScrapSaveResult(
+            family: _family,
+            channel: channel,
+            post: post,
+          ),
+        );
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _message = error.toString();
+          _isSaving = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      backgroundColor: AppColors.darkBackground,
+      navigationBar: CupertinoNavigationBar(
+        middle: const Text('스크랩에 저장'),
+        leading: CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(44, 32),
+          onPressed: _isSaving ? null : () => Navigator.of(context).pop(),
+          child: const Text('취소'),
+        ),
+        trailing: CupertinoButton(
+          padding: EdgeInsets.zero,
+          minimumSize: const Size(44, 32),
+          onPressed: _isSaving || _isLoading ? null : _save,
+          child: _isSaving
+              ? const CupertinoActivityIndicator()
+              : const Text('저장', style: TextStyle(fontWeight: FontWeight.w800)),
+        ),
+      ),
+      child: SafeArea(
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
+          children: [
+            Text(
+              '저장할 그룹',
+              style: TextStyle(
+                color: AppColors.darkTextMuted,
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 8),
+            CupertinoButton(
+              padding: EdgeInsets.zero,
+              minimumSize: const Size(double.infinity, 44),
+              onPressed: widget.families.length > 1 ? _selectFamily : null,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.darkSurface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.darkBorder),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _family.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.darkTextPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                      ),
+                      if (widget.families.length > 1)
+                        Icon(
+                          CupertinoIcons.chevron_up_chevron_down,
+                          size: 16,
+                          color: AppColors.darkTextMuted,
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Text(
+              '공유한 내용',
+              style: TextStyle(
+                color: AppColors.darkTextPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 0,
+              ),
+            ),
+            const SizedBox(height: 12),
+            CupertinoTextField(
+              controller: _contentController,
+              minLines: 4,
+              maxLines: 8,
+              maxLength: 2000,
+              enabled: !_isSaving,
+              padding: const EdgeInsets.all(15),
+              style: TextStyle(
+                color: AppColors.darkTextPrimary,
+                fontSize: 16,
+                height: 1.4,
+                letterSpacing: 0,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.darkSurface,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppColors.darkBorder),
+              ),
+            ),
+            const SizedBox(height: 28),
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    '저장할 채널',
+                    style: TextStyle(
+                      color: AppColors.darkTextPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                ),
+                CupertinoButton(
+                  padding: EdgeInsets.zero,
+                  minimumSize: const Size(44, 32),
+                  onPressed: _isLoading || _isSaving ? null : _createChannel,
+                  child: const Text('새 채널'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            if (_message != null) ...[
+              _InlineMessage(message: _message!),
+              const SizedBox(height: 12),
+            ],
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 34),
+                child: Center(child: CupertinoActivityIndicator()),
+              )
+            else if (_channels.isEmpty)
+              _EmptyState(
+                icon: CupertinoIcons.bookmark,
+                title: '저장할 채널이 없습니다.',
+                subtitle: '채널을 하나 만든 뒤 공유한 내용을 저장해 주세요.',
+                actionLabel: '새 채널 만들기',
+                onPressed: _createChannel,
+              )
+            else
+              DecoratedBox(
+                decoration: BoxDecoration(
+                  color: AppColors.darkSurface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.darkBorder),
+                ),
+                child: Column(
+                  children: [
+                    for (var index = 0; index < _channels.length; index++)
+                      _IncomingScrapChannelRow(
+                        channel: _channels[index],
+                        isSelected: _selectedChannel?.id == _channels[index].id,
+                        showDivider: index < _channels.length - 1,
+                        onPressed: () {
+                          setState(() {
+                            _selectedChannel = _channels[index];
+                            _message = null;
+                          });
+                        },
+                      ),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _IncomingScrapChannelRow extends StatelessWidget {
+  const _IncomingScrapChannelRow({
+    required this.channel,
+    required this.isSelected,
+    required this.showDivider,
+    required this.onPressed,
+  });
+
+  final ScrapChannel channel;
+  final bool isSelected;
+  final bool showDivider;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoButton(
+      padding: EdgeInsets.zero,
+      onPressed: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
+        decoration: BoxDecoration(
+          border: showDivider
+              ? Border(bottom: BorderSide(color: AppColors.darkBorder))
+              : null,
+        ),
+        child: Row(
+          children: [
+            Icon(
+              CupertinoIcons.bookmark_fill,
+              color: isSelected
+                  ? AppColors.darkPrimary
+                  : AppColors.darkTextMuted,
+              size: 18,
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Text(
+                channel.name,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: AppColors.darkTextPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0,
+                ),
+              ),
+            ),
+            if (isSelected)
+              Icon(
+                CupertinoIcons.check_mark_circled_solid,
+                color: AppColors.darkPrimary,
+                size: 20,
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+String _normalizeSharedScrapText(String value) {
+  final normalized = value.trim();
+  if (normalized.length <= 2000) {
+    return normalized;
+  }
+
+  var end = 2000;
+  final lastCodeUnit = normalized.codeUnitAt(end - 1);
+  if (lastCodeUnit >= 0xD800 && lastCodeUnit <= 0xDBFF) {
+    end -= 1;
+  }
+  return normalized.substring(0, end);
+}
+
 class ScrapScreen extends StatefulWidget {
   const ScrapScreen({
     super.key,

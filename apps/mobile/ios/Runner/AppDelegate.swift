@@ -1,16 +1,22 @@
 import ContactsUI
 import BackgroundTasks
 import Flutter
+import Security
 import UIKit
 import Vision
 
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate, CNContactPickerDelegate {
   let pendingDeepLinkKey = "checky.pendingDeepLink"
+  let appGroupId = "group.com.family.checky.mobile"
+  let pendingShareIdKey = "checky.pendingShareId"
+  let pendingShareTextKey = "checky.pendingShareText"
   var initialDeepLink: String?
   var latestDeepLink: String?
   var deepLinkChannel: FlutterMethodChannel?
+  var incomingShareChannel: FlutterMethodChannel?
   var pendingContactResult: FlutterResult?
+  private var shareSessionChannel: FlutterMethodChannel?
   private var widgetRefreshChannel: FlutterMethodChannel?
   private var couponTextChannel: FlutterMethodChannel?
 
@@ -28,6 +34,8 @@ import Vision
       configureCouponTextChannel(messenger: controller.binaryMessenger)
       configureWidgetRefreshChannel(messenger: controller.binaryMessenger)
       configureShareChannel(controller: controller)
+      configureIncomingShareChannel(controller: controller)
+      configureShareSessionChannel(controller: controller)
       configurePhoneChannel(controller: controller)
       configureContactChannel(controller: controller)
       let preferencesChannel = FlutterMethodChannel(
@@ -153,6 +161,86 @@ import Vision
 
       presenter.present(activityController, animated: true) {
         result(nil)
+      }
+    }
+  }
+
+  func configureIncomingShareChannel(controller: FlutterViewController) {
+    incomingShareChannel = FlutterMethodChannel(
+      name: "checky/incoming_share",
+      binaryMessenger: controller.binaryMessenger
+    )
+
+    incomingShareChannel?.setMethodCallHandler { [weak self] call, result in
+      switch call.method {
+      case "getPendingShare":
+        result(self?.consumePendingShare())
+      default:
+        result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+
+  func configureShareSessionChannel(controller: FlutterViewController) {
+    shareSessionChannel = FlutterMethodChannel(
+      name: "checky/share_session",
+      binaryMessenger: controller.binaryMessenger
+    )
+
+    shareSessionChannel?.setMethodCallHandler { call, result in
+      switch call.method {
+      case "sync":
+        guard
+          let arguments = call.arguments as? [String: Any],
+          let accessToken = arguments["accessToken"] as? String,
+          !accessToken.isEmpty,
+          let tokenType = arguments["tokenType"] as? String,
+          let expiresAt = arguments["expiresAt"] as? String,
+          let apiBaseUrl = arguments["apiBaseUrl"] as? String,
+          !apiBaseUrl.isEmpty
+        else {
+          result(
+            FlutterError(
+              code: "invalid_arguments",
+              message: "A complete share session is required",
+              details: nil
+            )
+          )
+          return
+        }
+
+        do {
+          try CheckySharedSessionKeychain.save([
+            "auth.accessToken": accessToken,
+            "auth.tokenType": tokenType,
+            "auth.expiresAt": expiresAt,
+            "auth.apiBaseUrl": apiBaseUrl,
+          ])
+          result(nil)
+        } catch {
+          result(
+            FlutterError(
+              code: "share_session_sync_failed",
+              message: error.localizedDescription,
+              details: nil
+            )
+          )
+        }
+      case "clear":
+        do {
+          try CheckySharedSessionKeychain.clear()
+          result(nil)
+        } catch {
+          result(
+            FlutterError(
+              code: "share_session_clear_failed",
+              message: error.localizedDescription,
+              details: nil
+            )
+          )
+        }
+      default:
+        result(FlutterMethodNotImplemented)
       }
     }
   }
@@ -303,9 +391,17 @@ import Vision
     guard
       let scheme = url.scheme,
       let host = url.host,
-      (scheme == "checky" || scheme == "favis"),
-      host == "family-invite"
+      scheme == "checky" || scheme == "favis"
     else {
+      return false
+    }
+
+    if host == "share" {
+      notifyIncomingShareIfAvailable()
+      return true
+    }
+
+    guard host == "family-invite" else {
       return false
     }
 
@@ -335,6 +431,37 @@ import Vision
 
     UserDefaults.standard.removeObject(forKey: pendingDeepLinkKey)
     return pending
+  }
+
+  func consumePendingShare() -> [String: String]? {
+    guard let defaults = UserDefaults(suiteName: appGroupId),
+          let id = defaults.string(forKey: pendingShareIdKey),
+          !id.isEmpty,
+          let text = defaults.string(forKey: pendingShareTextKey),
+          !text.isEmpty else {
+      return nil
+    }
+
+    defaults.removeObject(forKey: pendingShareIdKey)
+    defaults.removeObject(forKey: pendingShareTextKey)
+    return ["id": id, "text": text]
+  }
+
+  func notifyIncomingShareIfAvailable() {
+    guard let defaults = UserDefaults(suiteName: appGroupId),
+          let id = defaults.string(forKey: pendingShareIdKey),
+          !id.isEmpty,
+          let text = defaults.string(forKey: pendingShareTextKey),
+          !text.isEmpty else {
+      return
+    }
+
+    DispatchQueue.main.async { [weak self] in
+      self?.incomingShareChannel?.invokeMethod(
+        "onShare",
+        arguments: ["id": id, "text": text]
+      )
+    }
   }
 
   func topViewController(from controller: UIViewController) -> UIViewController {
@@ -417,6 +544,79 @@ import Vision
         CheckyWidgetRefreshScheduler.status(result: result)
       default:
         result(FlutterMethodNotImplemented)
+      }
+    }
+  }
+}
+
+private enum CheckySharedSessionKeychain {
+  private static let service = "checky.shared.auth"
+  private static let accessGroupSuffix = "com.family.checky.mobile.shared"
+
+  static func save(_ values: [String: String]) throws {
+    guard let accessGroup else {
+      throw KeychainError.accessGroupUnavailable
+    }
+
+    for (key, value) in values {
+      let query: [CFString: Any] = [
+        kSecClass: kSecClassGenericPassword,
+        kSecAttrAccount: key,
+        kSecAttrService: service,
+        kSecAttrAccessGroup: accessGroup,
+      ]
+      let attributes: [CFString: Any] = [
+        kSecValueData: Data(value.utf8),
+        kSecAttrAccessible: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
+      ]
+      let updateStatus = SecItemUpdate(query as CFDictionary, attributes as CFDictionary)
+
+      if updateStatus == errSecItemNotFound {
+        var item = query
+        attributes.forEach { item[$0.key] = $0.value }
+        let addStatus = SecItemAdd(item as CFDictionary, nil)
+        guard addStatus == errSecSuccess else {
+          throw KeychainError.status(addStatus)
+        }
+      } else if updateStatus != errSecSuccess {
+        throw KeychainError.status(updateStatus)
+      }
+    }
+  }
+
+  static func clear() throws {
+    guard let accessGroup else {
+      throw KeychainError.accessGroupUnavailable
+    }
+
+    let query: [CFString: Any] = [
+      kSecClass: kSecClassGenericPassword,
+      kSecAttrService: service,
+      kSecAttrAccessGroup: accessGroup,
+    ]
+    let status = SecItemDelete(query as CFDictionary)
+    guard status == errSecSuccess || status == errSecItemNotFound else {
+      throw KeychainError.status(status)
+    }
+  }
+
+  private static var accessGroup: String? {
+    let configured = Bundle.main.object(
+      forInfoDictionaryKey: "CheckySharedKeychainAccessGroup"
+    ) as? String
+    return configured?.hasSuffix(accessGroupSuffix) == true ? configured : nil
+  }
+
+  private enum KeychainError: LocalizedError {
+    case accessGroupUnavailable
+    case status(OSStatus)
+
+    var errorDescription: String? {
+      switch self {
+      case .accessGroupUnavailable:
+        return "Shared Keychain access group is unavailable"
+      case .status(let status):
+        return SecCopyErrorMessageString(status, nil) as String? ?? "Keychain error \(status)"
       }
     }
   }

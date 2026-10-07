@@ -21,6 +21,8 @@
 		EEFAA2439C466CA228358AC6 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A3A13817221D6520DBD70CF4 /* Pods_RunnerTests.framework */; };
 		9A7D0C3A3101000100000001 /* CheckyHomeWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9A7D0C3A3101000100000002 /* CheckyHomeWidget.swift */; };
 		9A7D0C3A3101000100000006 /* CheckyHomeWidget.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 9A7D0C3A3101000100000005 /* CheckyHomeWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		A6C500013101000100000001 /* ShareViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6C500013101000100000003 /* ShareViewController.swift */; };
+		A6C500013101000100000002 /* CheckyShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = A6C500013101000100000006 /* CheckyShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +53,7 @@
 			dstSubfolderSpec = 13;
 			files = (
 				9A7D0C3A3101000100000006 /* CheckyHomeWidget.appex in Embed App Extensions */,
+				A6C500013101000100000002 /* CheckyShareExtension.appex in Embed App Extensions */,
 			);
 			name = "Embed App Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -89,6 +92,10 @@
 		9A7D0C3A3101000100000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		9A7D0C3A3101000100000004 /* CheckyHomeWidget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CheckyHomeWidget.entitlements; sourceTree = "<group>"; };
 		9A7D0C3A3101000100000005 /* CheckyHomeWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CheckyHomeWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		A6C500013101000100000003 /* ShareViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShareViewController.swift; sourceTree = "<group>"; };
+		A6C500013101000100000004 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A6C500013101000100000005 /* CheckyShareExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = CheckyShareExtension.entitlements; sourceTree = "<group>"; };
+		A6C500013101000100000006 /* CheckyShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = CheckyShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -110,6 +117,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		9A7D0C3A310100010000000C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A6C50001310100010000000B /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -150,6 +164,16 @@
 			path = CheckyHomeWidget;
 			sourceTree = "<group>";
 		};
+		A6C500013101000100000007 /* CheckyShareExtension */ = {
+			isa = PBXGroup;
+			children = (
+				A6C500013101000100000003 /* ShareViewController.swift */,
+				A6C500013101000100000004 /* Info.plist */,
+				A6C500013101000100000005 /* CheckyShareExtension.entitlements */,
+			);
+			path = CheckyShareExtension;
+			sourceTree = "<group>";
+		};
 		76DB588F7FCB8F85AC47BC5E /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
@@ -179,6 +203,7 @@
 				97C146EF1CF9000F007C117D /* Products */,
 				331C8082294A63A400263BE5 /* RunnerTests */,
 				9A7D0C3A3101000100000008 /* CheckyHomeWidget */,
+				A6C500013101000100000007 /* CheckyShareExtension */,
 				11CFA359358AE0881DB97CA0 /* Pods */,
 				76DB588F7FCB8F85AC47BC5E /* Frameworks */,
 			);
@@ -190,6 +215,7 @@
 				97C146EE1CF9000F007C117D /* Runner.app */,
 				331C8081294A63A400263BE5 /* RunnerTests.xctest */,
 				9A7D0C3A3101000100000005 /* CheckyHomeWidget.appex */,
+				A6C500013101000100000006 /* CheckyShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -251,6 +277,7 @@
 			);
 			dependencies = (
 				9A7D0C3A310100010000000D /* PBXTargetDependency */,
+				A6C50001310100010000000D /* PBXTargetDependency */,
 			);
 			name = Runner;
 			packageProductDependencies = (
@@ -276,6 +303,22 @@
 			productReference = 9A7D0C3A3101000100000005 /* CheckyHomeWidget.appex */;
 			productType = "com.apple.product-type.app-extension";
 		};
+		A6C500013101000100000008 /* CheckyShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A6C500013101000100000009 /* Build configuration list for PBXNativeTarget "CheckyShareExtension" */;
+			buildPhases = (
+				A6C50001310100010000000A /* Sources */,
+				A6C50001310100010000000B /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = CheckyShareExtension;
+			productName = CheckyShareExtension;
+			productReference = A6C500013101000100000006 /* CheckyShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -295,6 +338,9 @@
 						LastSwiftMigration = 1100;
 					};
 					9A7D0C3A3101000100000009 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					A6C500013101000100000008 = {
 						CreatedOnToolsVersion = 15.0;
 					};
 				};
@@ -318,6 +364,7 @@
 				97C146ED1CF9000F007C117D /* Runner */,
 				331C8080294A63A400263BE5 /* RunnerTests */,
 				9A7D0C3A3101000100000009 /* CheckyHomeWidget */,
+				A6C500013101000100000008 /* CheckyShareExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -449,6 +496,14 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A6C50001310100010000000A /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A6C500013101000100000001 /* ShareViewController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -460,6 +515,10 @@
 		9A7D0C3A310100010000000D /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 9A7D0C3A3101000100000009 /* CheckyHomeWidget */;
+		};
+		A6C50001310100010000000D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A6C500013101000100000008 /* CheckyShareExtension */;
 		};
 /* End PBXTargetDependency section */
 
@@ -832,6 +891,85 @@
 			};
 			name = Profile;
 		};
+		A6C50001310100010000000E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 9740EEB21CF90195004384FC /* Debug.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = CheckyShareExtension/CheckyShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = SGJVQ68ZSB;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CheckyShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.family.checky.mobile.CheckyShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A6C50001310100010000000F /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = CheckyShareExtension/CheckyShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = SGJVQ68ZSB;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CheckyShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.family.checky.mobile.CheckyShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A6C500013101000100000010 /* Profile */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 7AFA3C8E1D35360C0083082E /* Release.xcconfig */;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = CheckyShareExtension/CheckyShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = "$(FLUTTER_BUILD_NUMBER)";
+				DEVELOPMENT_TEAM = SGJVQ68ZSB;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = CheckyShareExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = "$(FLUTTER_BUILD_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.family.checky.mobile.CheckyShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Profile;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -871,6 +1009,16 @@
 				9A7D0C3A310100010000000E /* Debug */,
 				9A7D0C3A310100010000000F /* Release */,
 				9A7D0C3A3101000100000010 /* Profile */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A6C500013101000100000009 /* Build configuration list for PBXNativeTarget "CheckyShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A6C50001310100010000000E /* Debug */,
+				A6C50001310100010000000F /* Release */,
+				A6C500013101000100000010 /* Profile */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

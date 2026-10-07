@@ -6,6 +6,7 @@
 - 홈 위젯: Android와 iOS에서 오늘 일정과 차량별 현재 주차 위치를 함께 표시합니다. 작은 위젯은 일정/주차를 상하로 각각 2개, 넓은 위젯은 좌우 절반씩 각각 3개 표시합니다. 한쪽에만 데이터가 있으면 해당 영역을 위젯 전체 공간에 표시하며, 둘 다 없으면 각 빈 상태 안내를 유지합니다. 초과 항목 수는 제목 옆 `+N`으로 안내합니다. 15분 주기의 백그라운드 갱신을 요청하고, 데이터 변경 시 무음 푸시로 추가 갱신합니다. 실제 실행 시각은 OS 정책에 따라 늦어질 수 있으며, 다음 날 일정은 미리 저장해 자정 이후 전환합니다.
 - 일정: 종일 옵션을 포함한 그룹 구성원별 일정·반복 일정·기념일 관리, 여행 일정 필터 캘린더, 다가오는 공휴일·연휴·징검다리 조회
 - 주차: 차량과 주차 위치 관리
+- 스크랩: 채널별 링크·메모·댓글 관리, iOS와 Android 공유 메뉴에서 링크나 텍스트를 받아 그룹과 채널을 선택해 바로 저장. iOS는 앱을 열지 않고 공유 팝업 안에서 저장을 완료합니다.
 - 그룹 활동: 최근 7일간의 일정·주차·스크랩·여행 활동을 유형별로 조회
 - 여행: 여행별 일정·장소 링크와 체크리스트 관리(완료자·완료 시각 표시), 기간 축소 시 기간 밖 일정 삭제 확인
 
@@ -61,6 +62,7 @@ harness/
 - 최초 가입 시 닉네임 입력 및 프로필 닉네임 수정 구현
 - 그룹 생성, 수정, 삭제, 구성원 조회, 구성원 닉네임 기반 추가, 구성원별 초대/수락, 구성원 삭제 구현
 - iOS 공유 시트로 그룹 초대 링크 공유 구현
+- iOS와 Android의 다른 앱에서 공유한 링크·텍스트를 스크랩 채널에 저장하는 흐름 구현
 - 주차 관리 schema/API/Flutter 화면 구현
 - 차량 등록, 수정, 삭제 구현
 - 주차 위치 즐겨찾기를 층수와 위치로 분리해 등록, 수정, 삭제 구현
@@ -391,14 +393,15 @@ apps/mobile/build/app/outputs/flutter-apk/app-debug.apk
 - 카카오 redirect scheme: `kakao{KAKAO_NATIVE_APP_KEY}`
 - Android manifest는 `--dart-define=KAKAO_NATIVE_APP_KEY=...` 값을 읽어 카카오 콜백 scheme에 반영합니다.
 
-### 홈 위젯 iOS 서명 설정
+### iOS 확장 기능 서명 설정
 
-iOS 홈 위젯은 앱과 `group.com.family.checky.mobile` App Group을 공유해 오늘 일정과 차량별 현재 주차 위치를 표시합니다. 작은 위젯은 각 2개, 넓은 위젯은 각 3개를 표시하며 초과 항목은 제목 옆 `+N`으로 안내합니다. 데이터는 앱 홈을 불러오거나 새로고침할 때 갱신되고, 백그라운드 작업은 15분 주기로 요청해 오늘·내일 일정과 현재 주차 위치를 동기화합니다. iOS와 Android의 절전 정책에 따라 실제 실행 시각은 늦어질 수 있습니다. 실제 기기·TestFlight·App Store 빌드 전 Apple Developer의 Identifiers에서 아래 두 App ID에 **App Groups** capability를 켜고 같은 그룹을 연결해야 합니다.
+iOS 홈 위젯은 앱과 `group.com.family.checky.mobile` App Group을 공유해 오늘 일정과 차량별 현재 주차 위치를 표시합니다. 공유 확장은 Safari 등에서 받은 링크·텍스트와 앱이 공유한 로그인 세션을 사용해 그룹·스크랩 채널을 조회하고, 앱을 열지 않은 채 저장을 완료합니다. 실제 기기·TestFlight·App Store 빌드 전 Apple Developer의 Identifiers에서 아래 세 App ID에 **App Groups** capability를 켜고 같은 그룹을 연결해야 합니다.
 
 - `com.family.checky.mobile`
 - `com.family.checky.mobile.CheckyHomeWidget`
+- `com.family.checky.mobile.CheckyShareExtension`
 
-연결 후 Xcode에서 `Runner`와 `CheckyHomeWidget` target의 Signing & Capabilities에 `group.com.family.checky.mobile`가 보이는지 확인합니다.
+연결 후 Xcode에서 `Runner`, `CheckyHomeWidget`, `CheckyShareExtension` target의 Signing & Capabilities에 `group.com.family.checky.mobile`가 보이는지 확인합니다. `Runner`와 `CheckyShareExtension`에는 **Keychain Sharing**도 켜고 `$(AppIdentifierPrefix)com.family.checky.mobile.shared` 접근 그룹이 포함되어야 합니다. 홈 위젯은 작은 크기에 일정·주차를 각각 2개, 넓은 크기에 각각 3개 표시하며 초과 항목은 제목 옆 `+N`으로 안내합니다. 데이터는 앱 홈을 불러오거나 새로고침할 때 갱신되고, 백그라운드 작업은 15분 주기로 요청합니다. iOS와 Android의 절전 정책에 따라 실제 실행 시각은 늦어질 수 있습니다.
 
 ### 데이터 변경 푸시와 화면 갱신
 

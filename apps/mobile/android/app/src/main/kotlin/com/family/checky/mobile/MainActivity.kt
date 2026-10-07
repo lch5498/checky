@@ -8,13 +8,17 @@ import android.provider.ContactsContract
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.util.UUID
 
 class MainActivity : FlutterActivity() {
     private val pendingDeepLinkKey = "pendingDeepLink"
+    private val pendingShareIdKey = "pendingShareId"
+    private val pendingShareTextKey = "pendingShareText"
     private val contactPickerRequestCode = 4017
     private var initialDeepLink: String? = null
     private var latestDeepLink: String? = null
     private var deepLinkChannel: MethodChannel? = null
+    private var incomingShareChannel: MethodChannel? = null
     private var pendingContactResult: MethodChannel.Result? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
@@ -100,12 +104,25 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        incomingShareChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "checky/incoming_share"
+        )
+        incomingShareChannel?.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getPendingShare" -> result.success(consumePendingShare())
+                else -> result.notImplemented()
+            }
+        }
+        captureIncomingShare(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
         captureDeepLink(intent, isInitial = false)
+        captureIncomingShare(intent)
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -214,4 +231,48 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun preferences() = getSharedPreferences("checky.deep_links", Context.MODE_PRIVATE)
+
+    private fun captureIncomingShare(intent: Intent?) {
+        if (intent?.action != Intent.ACTION_SEND || intent.type != "text/plain") {
+            return
+        }
+
+        val text = intent.getStringExtra(Intent.EXTRA_TEXT)?.trim()
+            ?.takeIf { it.isNotEmpty() }
+            ?: intent.getStringExtra(Intent.EXTRA_SUBJECT)?.trim()
+                ?.takeIf { it.isNotEmpty() }
+            ?: return
+        val payload = mapOf(
+            "id" to UUID.randomUUID().toString(),
+            "text" to text,
+        )
+
+        incomingSharePreferences().edit()
+            .putString(pendingShareIdKey, payload["id"])
+            .putString(pendingShareTextKey, payload["text"])
+            .apply()
+        intent.action = Intent.ACTION_MAIN
+        intent.removeExtra(Intent.EXTRA_TEXT)
+        intent.removeExtra(Intent.EXTRA_SUBJECT)
+        incomingShareChannel?.invokeMethod("onShare", payload)
+    }
+
+    private fun consumePendingShare(): Map<String, String>? {
+        val preferences = incomingSharePreferences()
+        val id = preferences.getString(pendingShareIdKey, null)
+        val text = preferences.getString(pendingShareTextKey, null)
+
+        if (id.isNullOrBlank() || text.isNullOrBlank()) {
+            return null
+        }
+
+        preferences.edit()
+            .remove(pendingShareIdKey)
+            .remove(pendingShareTextKey)
+            .apply()
+        return mapOf("id" to id, "text" to text)
+    }
+
+    private fun incomingSharePreferences() =
+        getSharedPreferences("checky.incoming_share", Context.MODE_PRIVATE)
 }

@@ -18,15 +18,24 @@ const _preferencesChannel = MethodChannel('checky/preferences');
 const _selectedFamilyPreferenceKey = 'selectedFamilyId';
 
 class AuthGate extends StatefulWidget {
-  const AuthGate({super.key});
+  const AuthGate({
+    super.key,
+    this.apiClient,
+    this.sessionStore,
+    this.startupSplashDuration = _startupSplashDuration,
+  });
+
+  final ApiClient? apiClient;
+  final AuthSessionStore? sessionStore;
+  final Duration startupSplashDuration;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
 }
 
 class _AuthGateState extends State<AuthGate> {
-  final _apiClient = ApiClient();
-  final _sessionStore = AuthSessionStore();
+  late final ApiClient _apiClient;
+  late final AuthSessionStore _sessionStore;
   final _pushNotificationService = PushNotificationService();
 
   AuthResponse? _auth;
@@ -36,11 +45,15 @@ class _AuthGateState extends State<AuthGate> {
   String? _message;
   bool _isLoading = false;
   bool _isRestoringSession = true;
+  bool _isRetryingSessionRestore = false;
+  bool _didSessionRestoreFail = false;
   bool _isAppleSignInAvailable = false;
 
   @override
   void initState() {
     super.initState();
+    _apiClient = widget.apiClient ?? ApiClient();
+    _sessionStore = widget.sessionStore ?? AuthSessionStore();
     _restoreSession();
     _loadAppleSignInAvailability();
   }
@@ -67,18 +80,26 @@ class _AuthGateState extends State<AuthGate> {
     });
   }
 
-  Future<void> _restoreSession() async {
-    final minimumSplash = Future<void>.delayed(_startupSplashDuration);
+  Future<void> _restoreSession({bool isRetry = false}) async {
+    final minimumSplash = isRetry
+        ? Future<void>.value()
+        : Future<void>.delayed(widget.startupSplashDuration);
+
+    if (isRetry && mounted) {
+      setState(() {
+        _isRetryingSessionRestore = true;
+      });
+    }
 
     try {
       final storedSession = await _sessionStore.read();
 
       if (storedSession == null) {
-        return;
-      }
-
-      if (storedSession.isExpired) {
-        await _sessionStore.clear();
+        if (mounted) {
+          setState(() {
+            _didSessionRestoreFail = false;
+          });
+        }
         return;
       }
 
@@ -100,22 +121,23 @@ class _AuthGateState extends State<AuthGate> {
           user: user,
         );
         _initialHomeData = initialHomeData;
+        _didSessionRestoreFail = false;
       });
       unawaited(
         _pushNotificationService.attachSession(storedSession.accessToken),
       );
-    } on ApiException catch (error) {
-      if (error.statusCode == 401) {
+    } catch (error) {
+      if (isSessionRejectedByServer(error)) {
         await _sessionStore.clear();
+
+        if (mounted) {
+          setState(() {
+            _didSessionRestoreFail = false;
+          });
+        }
       } else if (mounted) {
         setState(() {
-          _message = '저장된 로그인 확인에 실패했습니다. 다시 시도해 주세요.';
-        });
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _message = '저장된 로그인 확인에 실패했습니다. 다시 시도해 주세요.';
+          _didSessionRestoreFail = true;
         });
       }
     } finally {
@@ -124,6 +146,7 @@ class _AuthGateState extends State<AuthGate> {
       if (mounted) {
         setState(() {
           _isRestoringSession = false;
+          _isRetryingSessionRestore = false;
         });
       }
     }
@@ -487,6 +510,15 @@ class _AuthGateState extends State<AuthGate> {
       return const _StartupSplashScreen();
     }
 
+    if (_didSessionRestoreFail) {
+      return _SessionRestoreUnavailableScreen(
+        isRetrying: _isRetryingSessionRestore,
+        onRetry: _isRetryingSessionRestore
+            ? null
+            : () => _restoreSession(isRetry: true),
+      );
+    }
+
     if (auth != null) {
       final initialHomeData = _initialHomeData;
 
@@ -557,6 +589,10 @@ class _AuthGateState extends State<AuthGate> {
       ),
     );
   }
+}
+
+bool isSessionRejectedByServer(Object error) {
+  return error is ApiException && error.statusCode == 401;
 }
 
 String? _appleDisplayName({String? givenName, String? familyName}) {
@@ -634,6 +670,82 @@ class _StartupSplashScreen extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   letterSpacing: 0,
                   decoration: TextDecoration.none,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SessionRestoreUnavailableScreen extends StatelessWidget {
+  const _SessionRestoreUnavailableScreen({
+    required this.isRetrying,
+    required this.onRetry,
+  });
+
+  final bool isRetrying;
+  final VoidCallback? onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      backgroundColor: AppColors.darkBackground,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Spacer(),
+              Icon(
+                CupertinoIcons.wifi_slash,
+                color: AppColors.darkPrimary,
+                size: 48,
+              ),
+              const SizedBox(height: 22),
+              Text(
+                '서버에 연결할 수 없어요',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.darkTextPrimary,
+                  fontSize: 25,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                '네트워크 연결을 확인한 뒤 다시 시도해 주세요.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: AppColors.darkTextSecondary,
+                  fontSize: 16,
+                  height: 1.45,
+                  fontWeight: FontWeight.w500,
+                  letterSpacing: 0,
+                ),
+              ),
+              const Spacer(),
+              SizedBox(
+                height: 54,
+                child: CupertinoButton.filled(
+                  borderRadius: BorderRadius.circular(14),
+                  onPressed: onRetry,
+                  child: isRetrying
+                      ? const CupertinoActivityIndicator(
+                          color: CupertinoColors.white,
+                        )
+                      : const Text(
+                          '다시 시도',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0,
+                          ),
+                        ),
                 ),
               ),
             ],

@@ -49,6 +49,8 @@ class SceneDelegate: FlutterSceneDelegate {
     }
 
     appDelegate.configureShareChannel(controller: controller)
+    appDelegate.configureIncomingShareChannel(controller: controller)
+    appDelegate.configureShareSessionChannel(controller: controller)
     appDelegate.configurePhoneChannel(controller: controller)
     appDelegate.configureContactChannel(controller: controller)
     appDelegate.configureWidgetRefreshChannel(messenger: controller.binaryMessenger)
