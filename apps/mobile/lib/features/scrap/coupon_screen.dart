@@ -884,34 +884,116 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
-            Text(
-              '${widget.family.name}에 공유',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.darkTextSecondary,
-              ),
+            const Text(
+              '쿠폰 이미지',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 20),
-            if (widget.existing == null) ...[
-              if (_image != null)
-                SizedBox(
-                  height: 220,
-                  child: Image.memory(
-                    _image!,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, error, stack) =>
-                        const Center(child: Text('지원하지 않는 이미지예요. 다시 선택해 주세요.')),
-                  ),
+            const SizedBox(height: 8),
+            if (_image != null || widget.existing != null)
+              Container(
+                width: double.infinity,
+                margin: EdgeInsets.only(
+                  bottom: widget.existing == null ? 10 : 0,
                 ),
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  color: AppColors.darkSurface,
+                  border: Border.all(color: AppColors.darkBorder),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: _image != null
+                    ? Image.memory(
+                        _image!,
+                        width: double.infinity,
+                        fit: BoxFit.fitWidth,
+                        errorBuilder: (_, error, stack) => const SizedBox(
+                          height: 160,
+                          child: Center(
+                            child: Text('지원하지 않는 이미지예요. 다시 선택해 주세요.'),
+                          ),
+                        ),
+                      )
+                    : Image.network(
+                        _api.couponImageUrl(
+                          widget.family.id,
+                          widget.existing!.id,
+                        ),
+                        key: const ValueKey('coupon-editor-existing-image'),
+                        headers: {
+                          'Authorization': 'Bearer ${widget.sessionToken}',
+                        },
+                        width: double.infinity,
+                        fit: BoxFit.fitWidth,
+                        frameBuilder: (_, child, frame, synchronous) =>
+                            synchronous || frame != null
+                            ? child
+                            : SizedBox(
+                                height: 200,
+                                child: Center(
+                                  child: CupertinoActivityIndicator(
+                                    color: AppColors.darkPrimary,
+                                  ),
+                                ),
+                              ),
+                        errorBuilder: (_, error, stack) => const SizedBox(
+                          height: 160,
+                          child: Center(child: Text('이미지를 불러오지 못했어요.')),
+                        ),
+                      ),
+              ),
+            if (widget.existing == null) ...[
               CupertinoButton(
+                padding: EdgeInsets.zero,
                 onPressed: _busy ? null : _pick,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(CupertinoIcons.photo),
-                    const SizedBox(width: 8),
-                    Text(_image == null ? '쿠폰 이미지 선택' : '다른 이미지 선택'),
-                  ],
+                child: Container(
+                  width: double.infinity,
+                  height: _image == null ? 132 : 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.darkPrimarySoft,
+                    border: Border.all(
+                      color: AppColors.darkPrimary.withValues(alpha: 0.65),
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: _image == null
+                      ? Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              CupertinoIcons.arrow_up_doc,
+                              size: 30,
+                              color: AppColors.darkPrimary,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              '이미지 업로드',
+                              style: TextStyle(
+                                color: AppColors.darkPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              CupertinoIcons.photo,
+                              size: 19,
+                              color: AppColors.darkPrimary,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '다른 이미지 선택',
+                              style: TextStyle(
+                                color: AppColors.darkPrimary,
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
                 ),
               ),
               if (_analyzing)

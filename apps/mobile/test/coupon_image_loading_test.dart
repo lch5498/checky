@@ -25,6 +25,29 @@ const _family = AppFamily(
 const _loading = ValueKey('coupon-image-loading');
 
 void main() {
+  testWidgets('edit screen loads the saved coupon image with its session', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      CupertinoApp(
+        home: CouponEditorScreen(
+          family: _family,
+          sessionToken: 'test',
+          existing: _coupon,
+        ),
+      ),
+    );
+    final image = tester.widget<Image>(
+      find.byKey(const ValueKey('coupon-editor-existing-image')),
+    );
+    final source = image.image as NetworkImage;
+    expect(source.url, contains('/families/group/coupons/coupon/image'));
+    expect(source.headers?['Authorization'], 'Bearer test');
+    expect(find.text('쿠폰 이미지'), findsOneWidget);
+    expect(find.text('이미지 업로드'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets(
     'shows spinner immediately while awaiting coupon API and stops on failure',
     (tester) async {
