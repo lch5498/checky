@@ -16,11 +16,10 @@ class CouponOcrLine {
 }
 
 class CouponSuggestions {
-  const CouponSuggestions({this.title, this.expiresOn, this.memo});
+  const CouponSuggestions({this.title, this.expiresOn});
   final String? title;
   final DateTime? expiresOn;
-  final String? memo;
-  bool get isEmpty => title == null && expiresOn == null && memo == null;
+  bool get isEmpty => title == null && expiresOn == null;
 }
 
 class CouponOcr {
@@ -123,25 +122,9 @@ CouponSuggestions parseCouponText(List<CouponOcrLine> input) {
     }
   }
 
-  final memo = <String>[];
-  var collecting = false;
-  for (final line in lines) {
-    final text = line.text;
-    if (_memoLabel.hasMatch(text)) collecting = true;
-    if (_expiryLabel.hasMatch(text) ||
-        _otherDateLabel.hasMatch(text) ||
-        RegExp(r'쿠폰\s*번호|인증\s*번호|바코드|수신|보낸\s*사람|받는\s*사람').hasMatch(text)) {
-      collecting = false;
-    }
-    if (collecting && text != title && !RegExp(r'^[\d\s-]+$').hasMatch(text)) {
-      memo.add(text);
-    }
-  }
-  final memoText = memo.join('\n');
   return CouponSuggestions(
     title: title == null ? null : _limit(title, 100),
     expiresOn: expiries.length == 1 ? expiries.values.single : null,
-    memo: memoText.isEmpty ? null : _limit(memoText, 1000),
   );
 }
 

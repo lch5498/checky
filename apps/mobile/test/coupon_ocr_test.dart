@@ -15,7 +15,7 @@ List<CouponOcrLine> lines(List<String> values) => [
 ];
 
 void main() {
-  test('extracts explicitly labeled name, expiry and usage memo', () {
+  test('extracts explicitly labeled name and expiry only', () {
     final result = parseCouponText(
       lines([
         '쿠폰 정보',
@@ -31,7 +31,6 @@ void main() {
     );
     expect(result.title, '아이스 아메리카노');
     expect(result.expiresOn, DateTime(2026, 12, 31));
-    expect(result.memo, '사용처: 체키카페\n유의사항\n일부 매장 사용 불가');
   });
   test(
     'supports Korean, compact and wrapped range dates; validates calendar date',
@@ -73,12 +72,9 @@ void main() {
       expect(result.expiresOn, DateTime(2026, 12, 31));
     },
   );
-  test('empty OCR and oversized memo are safe', () {
+  test('empty OCR and usage notes do not produce suggestions', () {
     expect(parseCouponText([]).isEmpty, true);
-    final result = parseCouponText(
-      lines(['유의사항', List.filled(1200, '가').join()]),
-    );
-    expect(result.memo!.length, 1000);
+    expect(parseCouponText(lines(['유의사항'])).isEmpty, true);
   });
 
   testWidgets(
@@ -88,20 +84,35 @@ void main() {
       await _showEditor(tester, FakeOcr(completer.future));
       await tester.enterText(find.byType(CupertinoTextField).first, '내가 정한 이름');
       completer.complete(
-        CouponSuggestions(
-          title: '자동 이름',
-          expiresOn: DateTime(2026, 12, 31),
-          memo: '사용처: 카페',
-        ),
+        CouponSuggestions(title: '자동 이름', expiresOn: DateTime(2026, 12, 31)),
       );
       await tester.pumpAndSettle();
       final fields = tester
           .widgetList<CupertinoTextField>(find.byType(CupertinoTextField))
           .toList();
       expect(fields[0].controller!.text, '내가 정한 이름');
-      expect(fields[1].controller!.text, '사용처: 카페');
+      expect(fields[1].controller!.text, isEmpty);
+      expect(fields[2].controller!.text, isEmpty);
       expect(find.text('2026-12-31'), findsOneWidget);
       expect(find.textContaining('꼭 확인'), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('다른 이미지 선택')).dy,
+        lessThan(tester.getTopLeft(find.text('쿠폰 이름')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('쿠폰 이름')).dy,
+        lessThan(tester.getTopLeft(find.text('만료일')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('만료일')).dy,
+        lessThan(tester.getTopLeft(find.text('쿠폰 번호 (선택)')).dy),
+      );
+      expect(
+        tester.getTopLeft(find.text('쿠폰 번호 (선택)')).dy,
+        lessThan(tester.getTopLeft(find.text('메모')).dy),
+      );
+      expect(find.textContaining('QR·바코드가 선명한'), findsNothing);
+      expect(find.textContaining('그룹당 최대 100장'), findsNothing);
       await tester.pumpWidget(const SizedBox());
     },
   );

@@ -43,6 +43,7 @@ class ApiClient {
     Coupon? existing,
     required String title,
     required String memo,
+    String couponNumber = '',
     DateTime? expiresOn,
     List<int>? imageBytes,
   }) async => Coupon.fromJson(
@@ -53,6 +54,7 @@ class ApiClient {
       body: {
         'title': title,
         'memo': memo,
+        'couponNumber': couponNumber,
         'expiresOn': expiresOn == null ? null : couponDate(expiresOn),
         if (existing != null) 'version': existing.version,
         if (imageBytes != null) 'imageBase64': base64Encode(imageBytes),

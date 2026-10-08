@@ -13,11 +13,13 @@ class Coupon {
     required this.version,
     required this.canManage,
     this.usedByName,
+    this.couponNumber = '',
   });
 
   final String id;
   final String title;
   final String memo;
+  final String couponNumber;
   final DateTime? expiresOn;
   final DateTime? usedAt;
   final DateTime createdAt;
@@ -33,6 +35,7 @@ class Coupon {
     id: json['id'] as String,
     title: json['title'] as String,
     memo: json['memo'] as String? ?? '',
+    couponNumber: json['coupon_number'] as String? ?? '',
     expiresOn: DateTime.tryParse(json['expires_on'] as String? ?? ''),
     usedAt: DateTime.tryParse(json['used_at'] as String? ?? ''),
     createdAt: DateTime.parse(json['created_at'] as String),

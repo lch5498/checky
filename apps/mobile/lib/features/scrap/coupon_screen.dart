@@ -533,6 +533,10 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
                 ? '만료일 없음'
                 : '${couponDate(_coupon.expiresOn!).replaceAll('-', '.')}까지',
           ),
+          if (_coupon.couponNumber.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text('쿠폰 번호: ${_coupon.couponNumber}'),
+          ],
           const SizedBox(height: 16),
           if (!_ready && _loadingDetail) const _CouponImageLoading(),
           if (_ready)
@@ -669,6 +673,9 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
   final _api = ApiClient(timeout: const Duration(seconds: 30));
   late final _ocr = widget.ocr ?? CouponOcr();
   late final _title = TextEditingController(text: widget.existing?.title ?? '');
+  late final _couponNumber = TextEditingController(
+    text: widget.existing?.couponNumber ?? '',
+  );
   late final _memo = TextEditingController(text: widget.existing?.memo ?? '');
   late DateTime? _expires = widget.existing?.expiresOn;
   Uint8List? _image;
@@ -678,7 +685,6 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
   int _analysisVersion = 0;
   String? _analysisMessage;
   String? _autoTitle;
-  String? _autoMemo;
   DateTime? _autoExpiry;
   bool _expiryEdited = false;
   @override
@@ -690,6 +696,7 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
   @override
   void dispose() {
     _title.dispose();
+    _couponNumber.dispose();
     _memo.dispose();
     super.dispose();
   }
@@ -705,10 +712,8 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
         setState(() {
           // Replacing an image clears only untouched suggestions from the old image.
           if (_title.text == _autoTitle) _title.clear();
-          if (_memo.text == _autoMemo) _memo.clear();
           if (!_expiryEdited && _expires == _autoExpiry) _expires = null;
           _autoTitle = null;
-          _autoMemo = null;
           _autoExpiry = null;
           _image = bytes;
           _error = null;
@@ -751,10 +756,6 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
         if (_title.text.trim().isEmpty && suggestions.title != null) {
           _title.text = suggestions.title!;
           _autoTitle = _title.text;
-        }
-        if (_memo.text.trim().isEmpty && suggestions.memo != null) {
-          _memo.text = suggestions.memo!;
-          _autoMemo = _memo.text;
         }
         if (_expires == null &&
             !_expiryEdited &&
@@ -852,6 +853,7 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
         widget.family.id,
         existing: widget.existing,
         title: _title.text.trim(),
+        couponNumber: _couponNumber.text.trim(),
         memo: _memo.text.trim(),
         expiresOn: _expires,
         imageBytes: _image,
@@ -890,16 +892,6 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            const Text('쿠폰 이름'),
-            const SizedBox(height: 8),
-            CupertinoTextField(
-              controller: _title,
-              placeholder: '예: 카페 아메리카노',
-              maxLength: 100,
-              enabled: !_busy,
-              padding: const EdgeInsets.all(14),
-            ),
-            const SizedBox(height: 16),
             if (widget.existing == null) ...[
               if (_image != null)
                 SizedBox(
@@ -921,17 +913,6 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
                     Text(_image == null ? '쿠폰 이미지 선택' : '다른 이미지 선택'),
                   ],
                 ),
-              ),
-              Text(
-                'QR·바코드가 선명한 JPG, PNG, WebP · 최대 2MB',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: AppColors.darkTextMuted),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                '사용 완료·만료 포함, 그룹당 최대 100장',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12, color: AppColors.darkTextMuted),
               ),
               if (_analyzing)
                 Row(
@@ -967,6 +948,16 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
                 ),
             ],
             const SizedBox(height: 20),
+            const Text('쿠폰 이름'),
+            const SizedBox(height: 8),
+            CupertinoTextField(
+              controller: _title,
+              placeholder: '예: 카페 아메리카노',
+              maxLength: 100,
+              enabled: !_busy,
+              padding: const EdgeInsets.all(14),
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
                 const Text('만료일'),
@@ -991,6 +982,16 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
               ],
             ),
             const SizedBox(height: 12),
+            const Text('쿠폰 번호 (선택)'),
+            const SizedBox(height: 8),
+            CupertinoTextField(
+              controller: _couponNumber,
+              placeholder: '번호가 있는 경우에만 입력',
+              maxLength: 128,
+              enabled: !_busy,
+              padding: const EdgeInsets.all(14),
+            ),
+            const SizedBox(height: 16),
             const Text('메모'),
             const SizedBox(height: 8),
             CupertinoTextField(

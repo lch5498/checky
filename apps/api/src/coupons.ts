@@ -11,7 +11,8 @@ function couponLimitError() {
 }
 
 type Coupon = {
-  id: string; family_id: string; title: string; memo: string; expires_on: string | null;
+  id: string; family_id: string; title: string; memo: string; coupon_number: string;
+  expires_on: string | null;
   image_path: string; created_by_user_id: string | null; used_at: string | null;
   used_by_user_id: string | null; version: number; deleted_at: string | null;
   created_at: string; updated_at: string;
@@ -107,7 +108,8 @@ export async function updateCoupon(userId: string, familyId: string, id: string,
   if (coupon.deleted_at) throw new HttpError(404, { error: 'coupon_not_found' });
   const changes: Record<string, unknown> = { version: version + 1, updated_at: new Date().toISOString() };
   if ('used' in payload) {
-    if (typeof payload.used !== 'boolean' || 'title' in payload || 'memo' in payload || 'expiresOn' in payload)
+    if (typeof payload.used !== 'boolean' || 'title' in payload || 'memo' in payload ||
+      'expiresOn' in payload || 'couponNumber' in payload)
       throw new HttpError(400, { error: 'invalid_payload' });
     changes.used_at = payload.used ? new Date().toISOString() : null;
     changes.used_by_user_id = payload.used ? userId : null;

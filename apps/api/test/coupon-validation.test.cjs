@@ -26,6 +26,15 @@ test('coupon fields validate real dates and optional expiry', () => {
   assert.throws(() => couponFields({ title: ' ' }), { status: 400 });
   assert.throws(() => couponFields({ title: 'x', memo: 'a'.repeat(1001) }), { status: 400 });
 });
+test('coupon number preserves leading zeros and can be omitted or cleared', () => {
+  assert.equal(couponFields({ title: '커피' }).coupon_number, undefined);
+  assert.equal(couponFields({ title: '커피', couponNumber: ' 0012-AB ' }).coupon_number, '0012-AB');
+  assert.equal(couponFields({ title: '커피', couponNumber: '' }).coupon_number, '');
+  for (const couponNumber of [123, 'x'.repeat(129), 'AB\nCD']) {
+    assert.throws(() => couponFields({ title: '커피', couponNumber }),
+      error => error.status === 400 && error.body.field === 'couponNumber');
+  }
+});
 test('images reject active content, invalid encoding and oversized data', () => {
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j5e0AAAAASUVORK5CYII=', 'base64');
   assert.equal(couponImage(png.toString('base64')).contentType, 'image/png');

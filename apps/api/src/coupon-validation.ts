@@ -37,6 +37,15 @@ export function couponFields(payload: Record<string, unknown>) {
   if (typeof memo !== 'string' || memo.length > 1000) {
     throw new HttpError(400, { error: 'invalid_payload', field: 'memo' });
   }
+  let couponNumber: string | undefined;
+  if ('couponNumber' in payload) {
+    const value = payload.couponNumber ?? '';
+    if (typeof value !== 'string' || value.trim().length > 128 ||
+      /[\u0000-\u001f\u007f]/.test(value)) {
+      throw new HttpError(400, { error: 'invalid_payload', field: 'couponNumber' });
+    }
+    couponNumber = value.trim();
+  }
   const expires = payload.expiresOn ?? null;
   if (expires !== null && (typeof expires !== 'string' ||
     !/^\d{4}-\d{2}-\d{2}$/.test(expires) ||
@@ -45,7 +54,8 @@ export function couponFields(payload: Record<string, unknown>) {
     new Date(expires).toISOString().slice(0, 10) !== expires)) {
     throw new HttpError(400, { error: 'invalid_payload', field: 'expiresOn' });
   }
-  return { title, memo: memo.trim(), expires_on: expires as string | null };
+  return { title, memo: memo.trim(), expires_on: expires as string | null,
+    ...(couponNumber === undefined ? {} : { coupon_number: couponNumber }) };
 }
 
 export function couponImage(value: unknown) {

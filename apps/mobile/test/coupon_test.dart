@@ -45,6 +45,11 @@ void main() {
       '사용 완료: 알 수 없는 구성원',
     );
     expect(Coupon.fromJson({...json, 'used_at': null}).completionLabel, isNull);
+    expect(
+      Coupon.fromJson({...json, 'coupon_number': '0012-AB'}).couponNumber,
+      '0012-AB',
+    );
+    expect(Coupon.fromJson(json).couponNumber, isEmpty);
   });
   test('expiry remains usable through its whole calendar day', () {
     final item = coupon('today', expiry: '2026-10-07');
@@ -148,6 +153,7 @@ void main() {
             'group',
             title: '커피',
             memo: '',
+            couponNumber: '0012-AB',
             expiresOn: DateTime(2026, 10, 7),
             imageBytes: [1, 2, 3],
           );
@@ -155,6 +161,7 @@ void main() {
           await api.deleteCoupon('test-session', 'group', saved);
           expect(methods, ['POST', 'PATCH', 'DELETE']);
           expect(bodies[0]['imageBase64'], 'AQID');
+          expect(bodies[0]['couponNumber'], '0012-AB');
           expect(bodies[0]['expiresOn'], '2026-10-07');
           expect(bodies[1], {'version': 2, 'used': true});
           expect(bodies[2], {'version': 2});

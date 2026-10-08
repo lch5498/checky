@@ -23,7 +23,7 @@ function service() {
           const execute = () => {
             if (operation === 'insert') {
               if (state.insertError) return { error: state.insertError === true ? new Error('insert failed') : state.insertError, data: null };
-              const row = { ...change, version: 1, deleted_at: null };
+              const row = { coupon_number: '', ...change, version: 1, deleted_at: null };
               state.rows.push(row);
               return { data: row, error: null };
             }
@@ -67,7 +67,7 @@ function service() {
   return { api: load('./coupons'), state };
 }
 const request = body => new Request('https://test', { method: 'POST', body: JSON.stringify(body) });
-const row = () => ({ id: 'coupon', family_id: 'allowed', title: '커피', memo: '', expires_on: null,
+const row = () => ({ id: 'coupon', family_id: 'allowed', title: '커피', memo: '', coupon_number: '', expires_on: null,
   image_path: 'allowed/coupon.png', created_by_user_id: 'creator', used_at: null, version: 1, deleted_at: null });
 
 test('all coupon operations reject another group before DB/storage access', async () => {
@@ -113,6 +113,22 @@ test('metadata and deletion require creator or group owner', async () => {
   assert.equal(result.title, 'new');
   await api.deleteCoupon('owner', 'allowed', 'coupon', request({ version: 2 }));
   assert.equal(state.rows.length, 0); assert.deepEqual(state.storage, [['remove', 'allowed/coupon.png']]);
+});
+test('coupon number can be saved, changed and cleared without changing an older client value', async () => {
+  const { api, state } = service();
+  state.rows.push({ ...row(), coupon_number: '0012-AB' });
+  state.role = 'owner';
+  let result = await api.updateCoupon('owner', 'allowed', 'coupon',
+    request({ version: 1, title: '커피', memo: '', expiresOn: null }));
+  assert.equal(result.coupon_number, '0012-AB');
+  result = await api.updateCoupon('owner', 'allowed', 'coupon',
+    request({ version: 2, title: '커피', memo: '', couponNumber: ' 0099-Z ', expiresOn: null }));
+  assert.equal(result.coupon_number, '0099-Z');
+  result = await api.updateCoupon('owner', 'allowed', 'coupon',
+    request({ version: 3, title: '커피', memo: '', couponNumber: '', expiresOn: null }));
+  assert.equal(result.coupon_number, '');
+  await assert.rejects(api.updateCoupon('owner', 'allowed', 'coupon',
+    request({ version: 4, used: true, couponNumber: 'other' })), { status: 400 });
 });
 test('image response checks the coupon family and hides deleted coupons', async () => {
   const { api, state } = service(); state.rows.push({ ...row(), family_id: 'other' });

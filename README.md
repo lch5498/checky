@@ -1007,8 +1007,8 @@ curl https://favis.vercel.app/api/health
 ## 그룹 쿠폰 (스크랩 → 쿠폰)
 
 - 하단 5개 탭은 유지하며 스크랩에 `글·링크 | 쿠폰` 세그먼트를 제공합니다.
-- 사진 보관함의 QR/바코드 쿠폰 이미지, 이름(필수), 만료일·메모(선택)를 등록합니다. 이미지 1개, JPG/PNG/WebP, 최대 2MiB입니다. 사진 선택 시 최대 2400px로 리사이징(품질 95)한 이미지를 사용합니다. QR/바코드 코드 자체를 해독하는 기능은 포함하지 않습니다.
-- 기기 내 OCR로 이름·만료일·사용처/유의사항 메모 후보를 자동 입력합니다. iOS는 Apple Vision, Android는 번들된 ML Kit 한국어 모델을 사용하며 Apple Intelligence/Gemini Nano나 외부 AI API 키가 필요 없습니다. 이미지는 분석용으로 외부 AI에 전송하지 않습니다. 한국어 인식 미지원/실패/시간 초과 시 수동 등록을 유지합니다.
+- 사진 보관함의 QR/바코드 쿠폰 이미지, 이름(필수), 만료일·쿠폰 번호·메모(선택)를 등록합니다. 쿠폰 번호가 없는 QR 쿠폰은 빈칸으로 둘 수 있습니다. 이미지 1개, JPG/PNG/WebP, 최대 2MiB입니다. 사진 선택 시 최대 2400px로 리사이징(품질 95)한 이미지를 사용합니다. QR/바코드 코드 자체를 해독하는 기능은 포함하지 않습니다.
+- 기기 내 OCR로 이름과 만료일 후보만 자동 입력합니다. 메모는 직접 입력합니다. iOS는 Apple Vision, Android는 번들된 ML Kit 한국어 모델을 사용하며 Apple Intelligence/Gemini Nano나 외부 AI API 키가 필요 없습니다. 이미지는 분석용으로 외부 AI에 전송하지 않습니다. 한국어 인식 미지원/실패/시간 초과 시 수동 등록을 유지합니다.
 - OCR은 규칙 기반 보조 입력입니다. 유효기간 표기가 명확한 날짜만 채우고, 구매일/발급일이나 서로 다른 만료일 후보가 있으면 확정하지 않습니다. 사용자가 입력한 값은 덮어쓰지 않으며 이미지 교체 시 이전 사진의 미수정 자동 입력값만 비웁니다. 사용자가 저장 전 실제 이미지와 반드시 대조해야 합니다.
 - 그룹당 보관 가능한 쿠폰 이미지는 **총 100장**입니다(사용 완료·만료 포함). 삭제 후 Storage 정리까지 끝나면 슬롯이 반환됩니다. 앱에서는 제한 안내, API에서는 업로드 전 검사, DB에서는 1~100 슬롯의 범위·고유 제약과 그룹별 잠금으로 동시 등록을 제한합니다.
 - 선택한 그룹 구성원만 조회·이미지 확대·사용 완료/취소할 수 있습니다. 등록자 또는 그룹 대표만 내용 수정·삭제할 수 있습니다.
@@ -1016,8 +1016,9 @@ curl https://favis.vercel.app/api/health
 - 사용 가능/사용 완료/만료/전체 필터. 기본 정렬은 만료일 오름차순(미지정 마지막, 동일 날짜는 최신 등록순), 최신 등록순 선택도 가능합니다. 만료일은 기기 현지 날짜 기준 당일까지 유효합니다.
 - `supabase/migrations/202610070001_add_group_coupons.sql`을 먼저 적용하고 API를 배포하세요. `coupons` 테이블(RLS 활성화)과 **비공개** `coupons` Storage 버킷을 생성합니다. 기존 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`만 사용하며 앱에 별도 Storage 키는 넣지 않습니다.
 - 이후 `supabase/migrations/202610080001_limit_group_coupon_images.sql`을 **API 배포 전** 적용해야 동시 등록 제한이 보장됩니다. 기존 그룹에 100장 넘게 있으면 migration이 중단되며 기존 데이터를 자동 삭제하지 않습니다. 초과 쿠폰을 정리한 후 재적용하세요. 한도 초과 API 응답은 `409 coupon_limit_reached`입니다.
+- 쿠폰 번호 기능은 `supabase/migrations/202610080002_add_coupon_number.sql`을 적용한 뒤 API를 배포하세요. 기존 쿠폰의 번호는 빈칸이며, 번호는 최대 128자 문자열로 저장해 앞의 0을 보존합니다.
 - API: `GET/POST /api/mobile/families/:familyId/coupons`, `GET/PATCH/DELETE .../coupons/:couponId`, `GET .../coupons/:couponId/image`. 이미지는 Bearer 인증·그룹 권한 검증 후 API가 전달합니다(공개 URL 없음). 이미지 전송 트래픽은 API도 경유합니다.
-- 등록 body: `{title, memo, expiresOn: "YYYY-MM-DD" | null, imageBase64}`. 수정 body: `{version, title, memo, expiresOn}` 또는 `{version, used: boolean}`. 삭제 body: `{version}`. 다른 구성원의 변경과 충돌하면 409로 재조회합니다.
+- 등록 body: `{title, couponNumber?: string, memo, expiresOn: "YYYY-MM-DD" | null, imageBase64}`. 수정 body: `{version, title, couponNumber?: string, memo, expiresOn}` 또는 `{version, used: boolean}`. 번호를 생략한 구버전 앱의 수정 요청은 기존 번호를 유지하고, 빈 문자열로 보내면 번호를 지웁니다. 삭제 body: `{version}`. 다른 구성원의 변경과 충돌하면 409로 재조회합니다.
 - API 요청 본문은 3MiB, 실제 이미지 크기는 2MiB로 제한합니다. 삭제는 목록에서 먼저 숨기고 파일을 제거하며 파일 제거 실패 시 동일 DELETE를 재시도할 수 있습니다.
 - 사진 선택 플러그인이 추가되어 앱 완전 재빌드가 필요합니다. iOS 사진 접근 목적 문구를 포함합니다. Android 사진 선택 중 프로세스 종료 시 쿠폰 탭에 재진입하면 선택 이미지를 복구합니다.
 - 검증: `node --test apps/api/test/coupon*.test.cjs`, `npm run typecheck`, `npm --workspace apps/api run build`, `npm run mobile:analyze`, `npm run mobile:test`.
