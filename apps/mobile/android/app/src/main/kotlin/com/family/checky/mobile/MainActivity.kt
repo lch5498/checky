@@ -1,10 +1,16 @@
 package com.family.checky.mobile
 
 import android.app.Activity
+import android.Manifest
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
+import android.os.Environment
 import android.provider.ContactsContract
+import android.provider.MediaStore
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -15,6 +21,8 @@ class MainActivity : FlutterActivity() {
     private val pendingShareIdKey = "pendingShareId"
     private val pendingShareTextKey = "pendingShareText"
     private val contactPickerRequestCode = 4017
+    private val couponImagePermissionCode = 4018
+    private var pendingCouponImageSave: Triple<ByteArray, String, MethodChannel.Result>? = null
     private var initialDeepLink: String? = null
     private var latestDeepLink: String? = null
     private var deepLinkChannel: MethodChannel? = null
@@ -24,6 +32,33 @@ class MainActivity : FlutterActivity() {
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         CouponTextRecognizer.register(this, flutterEngine.dartExecutor.binaryMessenger)
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "checky/coupon_image_save"
+        ).setMethodCallHandler { call, result ->
+            if (call.method != "save") {
+                result.notImplemented()
+                return@setMethodCallHandler
+            }
+            val bytes = call.argument<ByteArray>("bytes")
+            val mimeType = call.argument<String>("mimeType")
+            if (bytes == null || bytes.isEmpty() || mimeType !in listOf("image/jpeg", "image/png")) {
+                result.error("invalid_image", "Invalid coupon image", null)
+                return@setMethodCallHandler
+            }
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q &&
+                checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                if (pendingCouponImageSave != null) {
+                    result.error("save_busy", "Another image save is in progress", null)
+                    return@setMethodCallHandler
+                }
+                pendingCouponImageSave = Triple(bytes, mimeType!!, result)
+                requestPermissions(arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE), couponImagePermissionCode)
+            } else {
+                saveCouponImage(bytes, mimeType!!, result)
+            }
+        }
 
         captureDeepLink(intent, isInitial = true)
 
@@ -116,6 +151,52 @@ class MainActivity : FlutterActivity() {
             }
         }
         captureIncomingShare(intent)
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<out String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode != couponImagePermissionCode) return
+        val pending = pendingCouponImageSave ?: return
+        pendingCouponImageSave = null
+        if (grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED) {
+            saveCouponImage(pending.first, pending.second, pending.third)
+        } else {
+            pending.third.error("permission_denied", "Photos access denied", null)
+        }
+    }
+
+    private fun saveCouponImage(bytes: ByteArray, mimeType: String, result: MethodChannel.Result) {
+        Thread {
+            var uri: Uri? = null
+            try {
+                val extension = if (mimeType == "image/png") "png" else "jpg"
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, "checky_coupon_${System.currentTimeMillis()}.$extension")
+                    put(MediaStore.Images.Media.MIME_TYPE, mimeType)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        put(MediaStore.Images.Media.RELATIVE_PATH, "${Environment.DIRECTORY_PICTURES}/Checky")
+                        put(MediaStore.Images.Media.IS_PENDING, 1)
+                    }
+                }
+                uri = contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                    ?: error("Could not create image")
+                contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                    ?: error("Could not write image")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    contentResolver.update(uri, ContentValues().apply {
+                        put(MediaStore.Images.Media.IS_PENDING, 0)
+                    }, null, null)
+                }
+                runOnUiThread { result.success(null) }
+            } catch (error: Exception) {
+                uri?.let { runCatching { contentResolver.delete(it, null, null) } }
+                runOnUiThread { result.error("save_failed", error.message ?: "Could not save image", null) }
+            }
+        }.start()
     }
 
     override fun onNewIntent(intent: Intent) {

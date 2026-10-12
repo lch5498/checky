@@ -1,6 +1,7 @@
 import ContactsUI
 import BackgroundTasks
 import Flutter
+import Photos
 import Security
 import UIKit
 import Vision
@@ -19,6 +20,7 @@ import Vision
   private var shareSessionChannel: FlutterMethodChannel?
   private var widgetRefreshChannel: FlutterMethodChannel?
   private var couponTextChannel: FlutterMethodChannel?
+  private var couponImageSaveChannel: FlutterMethodChannel?
 
   override func application(
     _ application: UIApplication,
@@ -32,6 +34,7 @@ import Vision
 
     if let controller = window?.rootViewController as? FlutterViewController {
       configureCouponTextChannel(messenger: controller.binaryMessenger)
+      configureCouponImageSaveChannel(messenger: controller.binaryMessenger)
       configureWidgetRefreshChannel(messenger: controller.binaryMessenger)
       configureShareChannel(controller: controller)
       configureIncomingShareChannel(controller: controller)
@@ -485,6 +488,7 @@ import Vision
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
     configureCouponTextChannel(messenger: engineBridge.applicationRegistrar.messenger())
+    configureCouponImageSaveChannel(messenger: engineBridge.applicationRegistrar.messenger())
     configureWidgetRefreshChannel(messenger: engineBridge.applicationRegistrar.messenger())
   }
 
@@ -522,6 +526,43 @@ import Vision
         } catch {
           DispatchQueue.main.async {
             result(FlutterError(code: "ocr_failed", message: "Could not read coupon text", details: nil))
+          }
+        }
+      }
+    }
+  }
+
+  func configureCouponImageSaveChannel(messenger: FlutterBinaryMessenger) {
+    couponImageSaveChannel = FlutterMethodChannel(name: "checky/coupon_image_save", binaryMessenger: messenger)
+    couponImageSaveChannel?.setMethodCallHandler { call, result in
+      guard call.method == "save" else { result(FlutterMethodNotImplemented); return }
+      guard let arguments = call.arguments as? [String: Any],
+            let bytes = arguments["bytes"] as? FlutterStandardTypedData,
+            !bytes.data.isEmpty,
+            let mimeType = arguments["mimeType"] as? String,
+            mimeType == "image/jpeg" || mimeType == "image/png" else {
+        result(FlutterError(code: "invalid_image", message: "Invalid coupon image", details: nil))
+        return
+      }
+      PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
+        guard status == .authorized || status == .limited else {
+          DispatchQueue.main.async {
+            result(FlutterError(code: "permission_denied", message: "Photos access denied", details: nil))
+          }
+          return
+        }
+        PHPhotoLibrary.shared().performChanges({
+          let request = PHAssetCreationRequest.forAsset()
+          let options = PHAssetResourceCreationOptions()
+          options.originalFilename = "checky_coupon_\(Int(Date().timeIntervalSince1970)).\(mimeType == "image/png" ? "png" : "jpg")"
+          request.addResource(with: .photo, data: bytes.data, options: options)
+        }) { saved, error in
+          DispatchQueue.main.async {
+            if saved {
+              result(nil)
+            } else {
+              result(FlutterError(code: "save_failed", message: error?.localizedDescription ?? "Could not save image", details: nil))
+            }
           }
         }
       }

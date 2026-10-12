@@ -56,6 +56,23 @@ void main() {
     expect(item.isExpired(now), false);
     expect(item.isExpired(DateTime(2026, 10, 8)), true);
   });
+  test('countdown uses calendar days and highlights the final seven days', () {
+    expect(coupon('today', expiry: '2026-10-07').expiryCountdown(now), 'D-Day');
+    expect(
+      coupon('tomorrow', expiry: '2026-10-08').expiryCountdown(now),
+      'D-1',
+    );
+    expect(coupon('seven', expiry: '2026-10-14').isExpiringSoon(now), true);
+    expect(coupon('seven', expiry: '2026-10-14').expiryCountdown(now), 'D-7');
+    expect(coupon('eight', expiry: '2026-10-15').isExpiringSoon(now), false);
+    expect(coupon('eight', expiry: '2026-10-15').expiryCountdown(now), 'D-8');
+    expect(coupon('past', expiry: '2026-10-06').expiryCountdown(now), isNull);
+    expect(coupon('undated').expiryCountdown(now), isNull);
+    expect(
+      coupon('used', expiry: '2026-10-08', used: true).expiryCountdown(now),
+      isNull,
+    );
+  });
   test('expiry sorting puts undated last and breaks ties by newest', () {
     final items = [
       coupon('undated'),
@@ -206,6 +223,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('오늘 쿠폰'), findsOneWidget);
+    expect(find.text('D-Day'), findsOneWidget);
     expect(find.text('사용한 쿠폰'), findsNothing);
     expect(
       tester.getTopLeft(find.text('오늘 쿠폰')).dy,

@@ -15,7 +15,7 @@ List<CouponOcrLine> lines(List<String> values) => [
 ];
 
 void main() {
-  test('extracts explicitly labeled name and expiry only', () {
+  test('extracts explicitly labeled name, expiry and coupon number', () {
     final result = parseCouponText(
       lines([
         '쿠폰 정보',
@@ -31,6 +31,47 @@ void main() {
     );
     expect(result.title, '아이스 아메리카노');
     expect(result.expiresOn, DateTime(2026, 12, 31));
+    expect(result.couponNumber, '1234567890');
+  });
+  test('prefers labeled numbers and preserves leading zeros', () {
+    expect(
+      parseCouponText(
+        lines(['커피', '교환번호: 0012-AB34', '99998888']),
+      ).couponNumber,
+      '0012-AB34',
+    );
+    expect(
+      parseCouponText(lines(['커피', '인증번호', '0000 1234 5678'])).couponNumber,
+      '000012345678',
+    );
+    expect(
+      parseCouponText(lines(['쿠폰번호: 00001234', '교환번호: 99998888'])).couponNumber,
+      isNull,
+    );
+  });
+  test('finds isolated 8–12 character codes without labels', () {
+    expect(
+      parseCouponText(lines(['커피', '0001234567'])).couponNumber,
+      '0001234567',
+    );
+    expect(parseCouponText(lines(['커피', 'A1B2C3D4'])).couponNumber, 'A1B2C3D4');
+    expect(
+      parseCouponText([
+        const CouponOcrLine('커피', top: 0.1),
+        const CouponOcrLine('ABCDEFGH', top: 0.5),
+      ]).couponNumber,
+      'ABCDEFGH',
+    );
+    expect(
+      parseCouponText(
+        lines(['커피', '20261008', '01012345678', '0001234567']),
+      ).couponNumber,
+      '0001234567',
+    );
+    expect(
+      parseCouponText(lines(['커피', '0001234567', '99998888'])).couponNumber,
+      isNull,
+    );
   });
   test(
     'supports Korean, compact and wrapped range dates; validates calendar date',
@@ -84,14 +125,18 @@ void main() {
       await _showEditor(tester, FakeOcr(completer.future));
       await tester.enterText(find.byType(CupertinoTextField).first, '내가 정한 이름');
       completer.complete(
-        CouponSuggestions(title: '자동 이름', expiresOn: DateTime(2026, 12, 31)),
+        CouponSuggestions(
+          title: '자동 이름',
+          expiresOn: DateTime(2026, 12, 31),
+          couponNumber: '0001234567',
+        ),
       );
       await tester.pumpAndSettle();
       final fields = tester
           .widgetList<CupertinoTextField>(find.byType(CupertinoTextField))
           .toList();
       expect(fields[0].controller!.text, '내가 정한 이름');
-      expect(fields[1].controller!.text, isEmpty);
+      expect(fields[1].controller!.text, '0001234567');
       expect(fields[2].controller!.text, isEmpty);
       expect(find.text('2026-12-31'), findsOneWidget);
       expect(find.textContaining('꼭 확인'), findsOneWidget);
@@ -116,6 +161,23 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     },
   );
+  testWidgets('OCR does not overwrite a coupon number typed by the user', (
+    tester,
+  ) async {
+    final completer = Completer<CouponSuggestions>();
+    await _showEditor(tester, FakeOcr(completer.future));
+    await tester.enterText(find.byType(CupertinoTextField).at(1), '내가 입력한 번호');
+    completer.complete(const CouponSuggestions(couponNumber: '0001234567'));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<CupertinoTextField>(find.byType(CupertinoTextField).at(1))
+          .controller!
+          .text,
+      '내가 입력한 번호',
+    );
+    await tester.pumpWidget(const SizedBox());
+  });
   testWidgets(
     'unsupported OCR preserves selected image and manual registration',
     (tester) async {

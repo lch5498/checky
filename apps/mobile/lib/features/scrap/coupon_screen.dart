@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../core/api_client.dart';
 import '../../core/coupon.dart';
+import '../../core/coupon_image_saver.dart';
 import '../../core/coupon_ocr.dart';
 import '../../core/group_refresh.dart';
 import '../../design_system/app_colors.dart';
@@ -282,7 +283,11 @@ class _CouponContentState extends State<CouponContent>
                           decoration: BoxDecoration(
                             color: AppColors.darkSurface,
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: AppColors.darkBorder),
+                            border: Border.all(
+                              color: coupon.isExpiringSoon(now)
+                                  ? AppColors.darkWarning.withValues(alpha: 0.7)
+                                  : AppColors.darkBorder,
+                            ),
                           ),
                           child: CupertinoButton(
                             padding: const EdgeInsets.all(16),
@@ -295,6 +300,8 @@ class _CouponContentState extends State<CouponContent>
                                       coupon.usedAt != null ||
                                           coupon.isExpired(now)
                                       ? AppColors.darkTextMuted
+                                      : coupon.isExpiringSoon(now)
+                                      ? AppColors.darkWarning
                                       : AppColors.darkPrimary,
                                 ),
                                 const SizedBox(width: 14),
@@ -322,6 +329,8 @@ class _CouponContentState extends State<CouponContent>
                                           fontSize: 13,
                                           color: coupon.isExpired(now)
                                               ? AppColors.darkDanger
+                                              : coupon.isExpiringSoon(now)
+                                              ? AppColors.darkWarning
                                               : AppColors.darkTextSecondary,
                                         ),
                                       ),
@@ -341,13 +350,39 @@ class _CouponContentState extends State<CouponContent>
                                   ),
                                 ),
                                 const SizedBox(width: 8),
-                                Text(
-                                  coupon.status(now),
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppColors.darkTextMuted,
+                                if (coupon.expiryCountdown(now) != null)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: coupon.isExpiringSoon(now)
+                                          ? AppColors.darkWarning.withValues(
+                                              alpha: 0.16,
+                                            )
+                                          : AppColors.darkSurfaceElevated,
+                                      borderRadius: BorderRadius.circular(7),
+                                    ),
+                                    child: Text(
+                                      coupon.expiryCountdown(now)!,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                        color: coupon.isExpiringSoon(now)
+                                            ? AppColors.darkWarning
+                                            : AppColors.darkTextSecondary,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  Text(
+                                    coupon.status(now),
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: AppColors.darkTextMuted,
+                                    ),
                                   ),
-                                ),
                                 const SizedBox(width: 4),
                                 Icon(
                                   CupertinoIcons.chevron_right,
@@ -374,21 +409,27 @@ class CouponDetailScreen extends StatefulWidget {
     required this.sessionToken,
     required this.coupon,
     this.apiClient,
+    this.imageSaver,
   });
   final AppFamily family;
   final String sessionToken;
   final Coupon coupon;
   final ApiClient? apiClient;
+  final CouponImageSaver? imageSaver;
   @override
   State<CouponDetailScreen> createState() => _CouponDetailScreenState();
 }
 
 class _CouponDetailScreenState extends State<CouponDetailScreen> {
   late final _api = widget.apiClient ?? ApiClient();
+  late final _imageSaver = widget.imageSaver ?? const CouponImageSaver();
   late Coupon _coupon = widget.coupon;
   bool _busy = false;
   bool _ready = false;
   bool _loadingDetail = true;
+  bool _savingImage = false;
+  String? _imageSaveMessage;
+  bool _imageSaved = false;
   String? _error;
   @override
   void initState() {
@@ -476,6 +517,40 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
     }
   }
 
+  Future<void> _saveImage() async {
+    if (_savingImage || _busy) return;
+    setState(() {
+      _savingImage = true;
+      _imageSaveMessage = null;
+    });
+    try {
+      final image = await _api.downloadCouponImage(
+        widget.sessionToken,
+        widget.family.id,
+        _coupon.id,
+      );
+      await _imageSaver.save(image);
+      if (mounted) {
+        setState(() {
+          _imageSaveMessage = '사진 앱에 저장했어요.';
+          _imageSaved = true;
+        });
+      }
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _imageSaveMessage =
+              error is PlatformException && error.code == 'permission_denied'
+              ? '사진 저장 권한이 없어요. 기기 설정에서 허용해 주세요.'
+              : '이미지를 저장하지 못했어요. 잠시 후 다시 시도해 주세요.';
+          _imageSaved = false;
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _savingImage = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => CupertinoPageScaffold(
     backgroundColor: AppColors.darkBackground,
@@ -484,7 +559,7 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
       trailing: _coupon.canManage
           ? CupertinoButton(
               padding: EdgeInsets.zero,
-              onPressed: _busy || !_ready
+              onPressed: _busy || _savingImage || !_ready
                   ? null
                   : () async {
                       await Navigator.push(
@@ -566,12 +641,40 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
               ),
             ),
           if (_ready)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                '이미지를 누르면 확대할 수 있어요.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 12),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                children: [
+                  const Text(
+                    '이미지를 누르면 확대할 수 있어요.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 12),
+                  ),
+                  CupertinoButton(
+                    onPressed: _busy || _savingImage ? null : _saveImage,
+                    child: _savingImage
+                        ? const CupertinoActivityIndicator()
+                        : const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(CupertinoIcons.arrow_down_to_line, size: 18),
+                              SizedBox(width: 6),
+                              Text('이미지 저장'),
+                            ],
+                          ),
+                  ),
+                  if (_imageSaveMessage != null)
+                    Text(
+                      _imageSaveMessage!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: _imageSaved
+                            ? AppColors.darkPrimary
+                            : AppColors.darkDanger,
+                      ),
+                    ),
+                ],
               ),
             ),
           if (_coupon.memo.isNotEmpty)
@@ -589,12 +692,16 @@ class _CouponDetailScreenState extends State<CouponDetailScreen> {
           if (_busy) const Center(child: CupertinoActivityIndicator()),
           const SizedBox(height: 16),
           CupertinoButton.filled(
-            onPressed: _busy || !_ready ? null : () => _change(),
+            onPressed: _busy || _savingImage || !_ready
+                ? null
+                : () => _change(),
             child: Text(_coupon.usedAt == null ? '사용 완료' : '사용 완료 취소'),
           ),
           if (_coupon.canManage)
             CupertinoButton(
-              onPressed: _busy || !_ready ? null : () => _change(delete: true),
+              onPressed: _busy || _savingImage || !_ready
+                  ? null
+                  : () => _change(delete: true),
               child: Text(
                 '쿠폰 삭제',
                 style: TextStyle(color: AppColors.darkDanger),
@@ -685,6 +792,7 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
   int _analysisVersion = 0;
   String? _analysisMessage;
   String? _autoTitle;
+  String? _autoCouponNumber;
   DateTime? _autoExpiry;
   bool _expiryEdited = false;
   @override
@@ -712,8 +820,10 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
         setState(() {
           // Replacing an image clears only untouched suggestions from the old image.
           if (_title.text == _autoTitle) _title.clear();
+          if (_couponNumber.text == _autoCouponNumber) _couponNumber.clear();
           if (!_expiryEdited && _expires == _autoExpiry) _expires = null;
           _autoTitle = null;
+          _autoCouponNumber = null;
           _autoExpiry = null;
           _image = bytes;
           _error = null;
@@ -757,6 +867,11 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
           _title.text = suggestions.title!;
           _autoTitle = _title.text;
         }
+        if (_couponNumber.text.trim().isEmpty &&
+            suggestions.couponNumber != null) {
+          _couponNumber.text = suggestions.couponNumber!;
+          _autoCouponNumber = _couponNumber.text;
+        }
         if (_expires == null &&
             !_expiryEdited &&
             suggestions.expiresOn != null) {
@@ -765,7 +880,7 @@ class _CouponEditorScreenState extends State<CouponEditorScreen> {
         }
         _analysisMessage = suggestions.isEmpty
             ? '쿠폰 정보를 찾지 못했어요. 직접 입력해 주세요.'
-            : '사진에서 찾은 정보를 채웠어요. 이름과 만료일을 꼭 확인해 주세요.';
+            : '사진에서 찾은 정보를 채웠어요. 자동 입력된 값을 꼭 확인해 주세요.';
       });
     } catch (error) {
       if (!mounted || version != _analysisVersion) return;

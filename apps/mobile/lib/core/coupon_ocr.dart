@@ -16,10 +16,12 @@ class CouponOcrLine {
 }
 
 class CouponSuggestions {
-  const CouponSuggestions({this.title, this.expiresOn});
+  const CouponSuggestions({this.title, this.expiresOn, this.couponNumber});
   final String? title;
   final DateTime? expiresOn;
-  bool get isEmpty => title == null && expiresOn == null;
+  final String? couponNumber;
+  bool get isEmpty =>
+      title == null && expiresOn == null && couponNumber == null;
 }
 
 class CouponOcr {
@@ -51,6 +53,10 @@ final _memoLabel = RegExp(
   r'사용\s*처|교환\s*처|이용\s*안내|사용\s*안내|유의\s*사항|주의\s*사항|사용\s*조건',
 );
 final _titleLabel = RegExp(r'^(?:상품\s*명|쿠폰\s*명|제품\s*명)\s*[:：]?\s*');
+final _couponNumberLabel = RegExp(
+  r'^(?:(?:쿠폰|교환|인증|바코드)\s*(?:번호|코드)|(?:coupon|voucher|barcode)\s*(?:no\.?|number|code))',
+  caseSensitive: false,
+);
 final _metadata = RegExp(
   r'유효|만료|기한|발급|구매일|주문|쿠폰\s*번호|인증\s*번호|바코드|교환\s*처|사용\s*처|수신|수신자|보낸\s*사람|받는\s*사람|고객\s*센터|전화|환불|사용\s*완료',
 );
@@ -122,10 +128,57 @@ CouponSuggestions parseCouponText(List<CouponOcrLine> input) {
     }
   }
 
+  final labeledNumbers = <String>{};
+  for (var i = 0; i < lines.length; i++) {
+    final match = _couponNumberLabel.firstMatch(lines[i].text);
+    if (match == null) continue;
+    var value = lines[i].text
+        .substring(match.end)
+        .replaceFirst(RegExp(r'^[\s:：#.-]+'), '');
+    if (value.isEmpty &&
+        i + 1 < lines.length &&
+        lines[i + 1].top - lines[i].top <= 0.12) {
+      value = lines[i + 1].text;
+    }
+    final number = _couponNumberCandidate(value, labeled: true);
+    if (number != null) labeledNumbers.add(number);
+  }
+
+  String? couponNumber;
+  if (labeledNumbers.length == 1) {
+    couponNumber = labeledNumbers.single;
+  } else if (labeledNumbers.isEmpty) {
+    final unlabelledNumbers = <String>{};
+    for (final line in lines) {
+      final number = _couponNumberCandidate(line.text, labeled: false);
+      if (number != null &&
+          number != title &&
+          (RegExp(r'\d').hasMatch(number) ||
+              (line.top >= 0.3 && number == number.toUpperCase()))) {
+        unlabelledNumbers.add(number);
+      }
+    }
+    if (unlabelledNumbers.length == 1) couponNumber = unlabelledNumbers.single;
+  }
+
   return CouponSuggestions(
     title: title == null ? null : _limit(title, 100),
     expiresOn: expiries.length == 1 ? expiries.values.single : null,
+    couponNumber: couponNumber,
   );
+}
+
+String? _couponNumberCandidate(String text, {required bool labeled}) {
+  final number = text.replaceAll(RegExp(r'\s+'), '');
+  final length = number.replaceAll('-', '').length;
+  if (length < (labeled ? 4 : 8) ||
+      length > (labeled ? 128 : 12) ||
+      !RegExp(r'^[A-Za-z0-9]+(?:-[A-Za-z0-9]+)*$').hasMatch(number) ||
+      _dates(number).isNotEmpty ||
+      RegExp(r'^01[016789]\d{7,8}$').hasMatch(number)) {
+    return null;
+  }
+  return number;
 }
 
 bool _isTitle(String text) =>
@@ -135,6 +188,8 @@ bool _isTitle(String text) =>
     !_metadata.hasMatch(text) &&
     !_expiryLabel.hasMatch(text) &&
     !_memoLabel.hasMatch(text) &&
+    !(_couponNumberCandidate(text, labeled: false) != null &&
+        RegExp(r'\d').hasMatch(text)) &&
     !RegExp(
       r'^(?:쿠폰|쿠폰\s*정보|교환권|선물|선물하기|기프티콘|기프티쇼|모바일\s*쿠폰|사용하기|저장|다운로드|취소|확인|자세히\s*보기)$',
     ).hasMatch(text) &&

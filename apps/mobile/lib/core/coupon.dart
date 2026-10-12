@@ -44,9 +44,31 @@ class Coupon {
     usedByName: json['used_by_name'] as String?,
   );
 
-  bool isExpired(DateTime now) =>
-      expiresOn != null &&
-      expiresOn!.isBefore(DateTime(now.year, now.month, now.day));
+  int? daysUntilExpiry(DateTime now) {
+    final expiry = expiresOn;
+    if (expiry == null) return null;
+    final today = DateTime.utc(now.year, now.month, now.day);
+    final due = DateTime.utc(expiry.year, expiry.month, expiry.day);
+    return due.difference(today).inDays;
+  }
+
+  bool isExpired(DateTime now) {
+    final days = daysUntilExpiry(now);
+    return days != null && days < 0;
+  }
+
+  bool isExpiringSoon(DateTime now) {
+    final days = daysUntilExpiry(now);
+    return usedAt == null && days != null && days >= 0 && days <= 7;
+  }
+
+  String? expiryCountdown(DateTime now) {
+    if (usedAt != null) return null;
+    final days = daysUntilExpiry(now);
+    if (days == null || days < 0) return null;
+    return days == 0 ? 'D-Day' : 'D-$days';
+  }
+
   String status(DateTime now) => usedAt != null
       ? '사용 완료'
       : isExpired(now)

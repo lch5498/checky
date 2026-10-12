@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'api_config.dart';
 import 'coupon.dart';
@@ -16,6 +17,51 @@ class ApiClient {
   String couponImageUrl(String familyId, String couponId) => _baseUrl
       .resolve('/api/mobile/families/$familyId/coupons/$couponId/image')
       .toString();
+
+  Future<CouponImageData> downloadCouponImage(
+    String token,
+    String familyId,
+    String couponId,
+  ) async {
+    final client = HttpClient();
+    try {
+      final request = await client
+          .getUrl(Uri.parse(couponImageUrl(familyId, couponId)))
+          .timeout(_timeout);
+      request.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+      final response = await request.close().timeout(_timeout);
+      final bytes = BytesBuilder(copy: false);
+      await for (final chunk in response.timeout(_timeout)) {
+        bytes.add(chunk);
+        if (bytes.length > 10 * 1024 * 1024) {
+          throw const FormatException('Coupon image is too large');
+        }
+      }
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        Map<String, Object?> body = {};
+        try {
+          body =
+              jsonDecode(utf8.decode(bytes.takeBytes()))
+                  as Map<String, Object?>;
+        } catch (_) {
+          // Non-JSON error pages should still report the HTTP status.
+        }
+        throw ApiException(response.statusCode, body);
+      }
+      final mimeType = response.headers.contentType?.mimeType;
+      if (bytes.isEmpty ||
+          !{'image/jpeg', 'image/png', 'image/webp'}.contains(mimeType)) {
+        throw const FormatException('Invalid coupon image response');
+      }
+      return CouponImageData(bytes.takeBytes(), mimeType!);
+    } on SocketException catch (error) {
+      throw ApiConnectionException(error.message);
+    } on TimeoutException {
+      throw const ApiConnectionException('요청 시간이 초과되었습니다.');
+    } finally {
+      client.close(force: true);
+    }
+  }
 
   Future<List<Coupon>> getCoupons(String token, String familyId) async {
     final json = await _requestJson(
@@ -1566,6 +1612,13 @@ class ApiClient {
       client.close(force: true);
     }
   }
+}
+
+class CouponImageData {
+  const CouponImageData(this.bytes, this.mimeType);
+
+  final Uint8List bytes;
+  final String mimeType;
 }
 
 class AuthResponse {
