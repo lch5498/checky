@@ -788,22 +788,6 @@ private final class CheckyWidgetRefreshWorker {
     }
     let engine = FlutterEngine(name: "checky.widget.refresh", project: nil, allowHeadlessExecution: true)
     self.engine = engine
-    let channel = FlutterMethodChannel(name: "checky/widget_worker", binaryMessenger: engine.binaryMessenger)
-    self.channel = channel
-    channel.setMethodCallHandler { [weak self] call, result in
-      guard let self = self, !self.finished else { result(false); return }
-      guard call.method == "ready" else { result(FlutterMethodNotImplemented); return }
-      result(true)
-      guard !self.ready else { return }
-      self.ready = true
-      self.stage("dart_ready")
-      // Dart installs its handler before sending ready. No startup race.
-      self.channel?.invokeMethod("refresh", arguments: nil) { [weak self] value in
-        guard let self = self else { return }
-        let success = (value as? Bool) == true
-        self.finish(success: success, stage: success ? "completed" : "refresh_failed")
-      }
-    }
     task.expirationHandler = { [weak self] in
       DispatchQueue.main.async { self?.finish(success: false, stage: "expired") }
     }
@@ -815,6 +799,23 @@ private final class CheckyWidgetRefreshWorker {
       return
     }
     GeneratedPluginRegistrant.register(with: engine)
+    let channel = FlutterMethodChannel(name: "checky/widget_worker", binaryMessenger: engine.binaryMessenger)
+    self.channel = channel
+    // FlutterEngine rejects non-nil channel handlers until run() has set up its shell.
+    // Dart retries "ready" until this handler is installed.
+    channel.setMethodCallHandler { [weak self] call, result in
+      guard let self = self, !self.finished else { result(false); return }
+      guard call.method == "ready" else { result(FlutterMethodNotImplemented); return }
+      result(true)
+      guard !self.ready else { return }
+      self.ready = true
+      self.stage("dart_ready")
+      self.channel?.invokeMethod("refresh", arguments: nil) { [weak self] value in
+        guard let self = self else { return }
+        let success = (value as? Bool) == true
+        self.finish(success: success, stage: success ? "completed" : "refresh_failed")
+      }
+    }
   }
 
   private func stage(_ value: String) {

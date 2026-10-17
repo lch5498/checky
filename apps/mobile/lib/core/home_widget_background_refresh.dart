@@ -23,7 +23,28 @@ void iosWidgetRefreshDispatcher() {
     return HomeWidgetBackgroundRefresh.refresh(source: 'periodic');
   });
   // Native invokes refresh only after this handler has been installed.
-  unawaited(channel.invokeMethod<void>('ready'));
+  unawaited(notifyIosWidgetWorkerReady(channel));
+}
+
+Future<bool> notifyIosWidgetWorkerReady(
+  MethodChannel channel, {
+  int maxAttempts = 20,
+  Duration retryDelay = const Duration(milliseconds: 250),
+}) async {
+  for (var attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      final acknowledged = await channel
+          .invokeMethod<bool>('ready')
+          .timeout(const Duration(milliseconds: 500));
+      if (acknowledged != null) return acknowledged;
+    } catch (_) {
+      // The headless engine may start Dart before native installs its handler.
+    }
+    if (attempt + 1 < maxAttempts) {
+      await Future<void>.delayed(retryDelay);
+    }
+  }
+  return false;
 }
 
 @pragma('vm:entry-point')

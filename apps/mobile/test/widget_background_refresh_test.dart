@@ -44,6 +44,55 @@ void main() {
   });
 
   test(
+    'iOS worker ready signal survives native handler registration race',
+    () async {
+      const channel = MethodChannel('checky/test_widget_worker');
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      var attempts = 0;
+      messenger.setMockMethodCallHandler(channel, (call) async {
+        expect(call.method, 'ready');
+        attempts++;
+        if (attempts < 3) throw MissingPluginException();
+        return true;
+      });
+      addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+      expect(
+        await notifyIosWidgetWorkerReady(
+          channel,
+          maxAttempts: 3,
+          retryDelay: Duration.zero,
+        ),
+        isTrue,
+      );
+      expect(attempts, 3);
+    },
+  );
+
+  test('iOS worker ready signal stops after bounded retries', () async {
+    const channel = MethodChannel('checky/test_widget_worker');
+    final messenger =
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+    var attempts = 0;
+    messenger.setMockMethodCallHandler(channel, (call) async {
+      attempts++;
+      throw MissingPluginException();
+    });
+    addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+
+    expect(
+      await notifyIosWidgetWorkerReady(
+        channel,
+        maxAttempts: 3,
+        retryDelay: Duration.zero,
+      ),
+      isFalse,
+    );
+    expect(attempts, 3);
+  });
+
+  test(
     'periodic callback fetches both APIs and publishes before recording success',
     () async {
       expect(await runner().run(), isTrue);
