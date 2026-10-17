@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto';
 
 import { HttpError } from './http';
+import { removeParkingPhotosForFamilies } from './parking-photo-cleanup';
 import { getSupabaseAdmin } from './supabase';
 import { getUserById } from './users';
 
@@ -169,6 +170,7 @@ export async function updateFamily(userId: string, familyId: string, name: strin
 export async function deleteFamily(userId: string, familyId: string) {
   await requireFamilyManager(userId, familyId);
 
+  await removeParkingPhotosForFamilies([familyId]);
   const supabase = getSupabaseAdmin();
   const { error } = await supabase.from('families').delete().eq('id', familyId);
 

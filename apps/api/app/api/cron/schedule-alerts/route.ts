@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto';
 
 import { HttpError, jsonFromError } from '../../../../src/http';
+import { dispatchDueCouponExpiryAlerts } from '../../../../src/coupon-expiry-alerts';
 import { dispatchDueScheduleAlerts } from '../../../../src/schedule-alerts';
 import { getBearerToken } from '../../../../src/session';
 
@@ -10,9 +11,10 @@ export async function GET(request: Request) {
   try {
     assertCronAuthorized(request);
     const result = await dispatchDueScheduleAlerts();
+    const coupons = await dispatchDueCouponExpiryAlerts();
 
-    return Response.json(result, {
-      status: result.failureCount === 0 ? 200 : 207,
+    return Response.json({ ...result, coupons }, {
+      status: result.failureCount + coupons.failureCount === 0 ? 200 : 207,
     });
   } catch (error) {
     return jsonFromError(error, 'schedule_alerts_dispatch_failed');

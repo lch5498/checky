@@ -5,7 +5,7 @@
 - 홈: 오늘 일정, 현재 주차 위치, 출발 7일 전부터의 여행 체크리스트 완료율, 최근 스크랩 브리핑
 - 홈 위젯: Android와 iOS에서 오늘 일정과 차량별 현재 주차 위치를 함께 표시합니다. 작은 위젯은 일정/주차를 상하로 각각 2개, 넓은 위젯은 좌우 절반씩 각각 3개 표시합니다. 한쪽에만 데이터가 있으면 해당 영역을 위젯 전체 공간에 표시하며, 둘 다 없으면 각 빈 상태 안내를 유지합니다. 초과 항목 수는 제목 옆 `+N`으로 안내합니다. 15분 주기의 백그라운드 갱신을 요청하고, 데이터 변경 시 무음 푸시로 추가 갱신합니다. 실제 실행 시각은 OS 정책에 따라 늦어질 수 있으며, 다음 날 일정은 미리 저장해 자정 이후 전환합니다.
 - 일정: 종일 옵션을 포함한 그룹 구성원별 일정·반복 일정·기념일 관리, 여행 일정 필터 캘린더, 다가오는 공휴일·연휴·징검다리 조회
-- 주차: 차량과 주차 위치 관리
+- 주차: 차량과 주차 위치 관리, 현재 위치 사진 첨부(새 위치 등록 시 이전 사진 교체)
 - 스크랩: 채널별 링크·메모·댓글 관리, iOS와 Android 공유 메뉴에서 링크나 텍스트를 받아 그룹과 채널을 선택해 바로 저장. iOS는 앱을 열지 않고 공유 팝업 안에서 저장을 완료합니다.
 - 그룹 활동: 최근 7일간의 일정·주차·스크랩·여행 활동을 유형별로 조회
 - 여행: 여행별 일정·장소 링크와 체크리스트 관리(완료자·완료 시각 표시), 기간 축소 시 기간 밖 일정 삭제 확인
@@ -774,6 +774,7 @@ GET /api/mobile/families/<familyId>/parking/records?vehicleId=<vehicleId>
 ```
 
 차량마다 최근 주차 기록 10개를 최신순으로 반환합니다. 새 기록이 추가되면 가장 오래된 기록은 자동으로 정리됩니다.
+사진은 이력에 포함되지 않고 차량의 현재 위치에만 연결됩니다.
 
 차량 등록:
 
@@ -823,14 +824,29 @@ content-type: application/json
 
 {
   "vehicleId": "<vehicleId>",
+  "buildingPresetId": "<buildingPresetId>",
   "floorPresetId": "<floorPresetId>",
-  "spotPresetId": "<spotPresetId>",
+  "detailPresetId": "<detailPresetId>",
+  "buildingText": "A동",
   "floorText": "B2",
-  "spotText": "101동"
+  "detailText": "기둥 A12"
 }
 ```
 
-`floorPresetId`, `spotPresetId`는 선택 입력입니다. 프리셋 없이 `floorText`, `spotText`만 보내 직접 입력 위치를 저장할 수 있습니다. 서버는 표시용 `locationText`를 `층 / 위치` 형태로 함께 저장합니다. 앱에서 이미 등록된 현재 위치가 있으면 위치 등록 화면 진입 시 기존 층과 위치가 자동 선택됩니다. 대표만 쓰기 API를 호출할 수 있고, 구성원은 조회만 가능합니다.
+현재 API는 `buildingText`, `floorText`가 필수이며 `detailText`와 대응 프리셋 ID는 선택 입력입니다. 서버는 `locationText`를 `건물 / 층 / 상세위치` 형태로 저장합니다. 앱에서 현재 위치가 있으면 기존 선택을 채웁니다. 대표만 쓰기 API를 호출할 수 있고, 구성원은 조회만 가능합니다.
+
+주차 위치 등록 팝업에서 선택한 사진을 등록 응답의 `record.id`로 올립니다. 현재 위치 카드에서는 사진을 보기만 할 수 있습니다. 사진은 앱에서 최대 1024px, JPEG 품질 55로 축소한 뒤 최대 512KiB로 제한합니다. JPEG/PNG/WebP만 허용하며 비공개 Storage의 **차량당 고정 경로 1개**에 덮어씁니다. 새 위치가 등록되면 이전 사진을 삭제하고, 사진 업로드 실패 시 위치 기록은 유지됩니다. 현재 사진 조회는 그룹 인증을 요구하며 이전 주차 이력에는 노출되지 않습니다.
+
+```http
+PUT /api/mobile/families/<familyId>/parking/vehicles/<vehicleId>/photo
+content-type: application/json
+
+{"recordId":"<방금 등록한 record.id>","imageBase64":"<base64>"}
+
+GET /api/mobile/families/<familyId>/parking/vehicles/<vehicleId>/photo
+```
+
+API 배포 전에 `supabase/migrations/202610170002_add_current_parking_photos.sql`을 적용해 차량의 현재 사진 참조와 비공개 `parking-photos` 버킷을 생성합니다.
 
 ## 일정 관리 API
 
@@ -1016,6 +1032,7 @@ curl https://favis.vercel.app/api/health
 - 쿠폰 상세의 `이미지 저장`으로 인증된 쿠폰 이미지를 기기 사진 보관함에 저장할 수 있습니다. iOS는 사진 추가 권한, Android 9 이하는 저장소 쓰기 권한을 요청합니다(Android 10 이상은 추가 권한 불필요). WebP 이미지는 호환성을 위해 PNG로 변환합니다. 저장 권한 거부와 실패는 상세 화면에 안내합니다.
 - 사용 가능/사용 완료/만료/전체 필터. 기본 정렬은 만료일 오름차순(미지정 마지막, 동일 날짜는 최신 등록순), 최신 등록순 선택도 가능합니다. 만료일은 기기 현지 날짜 기준 당일까지 유효합니다.
 - 쿠폰 목록에는 사용 가능한 쿠폰의 만료일까지 남은 날짜를 `D-1`, `D-2`처럼 표시합니다. 당일은 `D-Day`로 표시하고 7일 이내는 날짜·아이콘·테두리와 배지를 강조합니다. 사용 완료·만료 쿠폰에는 남은 날짜를 표시하지 않습니다.
+- 만료일이 있는 미사용 쿠폰은 한국시간 만료 7일 전과 1일 전 오전 9시대에 그룹의 푸시 등록 기기로 알립니다. 기존 `/api/cron/schedule-alerts`가 같이 처리하므로 새 Cron job은 필요 없습니다. 쿠폰·만료일·알림 단계별 발송 기록으로 중복을 막고 성공한 푸시는 수신 이력에도 남깁니다. 발송 전에 `supabase/migrations/202610170001_add_coupon_expiry_deliveries.sql`을 적용해야 합니다.
 - `supabase/migrations/202610070001_add_group_coupons.sql`을 먼저 적용하고 API를 배포하세요. `coupons` 테이블(RLS 활성화)과 **비공개** `coupons` Storage 버킷을 생성합니다. 기존 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`만 사용하며 앱에 별도 Storage 키는 넣지 않습니다.
 - 이후 `supabase/migrations/202610080001_limit_group_coupon_images.sql`을 **API 배포 전** 적용해야 동시 등록 제한이 보장됩니다. 기존 그룹에 100장 넘게 있으면 migration이 중단되며 기존 데이터를 자동 삭제하지 않습니다. 초과 쿠폰을 정리한 후 재적용하세요. 한도 초과 API 응답은 `409 coupon_limit_reached`입니다.
 - 쿠폰 번호 기능은 `supabase/migrations/202610080002_add_coupon_number.sql`을 적용한 뒤 API를 배포하세요. 기존 쿠폰의 번호는 빈칸이며, 번호는 최대 128자 문자열로 저장해 앞의 0을 보존합니다.

@@ -3,7 +3,7 @@
 체키의 일정 알림 발송과 대한민국 공휴일 동기화는 Vercel API가 담당하고, 반복 실행 트리거는 Supabase Cron에서 호출합니다.
 
 ```text
-Supabase Cron -> https://favis.vercel.app/api/cron/schedule-alerts -> FCM/APNs
+Supabase Cron -> https://favis.vercel.app/api/cron/schedule-alerts -> 일정·쿠폰 만료 FCM/APNs
 Supabase Cron -> https://favis.vercel.app/api/cron/korean-holidays -> korean_holidays
 ```
 
@@ -23,7 +23,7 @@ CRON_SECRET=충분히_긴_랜덤_문자열
 KASI_SERVICE_KEY=공공데이터포털_서비스키
 ```
 
-`/api/cron/schedule-alerts`는 `CRON_SECRET`이 설정되어 있으면 아래 헤더가 맞을 때만 실행됩니다.
+`/api/cron/schedule-alerts`는 일정 알림과 쿠폰 만료 7일 전·1일 전 알림을 처리합니다. 쿠폰은 한국시간 오전 9시대에 처리하며, 먼저 `202610170001_add_coupon_expiry_deliveries.sql` migration이 적용되어 있어야 합니다. `CRON_SECRET`이 설정되어 있으면 아래 헤더가 맞을 때만 실행됩니다.
 
 ```text
 Authorization: Bearer {CRON_SECRET}
@@ -136,7 +136,8 @@ curl -X GET https://favis.vercel.app/api/cron/schedule-alerts \
   "tokenCount": 0,
   "successCount": 0,
   "failureCount": 0,
-  "schedules": []
+  "schedules": [],
+  "coupons": {"dueCouponCount": 0, "sentCouponCount": 0, "failureCount": 0}
 }
 ```
 

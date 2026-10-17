@@ -13,6 +13,7 @@ export type Vehicle = {
   plate_number: string;
   created_at: string;
   updated_at: string;
+  parking_photo_record_id: string | null;
 };
 
 export type ParkingLocationPreset = {
@@ -159,7 +160,11 @@ export async function deleteVehicle(
 ) {
   await requireFamilyManager(userId, familyId);
 
+  const vehicle = await getVehicleOrThrow(familyId, vehicleId);
   const supabase = getSupabaseAdmin();
+  const { error: photoError } = await supabase.storage.from('parking-photos')
+    .remove([parkingPhotoPath(vehicle.family_id, vehicle.id)]);
+  if (photoError) throw photoError;
   const { error } = await supabase
     .from('vehicles')
     .delete()
@@ -344,6 +349,9 @@ export async function createParkingRecord(
   }
 
   const record = data as ParkingRecord;
+  const { error: oldPhotoError } = await supabase.storage.from('parking-photos')
+    .remove([parkingPhotoPath(familyId, vehicle.id)]);
+  if (oldPhotoError) console.error('parking_old_photo_cleanup_failed', vehicle.id);
   await recordGroupActivity({
     familyId,
     actorUserId: userId,
@@ -410,6 +418,57 @@ async function getVehicleOrThrow(familyId: string, vehicleId: string) {
   }
 
   return data as Vehicle;
+}
+
+export function parkingPhotoPath(familyId: string, vehicleId: string) {
+  return `${familyId}/${vehicleId}.photo`;
+}
+
+async function currentParkingRecordId(familyId: string, vehicleId: string) {
+  const { data, error } = await getSupabaseAdmin().from('parking_records')
+    .select('id').eq('family_id', familyId).eq('vehicle_id', vehicleId)
+    .order('parked_at', { ascending: false })
+    .order('created_at', { ascending: false }).limit(1).maybeSingle();
+  if (error) throw error;
+  return data?.id as string | undefined;
+}
+
+export async function saveCurrentParkingPhoto(
+  userId: string, familyId: string, vehicleId: string,
+  recordId: string, bytes: Buffer, contentType: string,
+) {
+  await requireFamilyManager(userId, familyId);
+  const vehicle = await getVehicleOrThrow(familyId, vehicleId);
+  if (await currentParkingRecordId(familyId, vehicleId) !== recordId) {
+    throw new HttpError(409, { error: 'parking_location_changed' });
+  }
+  const db = getSupabaseAdmin();
+  const path = parkingPhotoPath(familyId, vehicle.id);
+  const { error: uploadError } = await db.storage.from('parking-photos')
+    .upload(path, bytes, { contentType, upsert: true,
+      cacheControl: '0' });
+  if (uploadError) throw uploadError;
+  const { error: updateError } = await db.from('vehicles')
+    .update({ parking_photo_record_id: recordId })
+    .eq('id', vehicle.id).eq('family_id', familyId);
+  if (updateError) throw updateError;
+  scheduleGroupRefresh(familyId);
+}
+
+export async function currentParkingPhotoResponse(
+  userId: string, familyId: string, vehicleId: string,
+) {
+  await requireMembership(userId, familyId);
+  const vehicle = await getVehicleOrThrow(familyId, vehicleId);
+  if (!vehicle.parking_photo_record_id ||
+      await currentParkingRecordId(familyId, vehicleId) !== vehicle.parking_photo_record_id) {
+    throw new HttpError(404, { error: 'parking_photo_not_found' });
+  }
+  const { data, error } = await getSupabaseAdmin().storage.from('parking-photos')
+    .download(parkingPhotoPath(familyId, vehicle.id));
+  if (error || !data) throw new HttpError(404, { error: 'parking_photo_not_found' });
+  return new Response(data, { headers: { 'content-type': data.type,
+    'cache-control': 'private, no-store' } });
 }
 
 async function getPresetOrThrow(familyId: string, presetId: string) {

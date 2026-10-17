@@ -259,7 +259,7 @@ async function listDueSchedules(windowStart: Date, windowEnd: Date) {
   return (data ?? []) as unknown as DueScheduleRow[];
 }
 
-async function listPushTokensByFamilyId(familyIds: string[]) {
+export async function listPushTokensByFamilyId(familyIds: string[]) {
   const tokensByFamilyId = new Map<string, PushTokenRow[]>();
 
   if (familyIds.length === 0) {

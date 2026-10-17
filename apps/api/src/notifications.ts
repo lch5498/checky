@@ -13,7 +13,7 @@ type NotificationHistoryRow = {
 type RecordPushNotificationInput = {
   userIds: string[];
   familyId: string;
-  scheduleId: string;
+  scheduleId?: string;
   type: string;
   title: string;
   body: string;
@@ -43,7 +43,7 @@ export async function recordPushNotificationHistory(
     userIds.map((userId) => ({
       user_id: userId,
       family_id: input.familyId,
-      schedule_id: input.scheduleId,
+      schedule_id: input.scheduleId ?? null,
       notification_type: input.type,
       title: input.title,
       body: input.body,

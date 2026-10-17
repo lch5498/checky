@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter/cupertino.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../../core/api_client.dart';
 import '../../core/group_refresh.dart';
@@ -12,6 +15,42 @@ const _parkingPresetTypeDetail = 'detail';
 const _defaultBuildingChoices = <String>[];
 const _defaultFloorChoices = <String>[];
 const _defaultDetailChoices = <String>[];
+
+Future<Uint8List?> _chooseParkingPhoto(BuildContext context) async {
+  final source = await showCupertinoModalPopup<ImageSource>(
+    context: context,
+    builder: (sheetContext) => CupertinoActionSheet(
+      actions: [
+        CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(sheetContext).pop(ImageSource.camera),
+          child: const Text('사진 촬영'),
+        ),
+        CupertinoActionSheetAction(
+          onPressed: () => Navigator.of(sheetContext).pop(ImageSource.gallery),
+          child: const Text('사진 보관함에서 선택'),
+        ),
+      ],
+      cancelButton: CupertinoActionSheetAction(
+        onPressed: () => Navigator.of(sheetContext).pop(),
+        child: const Text('취소'),
+      ),
+    ),
+  );
+  if (source == null || !context.mounted) return null;
+  final photo = await ImagePicker().pickImage(
+    source: source,
+    maxWidth: 1024,
+    maxHeight: 1024,
+    imageQuality: 55,
+    requestFullMetadata: false,
+  );
+  if (photo == null) return null;
+  final bytes = await photo.readAsBytes();
+  if (bytes.length > 512 * 1024) {
+    throw const FormatException('사진이 512KB를 넘어요. 다른 사진을 선택해 주세요.');
+  }
+  return bytes;
+}
 
 class ParkingScreen extends StatefulWidget {
   const ParkingScreen({
@@ -44,6 +83,7 @@ class _ParkingScreenState extends State<ParkingScreen>
   String? _message;
   bool _isLoading = true;
   final Set<String> _registeringLocationVehicleIds = {};
+  Map<String, Uint8List> _photoBytesByVehicleId = {};
 
   Map<String, ParkingRecord> get _currentLocationsByVehicleId {
     final dashboard = _dashboard;
@@ -93,6 +133,7 @@ class _ParkingScreenState extends State<ParkingScreen>
       if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
         setState(() {
           _dashboard = dashboard;
+          _photoBytesByVehicleId = {};
         });
         final vehicleNames = {
           for (final vehicle in dashboard.vehicles)
@@ -107,6 +148,32 @@ class _ParkingScreenState extends State<ParkingScreen>
             );
           }).toList(),
         );
+        final currentByVehicle = {
+          for (final record in dashboard.currentLocations)
+            record.vehicleId: record,
+        };
+        final photos = <String, Uint8List>{};
+        await Future.wait(
+          dashboard.vehicles.map((vehicle) async {
+            if (vehicle.parkingPhotoRecordId == null ||
+                vehicle.parkingPhotoRecordId !=
+                    currentByVehicle[vehicle.id]?.id) {
+              return;
+            }
+            try {
+              photos[vehicle.id] = await _apiClient.downloadParkingPhoto(
+                widget.sessionToken,
+                familyId: familyId,
+                vehicleId: vehicle.id,
+              );
+            } catch (_) {
+              // Location remains usable if its optional photo cannot be fetched.
+            }
+          }),
+        );
+        if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
+          setState(() => _photoBytesByVehicleId = photos);
+        }
       }
     } catch (error) {
       if (isCurrentGroupLoad(loadVersion) && familyId == refreshFamilyId) {
@@ -247,7 +314,7 @@ class _ParkingScreenState extends State<ParkingScreen>
     });
 
     try {
-      await _apiClient.createParkingRecord(
+      final record = await _apiClient.createParkingRecord(
         widget.sessionToken,
         familyId: _family.id,
         vehicleId: vehicle.id,
@@ -258,7 +325,27 @@ class _ParkingScreenState extends State<ParkingScreen>
         floorText: selected.floorText,
         detailText: selected.detailText,
       );
+      var photoFailed = false;
+      if (selected.imageBytes != null) {
+        try {
+          await _apiClient.uploadParkingPhoto(
+            widget.sessionToken,
+            familyId: _family.id,
+            vehicleId: vehicle.id,
+            recordId: record.id,
+            bytes: selected.imageBytes!,
+          );
+        } catch (_) {
+          photoFailed = true;
+        }
+      }
       await _loadParking();
+      if (photoFailed && mounted) {
+        setState(
+          () => _message =
+              '주차 위치는 등록됐지만 사진은 올리지 못했어요. 사진은 다음 위치 등록 때 다시 첨부해 주세요.',
+        );
+      }
     } catch (error) {
       if (mounted) {
         setState(() {
@@ -425,6 +512,7 @@ class _ParkingScreenState extends State<ParkingScreen>
                 (vehicle) => _VehicleCard(
                   vehicle: vehicle,
                   currentLocation: _currentLocationsByVehicleId[vehicle.id],
+                  photoBytes: _photoBytesByVehicleId[vehicle.id],
                   isRegisteringLocation: _registeringLocationVehicleIds
                       .contains(vehicle.id),
                   canManage: dashboard.canManage,
@@ -1173,6 +1261,7 @@ class _VehicleCard extends StatelessWidget {
   const _VehicleCard({
     required this.vehicle,
     required this.currentLocation,
+    required this.photoBytes,
     required this.isRegisteringLocation,
     required this.canManage,
     required this.onRegisterLocation,
@@ -1183,6 +1272,7 @@ class _VehicleCard extends StatelessWidget {
 
   final Vehicle vehicle;
   final ParkingRecord? currentLocation;
+  final Uint8List? photoBytes;
   final bool isRegisteringLocation;
   final bool canManage;
   final VoidCallback onRegisterLocation;
@@ -1297,6 +1387,26 @@ class _VehicleCard extends StatelessWidget {
                   ],
                 ),
                 if (currentLocation != null && !isRegisteringLocation) ...[
+                  if (photoBytes != null) ...[
+                    const SizedBox(height: 10),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).push(
+                        CupertinoPageRoute<void>(
+                          builder: (_) =>
+                              _ParkingPhotoViewer(bytes: photoBytes!),
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.memory(
+                          photoBytes!,
+                          width: double.infinity,
+                          height: 120,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   Text(
                     '마지막 등록: ${currentLocation.createdByNickname} · ${_parkingUpdatedAtLabel(currentLocation.updatedAt)}',
@@ -1379,6 +1489,55 @@ class _VehicleCard extends StatelessWidget {
               ],
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _ParkingPhotoViewer extends StatelessWidget {
+  const _ParkingPhotoViewer({required this.bytes});
+
+  final Uint8List bytes;
+
+  @override
+  Widget build(BuildContext context) {
+    return CupertinoPageScaffold(
+      backgroundColor: CupertinoColors.black,
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: LayoutBuilder(
+              builder: (context, constraints) => InteractiveViewer(
+                minScale: 1,
+                maxScale: 5,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => Navigator.of(context).pop(),
+                  child: SizedBox(
+                    width: constraints.maxWidth,
+                    height: constraints.maxHeight,
+                    child: Image.memory(bytes, fit: BoxFit.contain),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: CupertinoButton(
+                padding: const EdgeInsets.all(16),
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Icon(
+                  CupertinoIcons.xmark,
+                  color: CupertinoColors.white,
+                  size: 24,
+                  semanticLabel: '닫기',
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -1663,6 +1822,29 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   _ParkingLocationChoice? _detail;
   String? _message;
   bool _isCreatingPreset = false;
+  bool _isPickingPhoto = false;
+  Uint8List? _imageBytes;
+
+  Future<void> _pickPhoto() async {
+    setState(() {
+      _isPickingPhoto = true;
+      _message = null;
+    });
+    try {
+      final bytes = await _chooseParkingPhoto(context);
+      if (bytes != null && mounted) setState(() => _imageBytes = bytes);
+    } catch (error) {
+      if (mounted) {
+        setState(
+          () => _message = error is FormatException
+              ? error.message
+              : '사진을 선택하지 못했어요. 권한을 확인해 주세요.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isPickingPhoto = false);
+    }
+  }
 
   @override
   void initState() {
@@ -1883,6 +2065,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
         buildingText: building.text,
         floorText: floor.text,
         detailText: detail?.text ?? '',
+        imageBytes: _imageBytes,
       ),
     );
   }
@@ -2020,6 +2203,84 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                     onClear: () => setState(() => _detail = null),
                   ),
                 ],
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        '주차 위치 사진 (선택)',
+                        style: TextStyle(
+                          color: AppColors.darkTextPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                    ),
+                    if (_isPickingPhoto)
+                      const SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Center(child: CupertinoActivityIndicator()),
+                      )
+                    else if (_imageBytes == null)
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(40, 40),
+                        onPressed: _pickPhoto,
+                        child: Icon(
+                          CupertinoIcons.plus,
+                          size: 20,
+                          color: AppColors.darkPrimary,
+                          semanticLabel: '사진 추가',
+                        ),
+                      )
+                    else ...[
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(40, 40),
+                        onPressed: _pickPhoto,
+                        child: Icon(
+                          CupertinoIcons.pencil,
+                          size: 18,
+                          color: AppColors.darkPrimary,
+                          semanticLabel: '사진 수정',
+                        ),
+                      ),
+                      CupertinoButton(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(40, 40),
+                        onPressed: () => setState(() => _imageBytes = null),
+                        child: const Icon(
+                          CupertinoIcons.trash,
+                          size: 18,
+                          color: CupertinoColors.destructiveRed,
+                          semanticLabel: '사진 삭제',
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                if (_imageBytes != null) ...[
+                  const SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.memory(
+                      _imageBytes!,
+                      width: double.infinity,
+                      height: 130,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 6),
+                Text(
+                  '새 위치를 등록하면 이전 사진은 삭제돼요.',
+                  style: TextStyle(
+                    color: AppColors.darkTextMuted,
+                    fontSize: 12,
+                  ),
+                ),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
@@ -2027,7 +2288,10 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                   child: CupertinoButton.filled(
                     padding: EdgeInsets.zero,
                     borderRadius: BorderRadius.circular(12),
-                    onPressed: canSubmit && !_isCreatingPreset ? _submit : null,
+                    onPressed:
+                        canSubmit && !_isCreatingPreset && !_isPickingPhoto
+                        ? _submit
+                        : null,
                     child: _isCreatingPreset
                         ? const CupertinoActivityIndicator(
                             color: CupertinoColors.white,
@@ -2407,6 +2671,7 @@ class _ParkingLocationInput {
     required this.buildingText,
     required this.floorText,
     required this.detailText,
+    this.imageBytes,
   });
 
   final String? buildingPresetId;
@@ -2415,6 +2680,7 @@ class _ParkingLocationInput {
   final String buildingText;
   final String floorText;
   final String detailText;
+  final Uint8List? imageBytes;
 }
 
 class _ParkingLocationChoice {

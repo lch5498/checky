@@ -24,7 +24,8 @@ Future<void> checkyBackgroundMessage(RemoteMessage message) async {
 
 bool _refreshMessage(RemoteMessage message) =>
     message.data['type'] == 'group_refresh' ||
-    message.data['type'] == 'schedule_alert';
+    message.data['type'] == 'schedule_alert' ||
+    message.data['type'] == 'coupon_expiry';
 
 class PushNotificationService {
   static Future<void> initializeBackgroundMessages() async {

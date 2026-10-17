@@ -1,5 +1,6 @@
 import type { KakaoUser } from './kakao';
 import { getSupabaseAdmin } from './supabase';
+import { removeParkingPhotosForFamilies } from './parking-photo-cleanup';
 
 export type AppUser = {
   id: string;
@@ -200,6 +201,7 @@ export async function deleteUserAccount(userId: string) {
   ];
 
   if (ownerFamilyIds.length > 0) {
+    await removeParkingPhotosForFamilies(ownerFamilyIds);
     const { error: familiesDeleteError } = await supabase
       .from('families')
       .delete()

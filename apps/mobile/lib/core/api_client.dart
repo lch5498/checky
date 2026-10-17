@@ -592,6 +592,63 @@ class ApiClient {
     return ParkingRecord.fromJson(json['record'] as Map<String, Object?>);
   }
 
+  Future<void> uploadParkingPhoto(
+    String sessionToken, {
+    required String familyId,
+    required String vehicleId,
+    required String recordId,
+    required Uint8List bytes,
+  }) async {
+    await _requestJson(
+      'PUT',
+      '/api/mobile/families/$familyId/parking/vehicles/$vehicleId/photo',
+      bearerToken: sessionToken,
+      body: {'recordId': recordId, 'imageBase64': base64Encode(bytes)},
+      requestTimeout: const Duration(seconds: 25),
+    );
+  }
+
+  Future<Uint8List> downloadParkingPhoto(
+    String sessionToken, {
+    required String familyId,
+    required String vehicleId,
+  }) async {
+    final client = HttpClient();
+    try {
+      final url = _baseUrl.resolve(
+        '/api/mobile/families/$familyId/parking/vehicles/$vehicleId/photo',
+      );
+      final request = await client.getUrl(url).timeout(_timeout);
+      request.headers.set(
+        HttpHeaders.authorizationHeader,
+        'Bearer $sessionToken',
+      );
+      final response = await request.close().timeout(_timeout);
+      final bytes = BytesBuilder(copy: false);
+      await for (final chunk in response.timeout(_timeout)) {
+        bytes.add(chunk);
+        if (bytes.length > 512 * 1024) {
+          throw const FormatException('Parking photo is too large');
+        }
+      }
+      if (response.statusCode != 200 ||
+          !{
+            'image/jpeg',
+            'image/png',
+            'image/webp',
+          }.contains(response.headers.contentType?.mimeType)) {
+        throw FormatException('Parking photo response: ${response.statusCode}');
+      }
+      return bytes.takeBytes();
+    } on SocketException catch (error) {
+      throw ApiConnectionException(error.message);
+    } on TimeoutException {
+      throw const ApiConnectionException('요청 시간이 초과되었습니다.');
+    } finally {
+      client.close(force: true);
+    }
+  }
+
   Future<List<ParkingRecord>> getParkingHistory(
     String sessionToken, {
     required String familyId,
@@ -1572,13 +1629,15 @@ class ApiClient {
     String path, {
     Map<String, Object?>? body,
     String? bearerToken,
+    Duration? requestTimeout,
   }) async {
     final client = HttpClient();
+    final timeout = requestTimeout ?? _timeout;
 
     try {
       final request = await client
           .openUrl(method, _baseUrl.resolve(path))
-          .timeout(_timeout);
+          .timeout(timeout);
       request.headers.set(HttpHeaders.acceptHeader, 'application/json');
 
       if (bearerToken != null) {
@@ -1593,7 +1652,7 @@ class ApiClient {
         request.write(jsonEncode(body));
       }
 
-      final response = await request.close().timeout(_timeout);
+      final response = await request.close().timeout(timeout);
       final responseBody = await response.transform(utf8.decoder).join();
       final decoded = responseBody.isEmpty
           ? <String, Object?>{}
@@ -2005,6 +2064,7 @@ class Vehicle {
     required this.plateNumber,
     required this.createdAt,
     required this.updatedAt,
+    this.parkingPhotoRecordId,
   });
 
   final String id;
@@ -2013,6 +2073,7 @@ class Vehicle {
   final String plateNumber;
   final String createdAt;
   final String updatedAt;
+  final String? parkingPhotoRecordId;
 
   factory Vehicle.fromJson(Map<String, Object?> json) {
     return Vehicle(
@@ -2022,6 +2083,7 @@ class Vehicle {
       plateNumber: json['plate_number'] as String,
       createdAt: json['created_at'] as String,
       updatedAt: json['updated_at'] as String,
+      parkingPhotoRecordId: json['parking_photo_record_id'] as String?,
     );
   }
 }
