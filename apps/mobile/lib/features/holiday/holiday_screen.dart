@@ -2,6 +2,9 @@ import 'package:flutter/cupertino.dart';
 
 import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
+import '../../design_system/app_radius.dart';
+import '../../design_system/app_spacing.dart';
+import '../../design_system/app_typography.dart';
 import '../../shared/refreshable_scroll_view.dart';
 import '../../shared/schedule_section_switcher.dart';
 import '../travel/travel_screen.dart';
@@ -175,6 +178,7 @@ class _HolidayScreenState extends State<HolidayScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final holidays = _holidays ?? const <KoreanHoliday>[];
     final trips = _trips ?? const <TravelTrip>[];
     final now = _dayOnly(DateTime.now());
@@ -183,12 +187,17 @@ class _HolidayScreenState extends State<HolidayScreen> {
     final bridgeDays = _bridgeDays(holidays, now, rangeEnd);
 
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: const CupertinoNavigationBar(middle: Text('공휴일')),
       child: SafeArea(
         child: RefreshableScrollView(
           onRefresh: _loadHolidays,
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            18,
+            AppSpacing.page,
+            AppSpacing.xxl,
+          ),
           children: [
             if (widget.selectedScheduleSection != null &&
                 widget.onScheduleSectionChanged != null) ...[
@@ -196,7 +205,7 @@ class _HolidayScreenState extends State<HolidayScreen> {
                 selectedSection: widget.selectedScheduleSection!,
                 onSectionChanged: widget.onScheduleSectionChanged!,
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
             ],
             _HolidaySubsectionSwitcher(
               value: _subsection,
@@ -311,10 +320,11 @@ class _HolidaySubsectionSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoSlidingSegmentedControl<_HolidaySubsection>(
       groupValue: value,
-      backgroundColor: AppColors.darkSurfaceElevated,
-      thumbColor: AppColors.darkPrimary,
+      backgroundColor: AppColors.surfaceElevated,
+      thumbColor: AppColors.primary,
       padding: const EdgeInsets.all(3),
       children: {
         _HolidaySubsection.holidays: _HolidaySubsectionLabel(
@@ -350,17 +360,16 @@ class _HolidaySubsectionLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm,
+        vertical: 7,
+      ),
       child: Text(
         label,
-        style: TextStyle(
-          color: isSelected
-              ? AppColors.darkBackground
-              : AppColors.darkTextPrimary,
-          fontSize: 13,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
+        style: AppTypography.labelSmall.copyWith(
+          color: isSelected ? AppColors.onPrimary : AppColors.textPrimary,
         ),
       ),
     );
@@ -374,15 +383,10 @@ class _HolidayDescription extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Text(
       text,
-      style: TextStyle(
-        color: AppColors.darkTextSecondary,
-        fontSize: 13,
-        height: 1.35,
-        fontWeight: FontWeight.w600,
-        letterSpacing: 0,
-      ),
+      style: AppTypography.labelSmall.copyWith(color: AppColors.textSecondary),
     );
   }
 }
@@ -408,6 +412,7 @@ class _HolidayTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onPressed,
@@ -415,9 +420,9 @@ class _HolidayTile extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: AppColors.darkSurface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: AppColors.darkBorder),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           children: [
@@ -427,11 +432,11 @@ class _HolidayTile extends StatelessWidget {
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: CupertinoColors.systemRed.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(AppRadius.sm),
               ),
               child: Icon(icon, color: CupertinoColors.systemRed, size: 19),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -443,28 +448,25 @@ class _HolidayTile extends StatelessWidget {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: AppColors.darkTextPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0,
+                          style: AppTypography.label.copyWith(
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ),
                       if (showTravelRegisterAction) ...[
-                        const SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.sm),
                         CupertinoButton(
                           padding: EdgeInsets.zero,
                           minimumSize: const Size(46, 30),
                           onPressed: onTravelPressed,
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Text('✈️', style: TextStyle(fontSize: 16)),
-                              SizedBox(width: 4),
+                              const Text('✈️', style: AppTypography.bodyMedium),
+                              const SizedBox(width: AppSpacing.xs),
                               Icon(
                                 CupertinoIcons.plus_circle_fill,
-                                color: CupertinoColors.systemTeal,
+                                color: AppColors.primary,
                                 size: 19,
                               ),
                             ],
@@ -473,17 +475,13 @@ class _HolidayTile extends StatelessWidget {
                       ],
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     subtitle,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkTextSecondary,
-                      fontSize: 13,
-                      height: 1.3,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -503,21 +501,17 @@ class _HolidayMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.border),
       ),
       child: Text(
         message,
-        style: TextStyle(
-          color: AppColors.darkDanger,
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0,
-        ),
+        style: AppTypography.labelSmall.copyWith(color: AppColors.danger),
       ),
     );
   }
@@ -530,16 +524,14 @@ class _HolidayEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 52),
       child: Center(
         child: Text(
           text,
-          style: TextStyle(
-            color: AppColors.darkTextSecondary,
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
+          style: AppTypography.labelSmall.copyWith(
+            color: AppColors.textSecondary,
           ),
         ),
       ),

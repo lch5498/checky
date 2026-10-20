@@ -2,6 +2,9 @@ import 'package:flutter/cupertino.dart';
 
 import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
+import '../../design_system/app_radius.dart';
+import '../../design_system/app_spacing.dart';
+import '../../design_system/app_typography.dart';
 
 typedef ProfileSaveCallback =
     Future<AppUser> Function(
@@ -233,8 +236,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: Text('내 정보 관리'),
         trailing: CupertinoButton(
@@ -243,27 +247,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
           onPressed: _isSaving ? null : _save,
           child: _isSaving
               ? const CupertinoActivityIndicator()
-              : Text(
-                  '저장',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                  ),
-                ),
+              : Text('저장', style: AppTypography.label),
         ),
       ),
       child: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            AppSpacing.xl,
+            AppSpacing.page,
+            AppSpacing.xxl,
+          ),
           children: [
             Text(
               '프로필 이름',
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                height: 1.12,
-                letterSpacing: 0,
+              style: AppTypography.titleLarge.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 26),
@@ -274,17 +273,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
               maxLength: 30,
               placeholder: '닉네임',
               textInputAction: TextInputAction.done,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: 15,
+              ),
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
               ),
               decoration: BoxDecoration(
-                color: AppColors.darkSurface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.darkBorder),
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.border),
               ),
               onSubmitted: (_) => _save(),
             ),
@@ -330,21 +329,22 @@ class _ProfileTextAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoButton(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 10,
+        vertical: AppSpacing.sm,
+      ),
       minimumSize: Size.zero,
       onPressed: onPressed,
       child: Text(
         label,
-        style: TextStyle(
+        style: AppTypography.labelSmall.copyWith(
           color:
               (isDestructive
                       ? CupertinoColors.destructiveRed
-                      : AppColors.darkTextMuted)
+                      : AppColors.textMuted)
                   .withValues(alpha: onPressed == null ? 0.35 : 0.78),
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0,
         ),
       ),
     );
@@ -358,23 +358,18 @@ class _ProfileMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Text(
           message,
-          style: TextStyle(
-            color: AppColors.darkDanger,
-            fontSize: 14,
-            height: 1.35,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.labelSmall.copyWith(color: AppColors.danger),
         ),
       ),
     );

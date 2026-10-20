@@ -1,84 +1,82 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
-import 'app_colors.dart';
 import 'app_theme_extension.dart';
+import 'app_theme_preset.dart';
 import 'app_typography.dart';
+import 'app_font_preset.dart';
 
 class AppTheme {
   const AppTheme._();
 
-  static const darkTokens = AppThemeExtension(
-    background: AppColors.darkBackgroundValue,
-    surface: AppColors.darkSurfaceValue,
-    surfaceElevated: AppColors.darkSurfaceElevatedValue,
-    primary: AppColors.darkPrimaryValue,
-    primarySoft: AppColors.darkPrimarySoftValue,
-    textPrimary: AppColors.darkTextPrimaryValue,
-    textSecondary: AppColors.darkTextSecondaryValue,
-    textMuted: AppColors.darkTextMutedValue,
-    border: AppColors.darkBorderValue,
-    success: AppColors.darkSuccessValue,
-    warning: AppColors.darkWarningValue,
-    danger: AppColors.darkDangerValue,
-  );
+  static ThemeData theme(
+    Brightness brightness,
+    AppThemePreset preset, {
+    AppFontPreset font = AppFontPreset.system,
+  }) => _theme(brightness, preset.colors(brightness), font);
 
-  static const lightTokens = AppThemeExtension(
-    background: AppColors.lightBackground,
-    surface: AppColors.lightSurface,
-    surfaceElevated: AppColors.lightSurfaceElevated,
-    primary: AppColors.lightPrimary,
-    primarySoft: AppColors.lightPrimarySoft,
-    textPrimary: AppColors.lightTextPrimary,
-    textSecondary: AppColors.lightTextSecondary,
-    textMuted: AppColors.lightTextMuted,
-    border: AppColors.lightBorder,
-    success: AppColors.lightSuccess,
-    warning: AppColors.lightWarning,
-    danger: AppColors.lightDanger,
-  );
-
-  static ThemeData get darkTheme => _theme(Brightness.dark, darkTokens);
-
-  static ThemeData get lightTheme => _theme(Brightness.light, lightTokens);
-
-  static CupertinoThemeData cupertinoTheme(Brightness brightness) {
-    final tokens = brightness == Brightness.dark ? darkTokens : lightTokens;
-    final bodyStyle = AppTypography.bodyMedium.copyWith(
-      inherit: false,
-      color: tokens.textPrimary,
-      decoration: TextDecoration.none,
-    );
-    final actionStyle = bodyStyle.copyWith(
-      color: tokens.primary,
-      fontSize: 17,
-      fontWeight: FontWeight.w600,
-    );
+  static CupertinoThemeData cupertinoTheme(
+    Brightness brightness,
+    AppThemeExtension tokens, {
+    AppFontPreset font = AppFontPreset.system,
+  }) {
+    final bodyStyle = font
+        .applyTo(AppTypography.bodyMedium)
+        .copyWith(
+          inherit: false,
+          color: tokens.textPrimary,
+          decoration: TextDecoration.none,
+        );
+    final actionStyle = font
+        .applyTo(AppTypography.button)
+        .copyWith(
+          inherit: false,
+          color: tokens.primary,
+          decoration: TextDecoration.none,
+        );
 
     return CupertinoThemeData(
       brightness: brightness,
       primaryColor: tokens.primary,
+      primaryContrastingColor: tokens.onPrimary,
       scaffoldBackgroundColor: tokens.background,
       barBackgroundColor: tokens.background.withValues(alpha: 0.92),
       textTheme: CupertinoTextThemeData(
         textStyle: bodyStyle,
         actionTextStyle: actionStyle,
         navActionTextStyle: actionStyle,
-        navTitleTextStyle: AppTypography.titleMedium.copyWith(
-          inherit: false,
-          color: tokens.textPrimary,
-          decoration: TextDecoration.none,
-        ),
-        navLargeTitleTextStyle: AppTypography.display.copyWith(
-          inherit: false,
-          color: tokens.textPrimary,
-          decoration: TextDecoration.none,
-        ),
+        tabLabelTextStyle: font
+            .applyTo(AppTypography.caption)
+            .copyWith(color: tokens.textSecondary),
+        pickerTextStyle: font
+            .applyTo(AppTypography.bodyLarge)
+            .copyWith(color: tokens.textPrimary),
+        dateTimePickerTextStyle: font
+            .applyTo(AppTypography.bodyLarge)
+            .copyWith(color: tokens.textPrimary),
+        navTitleTextStyle: font
+            .applyTo(AppTypography.titleSmall)
+            .copyWith(
+              inherit: false,
+              color: tokens.textPrimary,
+              decoration: TextDecoration.none,
+            ),
+        navLargeTitleTextStyle: font
+            .applyTo(AppTypography.display)
+            .copyWith(
+              inherit: false,
+              color: tokens.textPrimary,
+              decoration: TextDecoration.none,
+            ),
       ),
     );
   }
 
-  static ThemeData _theme(Brightness brightness, AppThemeExtension tokens) {
+  static ThemeData _theme(
+    Brightness brightness,
+    AppThemeExtension tokens,
+    AppFontPreset font,
+  ) {
     final colorScheme =
         ColorScheme.fromSeed(
           seedColor: tokens.primary,
@@ -87,19 +85,13 @@ class AppTheme {
           surface: tokens.surface,
           error: tokens.danger,
         ).copyWith(
-          secondary: brightness == Brightness.dark
-              ? AppColors.darkCoralValue
-              : AppColors.lightCoral,
-          tertiary: brightness == Brightness.dark
-              ? AppColors.darkLavenderValue
-              : AppColors.lightLavender,
-          onPrimary: brightness == Brightness.dark
-              ? AppColors.darkBackgroundValue
-              : AppColors.lightSurface,
+          secondary: tokens.success,
+          tertiary: tokens.warning,
+          onPrimary: tokens.onPrimary,
           onSurface: tokens.textPrimary,
           onError: brightness == Brightness.dark
-              ? AppColors.darkBackgroundValue
-              : AppColors.lightSurface,
+              ? const Color(0xFF3D1018)
+              : Colors.white,
           surfaceContainerHighest: tokens.surfaceElevated,
           outline: tokens.border,
         );
@@ -109,7 +101,8 @@ class AppTheme {
       brightness: brightness,
       colorScheme: colorScheme,
       scaffoldBackgroundColor: tokens.background,
-      fontFamily: null,
+      fontFamily: font.fontFamily,
+      fontFamilyFallback: AppFontPreset.fallbackFamilies,
       textTheme: TextTheme(
         displayLarge: AppTypography.display.copyWith(color: tokens.textPrimary),
         titleLarge: AppTypography.titleLarge.copyWith(
@@ -118,13 +111,20 @@ class AppTheme {
         titleMedium: AppTypography.titleMedium.copyWith(
           color: tokens.textPrimary,
         ),
+        titleSmall: AppTypography.titleSmall.copyWith(
+          color: tokens.textPrimary,
+        ),
         bodyLarge: AppTypography.bodyLarge.copyWith(color: tokens.textPrimary),
         bodyMedium: AppTypography.bodyMedium.copyWith(
-          color: tokens.textSecondary,
+          color: tokens.textPrimary,
         ),
         bodySmall: AppTypography.bodySmall.copyWith(color: tokens.textMuted),
         labelSmall: AppTypography.caption.copyWith(color: tokens.textMuted),
-      ),
+        labelLarge: AppTypography.button.copyWith(color: tokens.primary),
+        labelMedium: AppTypography.labelSmall.copyWith(
+          color: tokens.textSecondary,
+        ),
+      ).apply(fontFamily: font.fontFamily),
       appBarTheme: AppBarTheme(
         elevation: 0,
         centerTitle: false,
@@ -132,9 +132,9 @@ class AppTheme {
         backgroundColor: tokens.background,
         foregroundColor: tokens.textPrimary,
         surfaceTintColor: Colors.transparent,
-        titleTextStyle: AppTypography.titleMedium.copyWith(
-          color: tokens.textPrimary,
-        ),
+        titleTextStyle: font
+            .applyTo(AppTypography.titleSmall)
+            .copyWith(color: tokens.textPrimary),
       ),
       navigationBarTheme: NavigationBarThemeData(
         height: 64,
@@ -153,10 +153,11 @@ class AppTheme {
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
 
-          return AppTypography.caption.copyWith(
-            color: selected ? tokens.textPrimary : tokens.textMuted,
-            fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-          );
+          return font
+              .applyTo(AppTypography.caption)
+              .copyWith(
+                color: selected ? tokens.textPrimary : tokens.textMuted,
+              );
         }),
       ),
       dividerTheme: DividerThemeData(

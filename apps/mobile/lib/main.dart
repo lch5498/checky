@@ -10,6 +10,7 @@ import 'design_system/app_colors.dart';
 import 'design_system/app_theme.dart';
 import 'design_system/app_theme_extension.dart';
 import 'design_system/app_typography.dart';
+import 'design_system/app_font_preset.dart';
 import 'features/auth/auth_gate.dart';
 
 void main() async {
@@ -26,7 +27,9 @@ void main() async {
 }
 
 class CheckyApp extends StatefulWidget {
-  const CheckyApp({super.key});
+  const CheckyApp({super.key, this.home = const AuthGate()});
+
+  final Widget home;
 
   @override
   State<CheckyApp> createState() => _CheckyAppState();
@@ -58,21 +61,34 @@ class _CheckyAppState extends State<CheckyApp> {
           return MaterialApp(
             title: '체키',
             debugShowCheckedModeBanner: false,
-            theme: AppTheme.lightTheme,
-            darkTheme: AppTheme.darkTheme,
+            theme: AppTheme.theme(
+              Brightness.light,
+              _themePreferenceController.preset,
+              font: _themePreferenceController.font,
+            ),
+            darkTheme: AppTheme.theme(
+              Brightness.dark,
+              _themePreferenceController.preset,
+              font: _themePreferenceController.font,
+            ),
             themeMode: _themePreferenceController.themeMode,
             builder: (context, child) {
               final brightness = Theme.of(context).brightness;
-              AppColors.useBrightness(brightness);
-
               final colors = AppThemeExtension.of(context);
+              AppColors.useAppearance(brightness, colors);
               final textStyle = AppTypography.bodyMedium.copyWith(
+                fontFamily: _themePreferenceController.font.fontFamily,
+                fontFamilyFallback: AppFontPreset.fallbackFamilies,
                 color: colors.textPrimary,
                 decoration: TextDecoration.none,
               );
 
               return CupertinoTheme(
-                data: AppTheme.cupertinoTheme(brightness),
+                data: AppTheme.cupertinoTheme(
+                  brightness,
+                  colors,
+                  font: _themePreferenceController.font,
+                ),
                 child: DefaultTextStyle.merge(
                   style: textStyle,
                   child: IconTheme(
@@ -82,7 +98,7 @@ class _CheckyAppState extends State<CheckyApp> {
                 ),
               );
             },
-            home: const AuthGate(),
+            home: widget.home,
           );
         },
       ),

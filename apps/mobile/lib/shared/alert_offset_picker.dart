@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 
 import '../design_system/app_colors.dart';
+import '../design_system/app_spacing.dart';
+import '../design_system/app_typography.dart';
 
 const int maxAlertOffsetMinutes = 60 * 24 * 365;
 const int _customAlertOffsetValue = -1;
@@ -157,12 +159,13 @@ class _AlertOffsetInputSheetState extends State<_AlertOffsetInputSheet> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return AnimatedPadding(
       duration: const Duration(milliseconds: 180),
       curve: Curves.easeOut,
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: Container(
-        color: AppColors.darkSurface,
+        color: AppColors.surface,
         child: SafeArea(
           top: false,
           child: Padding(
@@ -180,11 +183,8 @@ class _AlertOffsetInputSheetState extends State<_AlertOffsetInputSheet> {
                     const Spacer(),
                     Text(
                       '직접 설정',
-                      style: TextStyle(
-                        color: AppColors.darkTextPrimary,
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
+                      style: AppTypography.titleSmall.copyWith(
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     const Spacer(),
@@ -195,7 +195,7 @@ class _AlertOffsetInputSheetState extends State<_AlertOffsetInputSheet> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Row(
                   children: [
                     Expanded(
@@ -207,30 +207,33 @@ class _AlertOffsetInputSheetState extends State<_AlertOffsetInputSheet> {
                         ],
                         placeholder: '숫자',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          color: AppColors.darkTextPrimary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
+                        style: AppTypography.bodyMedium.copyWith(
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: AppSpacing.md),
                     Expanded(
                       flex: 2,
                       child: CupertinoSlidingSegmentedControl<_AlertOffsetUnit>(
                         groupValue: _unit,
                         children: const {
                           _AlertOffsetUnit.minute: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                            ),
                             child: Text('분'),
                           ),
                           _AlertOffsetUnit.hour: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                            ),
                             child: Text('시간'),
                           ),
                           _AlertOffsetUnit.day: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 8),
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                            ),
                             child: Text('일'),
                           ),
                         },
@@ -247,11 +250,8 @@ class _AlertOffsetInputSheetState extends State<_AlertOffsetInputSheet> {
                   const SizedBox(height: 10),
                   Text(
                     _message!,
-                    style: TextStyle(
-                      color: AppColors.darkDanger,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.danger,
                     ),
                   ),
                 ],

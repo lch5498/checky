@@ -8,6 +8,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../core/api_client.dart';
 import '../../core/group_refresh.dart';
 import '../../design_system/app_colors.dart';
+import '../../design_system/app_radius.dart';
+import '../../design_system/app_spacing.dart';
+import '../../design_system/app_typography.dart';
 import '../../shared/refreshable_scroll_view.dart';
 import 'scrap_read_state.dart';
 import 'coupon_screen.dart';
@@ -243,8 +246,9 @@ class _IncomingScrapScreenState extends State<IncomingScrapScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: const Text('스크랩에 저장'),
         leading: CupertinoButton(
@@ -259,37 +263,39 @@ class _IncomingScrapScreenState extends State<IncomingScrapScreen> {
           onPressed: _isSaving || _isLoading ? null : _save,
           child: _isSaving
               ? const CupertinoActivityIndicator()
-              : const Text('저장', style: TextStyle(fontWeight: FontWeight.w800)),
+              : const Text('저장', style: AppTypography.label),
         ),
       ),
       child: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 22, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            22,
+            AppSpacing.page,
+            AppSpacing.xxl,
+          ),
           children: [
             Text(
               '저장할 그룹',
-              style: TextStyle(
-                color: AppColors.darkTextMuted,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textMuted,
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             CupertinoButton(
               padding: EdgeInsets.zero,
               minimumSize: const Size(double.infinity, 44),
               onPressed: widget.families.length > 1 ? _selectFamily : null,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppColors.darkSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.darkBorder),
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.border),
                 ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
-                    vertical: 12,
+                    vertical: AppSpacing.md,
                   ),
                   child: Row(
                     children: [
@@ -298,11 +304,8 @@ class _IncomingScrapScreenState extends State<IncomingScrapScreen> {
                           _family.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: AppColors.darkTextPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0,
+                          style: AppTypography.label.copyWith(
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ),
@@ -310,7 +313,7 @@ class _IncomingScrapScreenState extends State<IncomingScrapScreen> {
                         Icon(
                           CupertinoIcons.chevron_up_chevron_down,
                           size: 16,
-                          color: AppColors.darkTextMuted,
+                          color: AppColors.textMuted,
                         ),
                     ],
                   ),
@@ -320,14 +323,11 @@ class _IncomingScrapScreenState extends State<IncomingScrapScreen> {
             const SizedBox(height: 18),
             Text(
               '공유한 내용',
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+              style: AppTypography.titleSmall.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             CupertinoTextField(
               controller: _contentController,
               minLines: 4,
@@ -335,16 +335,13 @@ class _IncomingScrapScreenState extends State<IncomingScrapScreen> {
               maxLength: 2000,
               enabled: !_isSaving,
               padding: const EdgeInsets.all(15),
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 16,
-                height: 1.4,
-                letterSpacing: 0,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textPrimary,
               ),
               decoration: BoxDecoration(
-                color: AppColors.darkSurface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.darkBorder),
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                border: Border.all(color: AppColors.border),
               ),
             ),
             const SizedBox(height: 28),
@@ -353,11 +350,8 @@ class _IncomingScrapScreenState extends State<IncomingScrapScreen> {
                 Expanded(
                   child: Text(
                     '저장할 채널',
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
+                    style: AppTypography.titleSmall.copyWith(
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ),
@@ -369,10 +363,10 @@ class _IncomingScrapScreenState extends State<IncomingScrapScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             if (_message != null) ...[
               _InlineMessage(message: _message!),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
             ],
             if (_isLoading)
               const Padding(
@@ -390,9 +384,9 @@ class _IncomingScrapScreenState extends State<IncomingScrapScreen> {
             else
               DecoratedBox(
                 decoration: BoxDecoration(
-                  color: AppColors.darkSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.darkBorder),
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.border),
                 ),
                 child: Column(
                   children: [
@@ -433,6 +427,7 @@ class _IncomingScrapChannelRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoButton(
       padding: EdgeInsets.zero,
       onPressed: onPressed,
@@ -440,16 +435,14 @@ class _IncomingScrapChannelRow extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
         decoration: BoxDecoration(
           border: showDivider
-              ? Border(bottom: BorderSide(color: AppColors.darkBorder))
+              ? Border(bottom: BorderSide(color: AppColors.border))
               : null,
         ),
         child: Row(
           children: [
             Icon(
               CupertinoIcons.bookmark_fill,
-              color: isSelected
-                  ? AppColors.darkPrimary
-                  : AppColors.darkTextMuted,
+              color: isSelected ? AppColors.primary : AppColors.textMuted,
               size: 18,
             ),
             const SizedBox(width: 11),
@@ -458,18 +451,15 @@ class _IncomingScrapChannelRow extends StatelessWidget {
                 channel.name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: AppColors.darkTextPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
+                style: AppTypography.label.copyWith(
+                  color: AppColors.textPrimary,
                 ),
               ),
             ),
             if (isSelected)
               Icon(
                 CupertinoIcons.check_mark_circled_solid,
-                color: AppColors.darkPrimary,
+                color: AppColors.primary,
                 size: 20,
               ),
           ],
@@ -745,10 +735,11 @@ class _ScrapScreenState extends State<ScrapScreen>
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final dashboard = _dashboard;
 
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: _FeatureFamilyTitle(
           family: _family,
@@ -769,7 +760,12 @@ class _ScrapScreenState extends State<ScrapScreen>
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 6),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.page,
+                AppSpacing.md,
+                AppSpacing.page,
+                6,
+              ),
               child: SizedBox(
                 width: double.infinity,
                 child: CupertinoSlidingSegmentedControl<int>(
@@ -790,11 +786,16 @@ class _ScrapScreenState extends State<ScrapScreen>
                     )
                   : RefreshableScrollView(
                       onRefresh: _loadScraps,
-                      padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.page,
+                        18,
+                        AppSpacing.page,
+                        AppSpacing.xxl,
+                      ),
                       children: [
                         if (_message != null) ...[
                           _InlineMessage(message: _message!),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: AppSpacing.lg),
                         ],
                         if (_isLoading && dashboard == null)
                           const Padding(
@@ -1308,7 +1309,7 @@ class _ScrapChannelScreenState extends State<ScrapChannelScreen>
       builder: (dialogContext) => CupertinoAlertDialog(
         title: Text(title),
         content: Padding(
-          padding: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.only(top: AppSpacing.sm),
           child: Text(content),
         ),
         actions: [
@@ -1353,23 +1354,20 @@ class _ScrapChannelScreenState extends State<ScrapChannelScreen>
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final detail = _detail;
     final channel = detail?.channel ?? widget.channel;
     final canManageChannel = channel.canEdit || channel.canDelete;
 
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: Text(
           channel.name,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            inherit: false,
-            color: AppColors.darkTextPrimary,
-            fontSize: 17,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
+          style: AppTypography.titleSmall.copyWith(
+            color: AppColors.textPrimary,
           ),
         ),
         trailing: Row(
@@ -1394,11 +1392,16 @@ class _ScrapChannelScreenState extends State<ScrapChannelScreen>
       child: SafeArea(
         child: RefreshableScrollView(
           onRefresh: _loadChannel,
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            18,
+            AppSpacing.page,
+            AppSpacing.xxl,
+          ),
           children: [
             if (_message != null) ...[
               _InlineMessage(message: _message!),
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
             ],
             if (_isLoading && detail == null)
               const Padding(
@@ -1464,6 +1467,7 @@ class _FeatureFamilyTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final title = '${family.name} $featureName';
 
     if (!canSwitch) {
@@ -1471,13 +1475,7 @@ class _FeatureFamilyTitle extends StatelessWidget {
         title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          inherit: false,
-          color: AppColors.darkTextPrimary,
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0,
-        ),
+        style: AppTypography.titleSmall.copyWith(color: AppColors.textPrimary),
       );
     }
 
@@ -1493,16 +1491,12 @@ class _FeatureFamilyTitle extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                inherit: false,
-                color: AppColors.darkTextPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
+              style: AppTypography.titleSmall.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.xs),
           const Icon(CupertinoIcons.chevron_down, size: 15),
         ],
       ),
@@ -1523,6 +1517,7 @@ class _ChannelReorderList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return ReorderableListView.builder(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -1557,16 +1552,15 @@ class _ChannelRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoButton(
       padding: EdgeInsets.zero,
       onPressed: onPressed,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
         decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(
-              color: AppColors.darkBorder.withValues(alpha: 0.8),
-            ),
+            bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.8)),
           ),
         ),
         child: Row(
@@ -1575,16 +1569,16 @@ class _ChannelRow extends StatelessWidget {
               width: 38,
               height: 38,
               decoration: BoxDecoration(
-                color: AppColors.darkPrimarySoft,
-                borderRadius: BorderRadius.circular(12),
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Icon(
                 CupertinoIcons.bookmark_fill,
                 size: 19,
-                color: AppColors.darkPrimary,
+                color: AppColors.primary,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1596,11 +1590,8 @@ class _ChannelRow extends StatelessWidget {
                           channel.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: AppColors.darkTextPrimary,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0,
+                          style: AppTypography.label.copyWith(
+                            color: AppColors.textPrimary,
                           ),
                         ),
                       ),
@@ -1611,31 +1602,26 @@ class _ChannelRow extends StatelessWidget {
                           height: 18,
                           alignment: Alignment.center,
                           decoration: BoxDecoration(
-                            color: AppColors.darkDanger,
+                            color: AppColors.danger,
                             shape: BoxShape.circle,
                           ),
-                          child: const Text(
+                          child: Text(
                             'N',
-                            style: TextStyle(
-                              color: CupertinoColors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: 0,
+                            style: AppTypography.calendar.copyWith(
+                              color: AppColors.onDanger,
                             ),
                           ),
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     '${channel.authorNickname} · ${_formatDateTime(channel.createdAt)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkTextMuted,
-                      fontSize: 12,
-                      letterSpacing: 0,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textMuted,
                     ),
                   ),
                 ],
@@ -1643,17 +1629,20 @@ class _ChannelRow extends StatelessWidget {
             ),
             Icon(
               CupertinoIcons.chevron_forward,
-              color: AppColors.darkTextMuted,
+              color: AppColors.textMuted,
               size: 18,
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             ReorderableDragStartListener(
               index: dragIndex,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: AppSpacing.sm,
+                ),
                 child: Icon(
                   CupertinoIcons.line_horizontal_3,
-                  color: AppColors.darkTextMuted,
+                  color: AppColors.textMuted,
                   size: 19,
                 ),
               ),
@@ -1688,6 +1677,7 @@ class _PostThread extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final postContent = post.linkPreview == null
         ? post.content
         : _contentWithoutFirstLink(post.content);
@@ -1697,9 +1687,7 @@ class _PostThread extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 18),
       decoration: BoxDecoration(
         border: Border(
-          bottom: BorderSide(
-            color: AppColors.darkBorder.withValues(alpha: 0.8),
-          ),
+          bottom: BorderSide(color: AppColors.border.withValues(alpha: 0.8)),
         ),
       ),
       child: Column(
@@ -1713,7 +1701,7 @@ class _PostThread extends StatelessWidget {
             onDelete: onDeletePost,
           ),
           if (post.linkPreview != null) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             _LinkPreviewCard(preview: post.linkPreview!),
           ],
           const SizedBox(height: 10),
@@ -1724,10 +1712,10 @@ class _PostThread extends StatelessWidget {
             onComment: onComment,
           ),
           if (post.comments.isNotEmpty) ...[
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             for (final comment in post.comments)
               Padding(
-                padding: const EdgeInsets.only(left: 14, top: 12),
+                padding: const EdgeInsets.only(left: 14, top: AppSpacing.md),
                 child: _MessageBlock(
                   authorNickname: comment.authorNickname,
                   createdAt: comment.createdAt,
@@ -1772,6 +1760,7 @@ class _MessageBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1784,25 +1773,23 @@ class _MessageBlock extends StatelessWidget {
                   children: [
                     TextSpan(
                       text: authorNickname,
-                      style: TextStyle(
-                        color: AppColors.darkTextPrimary,
-                        fontWeight: FontWeight.w800,
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.textPrimary,
                       ),
                     ),
                     TextSpan(
                       text: '  ${_formatDateTime(createdAt)}',
-                      style: TextStyle(
-                        color: AppColors.darkTextMuted,
-                        fontWeight: FontWeight.w500,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textMuted,
                       ),
                     ),
                   ],
                 ),
-                style: const TextStyle(fontSize: 13, letterSpacing: 0),
+                style: AppTypography.bodySmall,
               ),
             ),
             if (onEdit != null || onDelete != null) ...[
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -1813,11 +1800,8 @@ class _MessageBlock extends StatelessWidget {
                       onPressed: onEdit,
                       child: Text(
                         '수정',
-                        style: TextStyle(
-                          color: AppColors.darkPrimary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0,
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.primary,
                         ),
                       ),
                     ),
@@ -1828,11 +1812,8 @@ class _MessageBlock extends StatelessWidget {
                       onPressed: onDelete,
                       child: Text(
                         '삭제',
-                        style: TextStyle(
-                          color: AppColors.darkDanger,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0,
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.danger,
                         ),
                       ),
                     ),
@@ -1842,14 +1823,11 @@ class _MessageBlock extends StatelessWidget {
           ],
         ),
         if (content.trim().isNotEmpty) ...[
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             content,
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 15,
-              height: 1.45,
-              letterSpacing: 0,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textPrimary,
             ),
           ),
         ],
@@ -1874,6 +1852,7 @@ class _PostActionsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Row(
       children: [
         _LikeButton(
@@ -1891,17 +1870,14 @@ class _PostActionsRow extends StatelessWidget {
             children: [
               Icon(
                 CupertinoIcons.chat_bubble,
-                color: AppColors.darkTextMuted,
+                color: AppColors.textMuted,
                 size: 15,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: AppSpacing.xs),
               Text(
                 '댓글',
-                style: TextStyle(
-                  color: AppColors.darkTextMuted,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textMuted,
                 ),
               ),
             ],
@@ -1925,7 +1901,8 @@ class _LikeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isLikedByMe ? AppColors.darkDanger : AppColors.darkTextMuted;
+    AppColors.of(context);
+    final color = isLikedByMe ? AppColors.danger : AppColors.textMuted;
 
     return CupertinoButton(
       padding: EdgeInsets.zero,
@@ -1945,15 +1922,10 @@ class _LikeButton extends StatelessWidget {
               color: color,
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.xs),
           Text(
             likeCount > 0 ? '$likeCount' : '좋아요',
-            style: TextStyle(
-              color: color,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
-            ),
+            style: AppTypography.caption.copyWith(color: color),
           ),
         ],
       ),
@@ -1979,6 +1951,7 @@ class _LinkPreviewCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final title = preview.title ?? preview.siteName ?? preview.url;
     final siteName = preview.siteName ?? Uri.tryParse(preview.url)?.host;
 
@@ -1990,9 +1963,9 @@ class _LinkPreviewCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
-            color: AppColors.darkSurfaceElevated,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.darkBorder),
+            color: AppColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(AppRadius.md),
+            border: Border.all(color: AppColors.border),
           ),
           child: Row(
             children: [
@@ -2001,13 +1974,13 @@ class _LinkPreviewCard extends StatelessWidget {
                 height: 58,
                 clipBehavior: Clip.antiAlias,
                 decoration: BoxDecoration(
-                  color: AppColors.darkPrimarySoft,
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.primarySoft,
+                  borderRadius: BorderRadius.circular(AppRadius.sm),
                 ),
                 child: preview.imageUrl == null
                     ? Icon(
                         CupertinoIcons.link,
-                        color: AppColors.darkPrimary,
+                        color: AppColors.primary,
                         size: 22,
                       )
                     : Image.network(
@@ -2015,7 +1988,7 @@ class _LinkPreviewCard extends StatelessWidget {
                         fit: BoxFit.cover,
                         errorBuilder: (_, _, _) => Icon(
                           CupertinoIcons.link,
-                          color: AppColors.darkPrimary,
+                          color: AppColors.primary,
                           size: 22,
                         ),
                       ),
@@ -2031,11 +2004,8 @@ class _LinkPreviewCard extends StatelessWidget {
                         siteName,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.darkPrimary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0,
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.primary,
                         ),
                       ),
                       const SizedBox(height: 3),
@@ -2044,12 +2014,8 @@ class _LinkPreviewCard extends StatelessWidget {
                       title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.darkTextPrimary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        height: 1.25,
-                        letterSpacing: 0,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ],
@@ -2067,9 +2033,9 @@ class _LinkPreviewCard extends StatelessWidget {
       child: Container(
         width: double.infinity,
         decoration: BoxDecoration(
-          color: AppColors.darkSurfaceElevated,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.darkBorder),
+          color: AppColors.surfaceElevated,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -2082,18 +2048,18 @@ class _LinkPreviewCard extends StatelessWidget {
                   preview.imageUrl!,
                   fit: BoxFit.cover,
                   errorBuilder: (_, _, _) => Container(
-                    color: AppColors.darkPrimarySoft,
+                    color: AppColors.primarySoft,
                     alignment: Alignment.center,
                     child: Icon(
                       CupertinoIcons.link,
-                      color: AppColors.darkPrimary,
+                      color: AppColors.primary,
                       size: 24,
                     ),
                   ),
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -2102,11 +2068,8 @@ class _LinkPreviewCard extends StatelessWidget {
                       siteName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.darkPrimary,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.primary,
                       ),
                     ),
                     const SizedBox(height: 5),
@@ -2115,11 +2078,8 @@ class _LinkPreviewCard extends StatelessWidget {
                     title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   if (preview.description != null) ...[
@@ -2128,21 +2088,18 @@ class _LinkPreviewCard extends StatelessWidget {
                       preview.description!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.darkTextSecondary,
-                        fontSize: 13,
-                        height: 1.35,
-                        letterSpacing: 0,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Row(
                     children: [
                       Icon(
                         CupertinoIcons.arrow_up_right_square,
                         size: 14,
-                        color: AppColors.darkTextMuted,
+                        color: AppColors.textMuted,
                       ),
                       const SizedBox(width: 5),
                       Expanded(
@@ -2150,10 +2107,8 @@ class _LinkPreviewCard extends StatelessWidget {
                           preview.url,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            color: AppColors.darkTextMuted,
-                            fontSize: 12,
-                            letterSpacing: 0,
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textMuted,
                           ),
                         ),
                       ),
@@ -2186,6 +2141,7 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 42),
       child: Column(
@@ -2195,29 +2151,23 @@ class _EmptyState extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: AppColors.darkPrimarySoft,
-              borderRadius: BorderRadius.circular(16),
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
             ),
-            child: Icon(icon, color: AppColors.darkPrimary, size: 24),
+            child: Icon(icon, color: AppColors.primary, size: 24),
           ),
           const SizedBox(height: 18),
           Text(
             title,
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+            style: AppTypography.titleMedium.copyWith(
+              color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             subtitle,
-            style: TextStyle(
-              color: AppColors.darkTextSecondary,
-              fontSize: 14,
-              height: 1.45,
-              letterSpacing: 0,
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: 22),
@@ -2225,16 +2175,9 @@ class _EmptyState extends StatelessWidget {
             width: double.infinity,
             child: CupertinoButton.filled(
               minimumSize: const Size(double.infinity, 48),
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               onPressed: onPressed,
-              child: Text(
-                actionLabel,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
-                ),
-              ),
+              child: Text(actionLabel, style: AppTypography.button),
             ),
           ),
         ],
@@ -2250,21 +2193,18 @@ class _InlineMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.darkDanger.withValues(alpha: 0.14),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.darkDanger.withValues(alpha: 0.3)),
+        color: AppColors.danger.withValues(alpha: 0.14),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.danger.withValues(alpha: 0.3)),
       ),
       child: Text(
         message,
-        style: TextStyle(
-          color: AppColors.darkDanger,
-          fontSize: 13,
-          letterSpacing: 0,
-        ),
+        style: AppTypography.bodySmall.copyWith(color: AppColors.danger),
       ),
     );
   }
@@ -2335,6 +2275,7 @@ class _BottomSheetFrame extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final screenHeight = MediaQuery.sizeOf(context).height;
     final keyboardHeight = MediaQuery.viewInsetsOf(context).bottom;
     final sheetHeight = (screenHeight * heightFactor - keyboardHeight).clamp(
@@ -2354,11 +2295,11 @@ class _BottomSheetFrame extends StatelessWidget {
             width: double.infinity,
             height: sheetHeight,
             decoration: BoxDecoration(
-              color: AppColors.darkSurface,
+              color: AppColors.surface,
               borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(24),
+                top: Radius.circular(AppRadius.xl),
               ),
-              border: Border(top: BorderSide(color: AppColors.darkBorder)),
+              border: Border(top: BorderSide(color: AppColors.border)),
             ),
             child: child,
           ),
@@ -2426,6 +2367,7 @@ class _TextInputSheetState extends State<_TextInputSheet> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final isCompactInput = widget.maxLines == 1;
     final minLines = isCompactInput
         ? 2
@@ -2448,19 +2390,11 @@ class _TextInputSheetState extends State<_TextInputSheet> {
         placeholder: widget.placeholder,
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
+          border: Border(bottom: BorderSide(color: AppColors.border)),
         ),
-        style: TextStyle(
-          color: AppColors.darkTextPrimary,
-          fontSize: 20,
-          height: 1.35,
-          letterSpacing: 0,
-        ),
-        placeholderStyle: TextStyle(
-          color: AppColors.darkTextMuted,
-          fontSize: 20,
-          height: 1.35,
-          letterSpacing: 0,
+        style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
+        placeholderStyle: AppTypography.titleMedium.copyWith(
+          color: AppColors.textMuted,
         ),
       ),
     );
@@ -2606,6 +2540,7 @@ class _PostComposerSheetState extends State<_PostComposerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return _ComposerScaffold(
       title: widget.title,
       actionLabel: widget.actionLabel,
@@ -2626,21 +2561,13 @@ class _PostComposerSheetState extends State<_PostComposerSheet> {
                 placeholder: widget.placeholder,
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(color: AppColors.darkBorder),
-                  ),
+                  border: Border(bottom: BorderSide(color: AppColors.border)),
                 ),
-                style: TextStyle(
-                  color: AppColors.darkTextPrimary,
-                  fontSize: 18,
-                  height: 1.42,
-                  letterSpacing: 0,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textPrimary,
                 ),
-                placeholderStyle: TextStyle(
-                  color: AppColors.darkTextMuted,
-                  fontSize: 18,
-                  height: 1.42,
-                  letterSpacing: 0,
+                placeholderStyle: AppTypography.bodyLarge.copyWith(
+                  color: AppColors.textMuted,
                 ),
               ),
             ),
@@ -2677,8 +2604,14 @@ class _ComposerScaffold extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 10, 20, 18),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.page,
+        10,
+        AppSpacing.page,
+        18,
+      ),
       child: Column(
         mainAxisSize: MainAxisSize.max,
         children: [
@@ -2686,11 +2619,11 @@ class _ComposerScaffold extends StatelessWidget {
             width: 36,
             height: 5,
             decoration: BoxDecoration(
-              color: AppColors.darkTextMuted.withValues(alpha: 0.35),
-              borderRadius: BorderRadius.circular(999),
+              color: AppColors.textMuted.withValues(alpha: 0.35),
+              borderRadius: BorderRadius.circular(AppRadius.pill),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           Row(
             children: [
               CupertinoButton(
@@ -2699,11 +2632,8 @@ class _ComposerScaffold extends StatelessWidget {
                 onPressed: onCancel,
                 child: Text(
                   '취소',
-                  style: TextStyle(
-                    color: AppColors.darkTextMuted,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.textMuted,
                   ),
                 ),
               ),
@@ -2713,11 +2643,8 @@ class _ComposerScaffold extends StatelessWidget {
                   textAlign: TextAlign.center,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkTextPrimary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -2727,19 +2654,16 @@ class _ComposerScaffold extends StatelessWidget {
                 onPressed: canSubmit ? onSubmit : null,
                 child: Text(
                   actionLabel,
-                  style: TextStyle(
+                  style: AppTypography.label.copyWith(
                     color: canSubmit
-                        ? AppColors.darkPrimary
-                        : AppColors.darkTextMuted.withValues(alpha: 0.45),
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                        ? AppColors.primary
+                        : AppColors.textMuted.withValues(alpha: 0.45),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           child,
         ],
       ),
@@ -2754,13 +2678,14 @@ class _PreviewLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.darkSurfaceElevated,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
@@ -2771,10 +2696,8 @@ class _PreviewLoading extends StatelessWidget {
               url == null ? '링크 미리보기를 불러오는 중입니다.' : '$url 미리보기 분석 중',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppColors.darkTextSecondary,
-                fontSize: 13,
-                letterSpacing: 0,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
           ),
@@ -2791,21 +2714,18 @@ class _PreviewMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.darkPrimarySoft.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.primarySoft.withValues(alpha: 0.55),
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
       ),
       child: Text(
         message,
-        style: TextStyle(
-          color: AppColors.darkTextSecondary,
-          fontSize: 13,
-          letterSpacing: 0,
-        ),
+        style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
       ),
     );
   }

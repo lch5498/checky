@@ -5,6 +5,8 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.graphics.Color
 import android.graphics.Typeface
 import android.text.Spannable
@@ -17,6 +19,7 @@ import android.widget.RemoteViews
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import org.json.JSONObject
 
 class CheckyHomeWidgetProvider : AppWidgetProvider() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -24,7 +27,8 @@ class CheckyHomeWidgetProvider : AppWidgetProvider() {
         if (
             intent.action == Intent.ACTION_DATE_CHANGED ||
             intent.action == Intent.ACTION_TIME_CHANGED ||
-            intent.action == Intent.ACTION_TIMEZONE_CHANGED
+            intent.action == Intent.ACTION_TIMEZONE_CHANGED ||
+            intent.action == Intent.ACTION_CONFIGURATION_CHANGED
         ) {
             updateAll(context)
         }
@@ -64,6 +68,7 @@ class CheckyHomeWidgetProvider : AppWidgetProvider() {
             appWidgetId: Int,
         ) {
             val preferences = context.getSharedPreferences(preferencesName, Context.MODE_PRIVATE)
+            val palette = widgetPalette(context, preferences)
             val today = SimpleDateFormat("yyyy-MM-dd", Locale.US).format(Date())
             val schedulePrefix = if (
                 preferences.getString("nextSchedule.snapshotDate", "") == today
@@ -83,13 +88,18 @@ class CheckyHomeWidgetProvider : AppWidgetProvider() {
                 if (isCompact) R.layout.checky_home_widget_compact else R.layout.checky_home_widget,
             )
 
+            // ImageView color filters are RemoteViews-safe on old Android too,
+            // and tint the existing rounded shapes without replacing their corners.
+            views.setInt(R.id.widget_background, "setColorFilter", palette.background)
+            views.setTextColor(R.id.widget_schedule_heading, palette.primary)
+            views.setTextColor(R.id.widget_parking_heading, palette.primary)
+            views.setInt(R.id.widget_section_divider, "setBackgroundColor", palette.border)
             views.setTextViewText(R.id.widget_schedule_heading, heading("오늘 일정", moreCount))
             views.removeAllViews(R.id.widget_schedule_list)
             if (itemCount == 0) {
-                views.addView(
-                    R.id.widget_schedule_list,
-                    RemoteViews(context.packageName, R.layout.checky_home_widget_empty),
-                )
+                val empty = RemoteViews(context.packageName, R.layout.checky_home_widget_empty)
+                empty.setTextColor(R.id.widget_empty_message, palette.textSecondary)
+                views.addView(R.id.widget_schedule_list, empty)
             } else {
                 repeat(itemCount) { index ->
                     val startsAt = preferences.getString("$schedulePrefix.item.$index.startsAt", "") ?: ""
@@ -104,6 +114,7 @@ class CheckyHomeWidgetProvider : AppWidgetProvider() {
                         context.packageName,
                         if (isCompact) R.layout.checky_home_widget_line else R.layout.checky_home_widget_item_safe,
                     )
+                    styleRow(item, palette)
                     val timeText = if (isCompact || endsAt.isBlank()) startsAt else "$startsAt - $endsAt"
                     item.setTextViewText(
                         R.id.widget_item_summary,
@@ -113,6 +124,7 @@ class CheckyHomeWidgetProvider : AppWidgetProvider() {
                             memberName = memberName,
                             memberColor = memberColor,
                             isCompact = isCompact,
+                            secondaryColor = palette.textSecondary,
                         ),
                     )
                     views.addView(R.id.widget_schedule_list, item)
@@ -135,6 +147,8 @@ class CheckyHomeWidgetProvider : AppWidgetProvider() {
             views.removeAllViews(R.id.widget_parking_list)
             if (parkingCount == 0) {
                 val empty = RemoteViews(context.packageName, R.layout.checky_home_widget_line)
+                styleRow(empty, palette)
+                empty.setTextColor(R.id.widget_item_summary, palette.textSecondary)
                 empty.setTextViewText(R.id.widget_item_summary, "등록된 주차 위치가 없습니다.")
                 views.addView(R.id.widget_parking_list, empty)
             } else {
@@ -145,6 +159,7 @@ class CheckyHomeWidgetProvider : AppWidgetProvider() {
                         context.packageName,
                         if (isCompact) R.layout.checky_home_widget_line else R.layout.checky_home_widget_item_safe,
                     )
+                    styleRow(row, palette)
                     row.setTextViewText(
                         R.id.widget_item_summary,
                         if (isCompact) "$name · $location" else "$name\n$location",
@@ -152,7 +167,13 @@ class CheckyHomeWidgetProvider : AppWidgetProvider() {
                     views.addView(R.id.widget_parking_list, row)
                 }
             }
-            views.setOnClickPendingIntent(
+            val font = runCatching {
+                JSONObject(preferences.getString("appearance", "") ?: "").optString("font", "system")
+            }.getOrDefault("system")
+            val displayViews = CheckyWidgetFontRenderer.render(
+                context, views, appWidgetManager.getAppWidgetOptions(appWidgetId), font,
+            )
+            displayViews.setOnClickPendingIntent(
                 R.id.widget_content,
                 PendingIntent.getActivity(
                     context,
@@ -161,11 +182,47 @@ class CheckyHomeWidgetProvider : AppWidgetProvider() {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 ),
             )
-            appWidgetManager.updateAppWidget(appWidgetId, views)
+            appWidgetManager.updateAppWidget(appWidgetId, displayViews)
         }
 
         private fun heading(title: String, moreCount: Int): String =
             if (moreCount > 0) "$title  +$moreCount" else title
+
+        private data class WidgetPalette(
+            val background: Int,
+            val surface: Int,
+            val primary: Int,
+            val textPrimary: Int,
+            val textSecondary: Int,
+            val border: Int,
+        )
+
+        private fun widgetPalette(context: Context, preferences: SharedPreferences): WidgetPalette {
+            val appearance = runCatching { JSONObject(preferences.getString("appearance", "") ?: "") }
+                .getOrNull()
+            val dark = when (appearance?.optString("mode")) {
+                "light" -> false
+                "dark" -> true
+                else -> context.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
+                    Configuration.UI_MODE_NIGHT_YES
+            }
+            val values = appearance?.optJSONObject(if (dark) "dark" else "light")
+            val fallback = if (dark) {
+                longArrayOf(0xFF244A40, 0xFF182725, 0xFF75DAC5, 0xFFF0FCF7, 0xFFC3D9D0, 0xFF365148)
+            } else {
+                longArrayOf(0xFFD5EEE7, 0xFFF8FFFC, 0xFF067168, 0xFF142E29, 0xFF405F56, 0xFFC8DED5)
+            }
+            fun color(key: String, index: Int) = (values?.optLong(key, fallback[index]) ?: fallback[index]).toInt()
+            return WidgetPalette(
+                color("background", 0), color("surface", 1), color("primary", 2),
+                color("textPrimary", 3), color("textSecondary", 4), color("border", 5),
+            )
+        }
+
+        private fun styleRow(row: RemoteViews, palette: WidgetPalette) {
+            row.setInt(R.id.widget_item_background, "setColorFilter", palette.surface)
+            row.setTextColor(R.id.widget_item_summary, palette.textPrimary)
+        }
 
         private fun scheduleSummary(
             timeText: String,
@@ -173,6 +230,7 @@ class CheckyHomeWidgetProvider : AppWidgetProvider() {
             memberName: String,
             memberColor: String,
             isCompact: Boolean,
+            secondaryColor: Int,
         ): CharSequence {
             val color = memberColorValue(memberColor)
             return SpannableStringBuilder().apply {
@@ -185,13 +243,19 @@ class CheckyHomeWidgetProvider : AppWidgetProvider() {
                     Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
                 )
                 if (isCompact) {
+                    val timeStart = length
                     append("$timeText  $title")
+                    setSpan(ForegroundColorSpan(secondaryColor), timeStart, timeStart + timeText.length,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                     return@apply
                 }
                 if (title.isNotBlank()) {
                     append(title)
                 } else {
+                    val timeStart = length
                     append(timeText)
+                    setSpan(ForegroundColorSpan(secondaryColor), timeStart, length,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE)
                 }
                 if (!isCompact && title.isNotBlank() && memberName.isNotBlank()) {
                     append(" ")
@@ -218,6 +282,12 @@ class CheckyHomeWidgetProvider : AppWidgetProvider() {
                     append("\n")
                     val timeStart = length
                     append(timeText)
+                    setSpan(
+                        ForegroundColorSpan(secondaryColor),
+                        timeStart,
+                        length,
+                        Spannable.SPAN_EXCLUSIVE_EXCLUSIVE,
+                    )
                     setSpan(
                         StyleSpan(Typeface.NORMAL),
                         timeStart,

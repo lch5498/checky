@@ -1,0 +1,46 @@
+# Upload only: Flutter handles builds and existing local signing configuration.
+opt_out_usage
+skip_docs
+
+lane :upload_ios do
+  api_key = app_store_connect_api_key(
+    key_id: ENV.fetch("ASC_KEY_ID"),
+    issuer_id: ENV.fetch("ASC_ISSUER_ID"),
+    key_filepath: ENV.fetch("ASC_KEY_FILE"),
+    duration: 1200,
+    in_house: false
+  )
+  upload_to_testflight(
+    api_key: api_key,
+    app_identifier: "com.family.checky.mobile",
+    ipa: ENV.fetch("CHECKY_IPA_PATH"),
+    skip_submission: true,
+    skip_waiting_for_build_processing: true,
+    distribute_only: false,
+    distribute_external: false,
+    notify_external_testers: false
+  )
+end
+
+lane :upload_android do
+  # Do not inherit a production promotion/rollout from a developer's shell.
+  %w[SUPPLY_TRACK_PROMOTE_TO SUPPLY_UPDATE_ROLLOUT].each do |name|
+    UI.user_error!("Unset #{name}; this lane only uploads to internal testing") unless ENV[name].to_s.empty?
+  end
+  status = ENV.fetch("CHECKY_ANDROID_STATUS", "completed")
+  UI.user_error!("Only internal completed/draft releases are supported") unless %w[completed draft].include?(status)
+  upload_to_play_store(
+    package_name: "com.family.checky.mobile",
+    json_key: ENV.fetch("GOOGLE_PLAY_JSON_KEY"),
+    aab: ENV.fetch("CHECKY_AAB_PATH"),
+    track: "internal",
+    release_status: status,
+    skip_upload_apk: true,
+    skip_upload_metadata: true,
+    skip_upload_changelogs: true,
+    skip_upload_images: true,
+    skip_upload_screenshots: true,
+    # Never silently retry with a different publication/review policy.
+    rescue_changes_not_sent_for_review: false
+  )
+end

@@ -20,3 +20,14 @@ build/
 
 # Generated coverage
 coverage/
+
+# Mobile store credentials and local release numbering/lock
+*.p8
+.release-state/
+scripts/release.env
+scripts/fastlane/.env*
+scripts/fastlane/keys/
+scripts/fastlane/report.xml
+scripts/fastlane/README.md
+google-play-service-account*.json
+scripts/tests/__pycache__/

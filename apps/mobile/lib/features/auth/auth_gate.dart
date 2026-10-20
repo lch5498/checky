@@ -8,6 +8,9 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
+import '../../design_system/app_radius.dart';
+import '../../design_system/app_spacing.dart';
+import '../../design_system/app_typography.dart';
 import '../../core/api_config.dart';
 import '../../core/auth_session_store.dart';
 import '../../core/push_notification_service.dart';
@@ -504,6 +507,7 @@ class _AuthGateState extends State<AuthGate> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final auth = _auth;
 
     if (_isRestoringSession) {
@@ -556,16 +560,21 @@ class _AuthGateState extends State<AuthGate> {
     }
 
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.xl,
+            AppSpacing.xl,
+            28,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
               const _AppMark(),
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xl),
               const _LoginTitle(),
               if (_message != null) ...[
                 const SizedBox(height: 18),
@@ -624,8 +633,9 @@ class _StartupSplashScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoPageScaffold(
-      backgroundColor: const Color(0xFFEAFBF8),
+      backgroundColor: AppColors.background,
       child: SafeArea(
         child: Center(
           child: Column(
@@ -651,24 +661,18 @@ class _StartupSplashScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 22),
-              const Text(
+              Text(
                 '체키',
-                style: TextStyle(
-                  color: Color(0xFF102A2A),
-                  fontSize: 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0,
+                style: AppTypography.display.copyWith(
+                  color: AppColors.textPrimary,
                   decoration: TextDecoration.none,
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
+              const SizedBox(height: AppSpacing.sm),
+              Text(
                 '우리의 하루를 준비하는 중',
-                style: TextStyle(
-                  color: Color(0xFF55706F),
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
                   decoration: TextDecoration.none,
                 ),
               ),
@@ -691,61 +695,53 @@ class _SessionRestoreUnavailableScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.xl,
+            AppSpacing.xl,
+            28,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Spacer(),
               Icon(
                 CupertinoIcons.wifi_slash,
-                color: AppColors.darkPrimary,
+                color: AppColors.primary,
                 size: 48,
               ),
               const SizedBox(height: 22),
               Text(
                 '서버에 연결할 수 없어요',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.darkTextPrimary,
-                  fontSize: 25,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
+                style: AppTypography.titleLarge.copyWith(
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 10),
               Text(
                 '네트워크 연결을 확인한 뒤 다시 시도해 주세요.',
                 textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: AppColors.darkTextSecondary,
-                  fontSize: 16,
-                  height: 1.45,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
                 ),
               ),
               const Spacer(),
               SizedBox(
                 height: 54,
                 child: CupertinoButton.filled(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   onPressed: onRetry,
                   child: isRetrying
                       ? const CupertinoActivityIndicator(
                           color: CupertinoColors.white,
                         )
-                      : const Text(
-                          '다시 시도',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0,
-                          ),
-                        ),
+                      : const Text('다시 시도', style: AppTypography.button),
                 ),
               ),
             ],
@@ -809,10 +805,11 @@ class _NicknameSetupScreenState extends State<_NicknameSetupScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final message = _validationMessage ?? widget.message;
 
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: Text('프로필 설정'),
         leading: CupertinoButton(
@@ -824,29 +821,26 @@ class _NicknameSetupScreenState extends State<_NicknameSetupScreen> {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            28,
+            AppSpacing.xl,
+            AppSpacing.xl,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
                 '처음 사용할 이름을 정해 주세요.',
-                style: TextStyle(
-                  color: AppColors.darkTextPrimary,
-                  fontSize: 30,
-                  fontWeight: FontWeight.w800,
-                  height: 1.12,
-                  letterSpacing: 0,
+                style: AppTypography.titleLarge.copyWith(
+                  color: AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 10),
               Text(
                 '로그인 계정 정보 대신 함께 보기 편한 이름으로 저장됩니다.',
-                style: TextStyle(
-                  color: AppColors.darkTextSecondary,
-                  fontSize: 16,
-                  height: 1.42,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
                 ),
               ),
               const SizedBox(height: 28),
@@ -858,19 +852,16 @@ class _NicknameSetupScreenState extends State<_NicknameSetupScreen> {
                 textInputAction: TextInputAction.done,
                 maxLength: 30,
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
+                  horizontal: AppSpacing.lg,
                   vertical: 15,
                 ),
-                style: TextStyle(
-                  color: AppColors.darkTextPrimary,
-                  fontSize: 17,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textPrimary,
                 ),
                 decoration: BoxDecoration(
-                  color: AppColors.darkSurface,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.darkBorder),
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
+                  border: Border.all(color: AppColors.border),
                 ),
                 onSubmitted: (_) => _submit(),
               ),
@@ -882,20 +873,13 @@ class _NicknameSetupScreenState extends State<_NicknameSetupScreen> {
               SizedBox(
                 height: 56,
                 child: CupertinoButton.filled(
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   onPressed: widget.isLoading ? null : _submit,
                   child: widget.isLoading
                       ? const CupertinoActivityIndicator(
                           color: CupertinoColors.white,
                         )
-                      : Text(
-                          '가입 완료하기',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0,
-                          ),
-                        ),
+                      : Text('가입 완료하기', style: AppTypography.button),
                 ),
               ),
             ],
@@ -911,14 +895,15 @@ class _AppMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Align(
       alignment: Alignment.centerLeft,
       child: Container(
         width: 64,
         height: 64,
         decoration: BoxDecoration(
-          color: AppColors.darkSurface,
-          borderRadius: BorderRadius.circular(16),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
           boxShadow: const [
             BoxShadow(
               color: Color(0x1F000000),
@@ -937,10 +922,8 @@ class _AppMark extends StatelessWidget {
           errorBuilder: (context, error, stackTrace) {
             return Text(
               'C',
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 30,
-                fontWeight: FontWeight.w800,
+              style: AppTypography.titleLarge.copyWith(
+                color: AppColors.textPrimary,
               ),
             );
           },
@@ -955,51 +938,32 @@ class _LoginTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           '체키',
-          style: TextStyle(
-            color: AppColors.darkTextPrimary,
-            fontSize: 38,
-            fontWeight: FontWeight.w800,
-            height: 1.05,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.display.copyWith(color: AppColors.textPrimary),
         ),
-        SizedBox(height: 12),
+        SizedBox(height: AppSpacing.md),
         Text(
           '까먹지 마, 체키 있잖아',
-          style: TextStyle(
-            color: AppColors.darkTextPrimary,
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            height: 1.15,
-            letterSpacing: 0,
+          style: AppTypography.titleLarge.copyWith(
+            color: AppColors.textPrimary,
           ),
         ),
-        SizedBox(height: 12),
+        SizedBox(height: AppSpacing.md),
         Text(
           '그룹 일정과 주차 자리, 오늘 챙길 일을 체키 하나로 가볍게 확인해요.',
-          style: TextStyle(
-            color: AppColors.darkTextSecondary,
-            fontSize: 17,
-            height: 1.45,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0,
+          style: AppTypography.bodyLarge.copyWith(
+            color: AppColors.textSecondary,
           ),
         ),
         SizedBox(height: 18),
         Text(
           'Checky, 우리 그룹 체크 비서',
-          style: TextStyle(
-            color: AppColors.brandCoral,
-            fontSize: 14,
-            height: 1.25,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.labelSmall.copyWith(color: AppColors.brandCoral),
         ),
       ],
     );
@@ -1013,22 +977,18 @@ class _ErrorMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Text(
           message,
-          style: TextStyle(
-            color: AppColors.darkDanger,
-            fontSize: 14,
-            height: 1.35,
-            fontWeight: FontWeight.w600,
-          ),
+          style: AppTypography.labelSmall.copyWith(color: AppColors.danger),
         ),
       ),
     );
@@ -1043,10 +1003,11 @@ class _AppleLoginButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SignInWithAppleButton(
       text: 'Apple로 계속하기',
       height: 56,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       onPressed: isLoading ? null : onPressed,
     );
   }
@@ -1060,23 +1021,21 @@ class _KakaoLoginButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       height: 56,
       child: CupertinoButton(
         color: const Color(0xFFFEE500),
         disabledColor: const Color(0xFFFEE500),
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         padding: EdgeInsets.zero,
         onPressed: onPressed,
         child: isLoading
             ? const CupertinoActivityIndicator(color: Color(0xFF191919))
             : Text(
                 '카카오로 계속하기',
-                style: TextStyle(
+                style: AppTypography.titleSmall.copyWith(
                   color: Color(0xFF191919),
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
                 ),
               ),
       ),

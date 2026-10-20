@@ -1,68 +1,51 @@
 import 'package:flutter/material.dart';
 
+import 'app_theme_extension.dart';
+import 'app_theme_preset.dart';
+
 class AppColors {
   const AppColors._();
 
-  static Brightness _brightness = Brightness.dark;
+  static Brightness _brightness = Brightness.light;
+  static AppThemeExtension _colors = AppThemePreset.mint.colors(
+    Brightness.light,
+  );
 
-  static const checkyMint = Color(0xFF4ECDC4);
-  static const checkyCoral = Color(0xFFFF6B6B);
-  static const checkyLavender = Color(0xFFA78BFA);
-
-  static const darkBackgroundValue = Color(0xFF10171B);
-  static const darkSurfaceValue = Color(0xFF172225);
-  static const darkSurfaceElevatedValue = Color(0xFF203033);
-  static const darkPrimaryValue = Color(0xFF63DCD4);
-  static const darkPrimarySoftValue = Color(0xFF1D4545);
-  static const darkTextPrimaryValue = Color(0xFFF6FFFD);
-  static const darkTextSecondaryValue = Color(0xFFC5D7D8);
-  static const darkTextMutedValue = Color(0xFF89A3A5);
-  static const darkBorderValue = Color(0xFF2B4245);
-  static const darkSuccessValue = Color(0xFFA78BFA);
-  static const darkWarningValue = Color(0xFFFFC66D);
-  static const darkDangerValue = Color(0xFFFF8585);
-  static const darkCoralValue = Color(0xFFFF8585);
-  static const darkLavenderValue = Color(0xFFBCA7FF);
-
-  static const lightBackground = Color(0xFFEEF9F6);
-  static const lightSurface = Color(0xFFF3FCF9);
-  static const lightSurfaceElevated = Color(0xFFDFF4EF);
-  static const lightPrimary = Color(0xFF159D95);
-  static const lightPrimarySoft = Color(0xFFD5F2EE);
-  static const lightTextPrimary = Color(0xFF102320);
-  static const lightTextSecondary = Color(0xFF42635E);
-  static const lightTextMuted = Color(0xFF6F8984);
-  static const lightBorder = Color(0xFFC2E2DC);
-  static const lightSuccess = checkyLavender;
-  static const lightWarning = Color(0xFFE78B00);
-  static const lightDanger = checkyCoral;
-  static const lightCoral = checkyCoral;
-  static const lightLavender = checkyLavender;
-
-  static void useBrightness(Brightness brightness) {
+  static void useAppearance(Brightness brightness, AppThemeExtension colors) {
     _brightness = brightness;
+    _colors = colors;
   }
 
-  static bool get _isDark => _brightness == Brightness.dark;
+  /// Registers a theme dependency so open routes update immediately.
+  /// New widgets should keep the returned palette in a local `colors` variable.
+  static AppThemeExtension of(BuildContext context) =>
+      Theme.of(context).extension<AppThemeExtension>() ?? _colors;
 
-  static Color get darkBackground =>
-      _isDark ? darkBackgroundValue : lightBackground;
-  static Color get darkSurface => _isDark ? darkSurfaceValue : lightSurface;
-  static Color get darkSurfaceElevated =>
-      _isDark ? darkSurfaceElevatedValue : lightSurfaceElevated;
-  static Color get darkPrimary => _isDark ? darkPrimaryValue : lightPrimary;
-  static Color get darkPrimarySoft =>
-      _isDark ? darkPrimarySoftValue : lightPrimarySoft;
-  static Color get darkTextPrimary =>
-      _isDark ? darkTextPrimaryValue : lightTextPrimary;
-  static Color get darkTextSecondary =>
-      _isDark ? darkTextSecondaryValue : lightTextSecondary;
-  static Color get darkTextMuted =>
-      _isDark ? darkTextMutedValue : lightTextMuted;
-  static Color get darkBorder => _isDark ? darkBorderValue : lightBorder;
-  static Color get darkSuccess => _isDark ? darkSuccessValue : lightSuccess;
-  static Color get darkWarning => _isDark ? darkWarningValue : lightWarning;
-  static Color get darkDanger => _isDark ? darkDangerValue : lightDanger;
-  static Color get brandCoral => _isDark ? darkCoralValue : lightCoral;
-  static Color get brandLavender => _isDark ? darkLavenderValue : lightLavender;
+  static Color get background => _colors.background;
+  static Color get surface => _colors.surface;
+  static Color get surfaceElevated => _colors.surfaceElevated;
+  static Color get primary => _colors.primary;
+  static Color get onPrimary => _colors.onPrimary;
+  static Color get primarySoft => _colors.primarySoft;
+  static Color get textPrimary => _colors.textPrimary;
+  static Color get textSecondary => _colors.textSecondary;
+  static Color get textMuted => _colors.textMuted;
+  static Color get border => _colors.border;
+  static Color get success => _colors.success;
+  static Color get warning => _colors.warning;
+  static Color get danger => _colors.danger;
+  static Color get onDanger => _brightness == Brightness.dark
+      ? const Color(0xFF3D1018)
+      : const Color(0xFFFFFFFF);
+
+  // Semantic accents and image surfaces deliberately do not follow the preset.
+  static Color get brandCoral => _brightness == Brightness.dark
+      ? const Color(0xFFFF98A3)
+      : const Color(0xFFB8323D);
+  static Color get brandLavender => _brightness == Brightness.dark
+      ? const Color(0xFFC7AFF0)
+      : const Color(0xFF7150A2);
+  static const imageTextPrimary = Color(0xFF142E29);
+  static const imageTextSecondary = Color(0xFF405F56);
+  static const imageAccent = Color(0xFF087D74);
 }

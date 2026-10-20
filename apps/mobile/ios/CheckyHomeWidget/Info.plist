@@ -25,5 +25,14 @@
 		<key>NSExtensionPointIdentifier</key>
 		<string>com.apple.widgetkit-extension</string>
 	</dict>
+	<key>UIAppFonts</key>
+	<array>
+		<string>fonts/gowundodum/GowunDodum-Regular.ttf</string>
+		<string>fonts/gowunbatang/GowunBatang-Regular.ttf</string>
+		<string>fonts/gowunbatang/GowunBatang-Bold.ttf</string>
+		<string>fonts/parkdahyun/Ownglyph-ParkDaHyun.ttf</string>
+		<string>fonts/poorstory/PoorStory-Regular.ttf</string>
+		<string>fonts/incheonhimchan/ICEHimchan-Regular.ttf</string>
+	</array>
 </dict>
 </plist>

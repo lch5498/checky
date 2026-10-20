@@ -7,6 +7,7 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
     required this.surface,
     required this.surfaceElevated,
     required this.primary,
+    required this.onPrimary,
     required this.primarySoft,
     required this.textPrimary,
     required this.textSecondary,
@@ -21,6 +22,7 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
   final Color surface;
   final Color surfaceElevated;
   final Color primary;
+  final Color onPrimary;
   final Color primarySoft;
   final Color textPrimary;
   final Color textSecondary;
@@ -40,6 +42,7 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
     Color? surface,
     Color? surfaceElevated,
     Color? primary,
+    Color? onPrimary,
     Color? primarySoft,
     Color? textPrimary,
     Color? textSecondary,
@@ -54,6 +57,7 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
       surface: surface ?? this.surface,
       surfaceElevated: surfaceElevated ?? this.surfaceElevated,
       primary: primary ?? this.primary,
+      onPrimary: onPrimary ?? this.onPrimary,
       primarySoft: primarySoft ?? this.primarySoft,
       textPrimary: textPrimary ?? this.textPrimary,
       textSecondary: textSecondary ?? this.textSecondary,
@@ -76,6 +80,7 @@ class AppThemeExtension extends ThemeExtension<AppThemeExtension> {
       surface: Color.lerp(surface, other.surface, t)!,
       surfaceElevated: Color.lerp(surfaceElevated, other.surfaceElevated, t)!,
       primary: Color.lerp(primary, other.primary, t)!,
+      onPrimary: Color.lerp(onPrimary, other.onPrimary, t)!,
       primarySoft: Color.lerp(primarySoft, other.primarySoft, t)!,
       textPrimary: Color.lerp(textPrimary, other.textPrimary, t)!,
       textSecondary: Color.lerp(textSecondary, other.textSecondary, t)!,

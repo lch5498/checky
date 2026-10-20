@@ -70,11 +70,16 @@ Material 위젯은 대체가 어렵거나 명확한 이유가 있을 때만 사�
 
 ### 디자인 톤
 
+- UI 작업 전에 `docs/design-guide.md`와 `apps/mobile/lib/design_system/`을 확인한다. 신규 기능도 같은 기준을 따른다.
+- 색상은 `AppColors.of(context)`의 역할 토큰, 글자는 `AppTypography`, 간격은 `AppSpacing`, 모서리는 `AppRadius`를 사용한다.
+- 화면 파일에 개별 `fontSize`, `fontWeight`, `letterSpacing`, 새 `TextStyle`을 추가하지 않는다. 필요한 역할은 공통 토큰과 가이드에 먼저 정의한다.
+- 민트·크림·라벤더·로즈·스노우와 라이트·다크 조합을 모두 지원한다. 구성원 색상과 상태 의미색은 테마와 구분하고, 선택 배경 위에는 `onPrimary`를 사용한다.
+- 기본·고운돋움·고운바탕·온글잎 박다현체·푸어스토리·인천교육힘찬체 선택은 앱 테마에서 상속한다. 개별 `inherit: false` 또는 글꼴 고정으로 상속을 끊지 않는다. 글꼴 미리보기·라이선스 원문만 명시적인 `AppFontPreset.applyTo`를 허용한다.
 - iOS 기본 앱처럼 조용하고 넉넉한 여백을 둔다.
 - 과한 카드 중첩, 장식용 그래디언트, 불필요한 설명 문구를 피한다.
 - 핵심 액션은 한 화면에서 명확히 보이게 한다.
 - 로그인 화면은 `카카오로 계속하기` 단일 CTA를 유지한다.
-- 홈 화면은 `일정 관리`, `주차 관리` 두 메뉴가 즉시 보이게 한다.
+- 홈은 오늘 일정 → 주차 위치 → 여행 → 최근 스크랩의 기존 정보 위계를 유지한다.
 - 카드 radius는 과하게 둥글게 만들지 말고, 현재 iOS 톤과 맞는 범위에서 유지한다.
 
 ### 인증 흐름
@@ -183,6 +188,7 @@ Flutter 변경 후:
 
 ```bash
 cd apps/mobile
+dart tool/check_design.dart
 flutter analyze
 flutter test
 ```

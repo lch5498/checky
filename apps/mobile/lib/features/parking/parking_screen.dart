@@ -7,6 +7,9 @@ import '../../core/api_client.dart';
 import '../../core/group_refresh.dart';
 import '../../core/home_widget_service.dart';
 import '../../design_system/app_colors.dart';
+import '../../design_system/app_radius.dart';
+import '../../design_system/app_spacing.dart';
+import '../../design_system/app_typography.dart';
 import '../../shared/refreshable_scroll_view.dart';
 
 const _parkingPresetTypeBuilding = 'building';
@@ -443,10 +446,11 @@ class _ParkingScreenState extends State<ParkingScreen>
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final dashboard = _dashboard;
 
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         leading: dashboard == null
             ? null
@@ -478,7 +482,12 @@ class _ParkingScreenState extends State<ParkingScreen>
       child: SafeArea(
         child: RefreshableScrollView(
           onRefresh: _loadParking,
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            18,
+            AppSpacing.page,
+            AppSpacing.xxl,
+          ),
           children: [
             if (_message != null) ...[
               _InlineMessage(message: _message!),
@@ -544,6 +553,7 @@ class _FeatureFamilyTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final title = '${family.name} $featureName';
 
     if (!canSwitch) {
@@ -551,13 +561,7 @@ class _FeatureFamilyTitle extends StatelessWidget {
         title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          inherit: false,
-          color: AppColors.darkTextPrimary,
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0,
-        ),
+        style: AppTypography.titleSmall.copyWith(color: AppColors.textPrimary),
       );
     }
 
@@ -573,16 +577,12 @@ class _FeatureFamilyTitle extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                inherit: false,
-                color: AppColors.darkTextPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
+              style: AppTypography.titleSmall.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.xs),
           const Icon(CupertinoIcons.chevron_down, size: 15),
         ],
       ),
@@ -788,8 +788,9 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: Text('주차 위치 즐겨찾기'),
         trailing: widget.canManage
@@ -807,27 +808,24 @@ class _ParkingPresetScreenState extends State<ParkingPresetScreen> {
       ),
       child: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            18,
+            AppSpacing.page,
+            AppSpacing.xxl,
+          ),
           children: [
             Text(
               '자주 쓰는 주차 위치',
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 28,
-                fontWeight: FontWeight.w800,
-                height: 1.12,
-                letterSpacing: 0,
+              style: AppTypography.titleLarge.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 10),
             Text(
               '건물 아래에 층수와 상세위치를 등록해 두면 주차 위치를 빠르게 기록할 수 있습니다.',
-              style: TextStyle(
-                color: AppColors.darkTextSecondary,
-                fontSize: 16,
-                height: 1.4,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
             if (_message != null) ...[
@@ -924,12 +922,13 @@ class _PresetSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -939,11 +938,8 @@ class _PresetSection extends StatelessWidget {
               Expanded(
                 child: Text(
                   title,
-                  style: TextStyle(
-                    color: AppColors.darkTextPrimary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -960,18 +956,18 @@ class _PresetSection extends StatelessWidget {
           if (presets.isEmpty)
             Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: 14,
+              ),
               decoration: BoxDecoration(
-                color: AppColors.darkBackground,
-                borderRadius: BorderRadius.circular(12),
+                color: AppColors.background,
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: Text(
                 emptyText,
-                style: TextStyle(
-                  color: AppColors.darkTextMuted,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textMuted,
                 ),
               ),
             )
@@ -983,7 +979,7 @@ class _PresetSection extends StatelessWidget {
                 onEdit: () => onEdit(preset),
                 onDelete: () => onDelete(preset),
               ),
-              if (preset != presets.last) const SizedBox(height: 8),
+              if (preset != presets.last) const SizedBox(height: AppSpacing.sm),
             ],
         ],
       ),
@@ -1022,12 +1018,13 @@ class _BuildingPresetBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      padding: const EdgeInsets.fromLTRB(14, AppSpacing.md, 14, 14),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1045,11 +1042,8 @@ class _BuildingPresetBlock extends StatelessWidget {
                   building.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkTextPrimary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
@@ -1085,7 +1079,7 @@ class _BuildingPresetBlock extends StatelessWidget {
             canManage: canManage,
             onAdd: onAddFloor,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           if (floors.isEmpty)
             const _PresetEmptyText(text: '등록된 층수가 없습니다.')
           else
@@ -1108,7 +1102,7 @@ class _BuildingPresetBlock extends StatelessWidget {
             canManage: canManage,
             onAdd: onAddDetail,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           if (details.isEmpty)
             const _PresetEmptyText(text: '등록된 상세위치가 없습니다.')
           else
@@ -1144,16 +1138,14 @@ class _PresetGroupHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Row(
       children: [
         Expanded(
           child: Text(
             title,
-            style: TextStyle(
-              color: AppColors.darkTextSecondary,
-              fontSize: 13,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
         ),
@@ -1184,33 +1176,36 @@ class _PresetNameChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.darkSurfaceElevated,
-        borderRadius: BorderRadius.circular(999),
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           CupertinoButton(
-            padding: const EdgeInsets.fromLTRB(12, 7, 8, 7),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              7,
+              AppSpacing.sm,
+              7,
+            ),
             minimumSize: Size.zero,
             onPressed: canManage ? onEdit : null,
             child: Text(
               preset.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
           ),
           if (canManage)
             Padding(
-              padding: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsets.only(right: AppSpacing.xs),
               child: CupertinoButton(
                 padding: EdgeInsets.zero,
                 minimumSize: const Size(24, 24),
@@ -1223,7 +1218,7 @@ class _PresetNameChip extends StatelessWidget {
               ),
             )
           else
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
         ],
       ),
     );
@@ -1237,21 +1232,20 @@ class _PresetEmptyText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.md,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.darkBackground,
-        borderRadius: BorderRadius.circular(10),
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
       ),
       child: Text(
         text,
-        style: TextStyle(
-          color: AppColors.darkTextMuted,
-          fontSize: 13,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0,
-        ),
+        style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted),
       ),
     );
   }
@@ -1282,6 +1276,7 @@ class _VehicleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final currentLocation = this.currentLocation;
     final locationText = isRegisteringLocation
         ? '위치 등록 중...'
@@ -1289,13 +1284,13 @@ class _VehicleCard extends StatelessWidget {
     final locationColor = isRegisteringLocation
         ? CupertinoColors.systemOrange
         : currentLocation == null
-        ? AppColors.darkTextMuted
-        : AppColors.darkTextPrimary;
+        ? AppColors.textMuted
+        : AppColors.textPrimary;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(0, 14, 0, 16),
+      padding: const EdgeInsets.fromLTRB(0, 14, 0, AppSpacing.lg),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1311,21 +1306,15 @@ class _VehicleCard extends StatelessWidget {
                       vehicle.nickname,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.darkTextPrimary,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
+                      style: AppTypography.titleSmall.copyWith(
+                        color: AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xs),
                     Text(
                       vehicle.plateNumber,
-                      style: TextStyle(
-                        color: AppColors.darkTextSecondary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -1345,22 +1334,19 @@ class _VehicleCard extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
-              color: AppColors.darkBackground,
-              borderRadius: BorderRadius.circular(12),
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '현재 위치',
-                  style: TextStyle(
-                    color: AppColors.darkTextSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Row(
                   children: [
                     if (isRegisteringLocation) ...[
@@ -1376,11 +1362,8 @@ class _VehicleCard extends StatelessWidget {
                         locationText,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: AppTypography.titleSmall.copyWith(
                           color: locationColor,
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
                         ),
                       ),
                     ),
@@ -1397,7 +1380,7 @@ class _VehicleCard extends StatelessWidget {
                         ),
                       ),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(AppRadius.sm),
                         child: Image.memory(
                           photoBytes!,
                           width: double.infinity,
@@ -1407,23 +1390,20 @@ class _VehicleCard extends StatelessWidget {
                       ),
                     ),
                   ],
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Text(
                     '마지막 등록: ${currentLocation.createdByNickname} · ${_parkingUpdatedAtLabel(currentLocation.updatedAt)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkTextSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
               ],
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           CupertinoButton(
             padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
             minimumSize: const Size(44, 34),
@@ -1431,26 +1411,19 @@ class _VehicleCard extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  CupertinoIcons.clock,
-                  size: 16,
-                  color: AppColors.darkPrimary,
-                ),
+                Icon(CupertinoIcons.clock, size: 16, color: AppColors.primary),
                 const SizedBox(width: 5),
                 Text(
                   '이전 주차 이력 보기',
-                  style: TextStyle(
-                    color: AppColors.darkPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.primary,
                   ),
                 ),
               ],
             ),
           ),
           if (canManage) ...[
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Row(
               children: [
                 Expanded(
@@ -1458,27 +1431,24 @@ class _VehicleCard extends StatelessWidget {
                     height: 50,
                     child: CupertinoButton.filled(
                       padding: EdgeInsets.zero,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppRadius.md),
                       onPressed: isRegisteringLocation
                           ? null
                           : onRegisterLocation,
                       child: Text(
                         isRegisteringLocation ? '등록 중' : '위치 등록',
-                        style: TextStyle(
-                          fontSize: 15,
-                          height: 1,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
-                        ),
+                        style: AppTypography.button,
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 CupertinoButton(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  color: AppColors.darkSurfaceElevated,
-                  borderRadius: BorderRadius.circular(12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                  ),
+                  color: AppColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   onPressed: isRegisteringLocation ? null : onDelete,
                   child: const Icon(
                     CupertinoIcons.trash,
@@ -1502,6 +1472,7 @@ class _ParkingPhotoViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoPageScaffold(
       backgroundColor: CupertinoColors.black,
       child: Stack(
@@ -1527,7 +1498,7 @@ class _ParkingPhotoViewer extends StatelessWidget {
             child: Align(
               alignment: Alignment.topRight,
               child: CupertinoButton(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(AppSpacing.lg),
                 onPressed: () => Navigator.of(context).pop(),
                 child: const Icon(
                   CupertinoIcons.xmark,
@@ -1608,8 +1579,9 @@ class _ParkingHistoryScreenState extends State<ParkingHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: Text('${widget.vehicle.nickname} 주차 기록'),
       ),
@@ -1618,15 +1590,17 @@ class _ParkingHistoryScreenState extends State<ParkingHistoryScreen> {
             ? const Center(child: CupertinoActivityIndicator())
             : RefreshableScrollView(
                 onRefresh: _loadHistory,
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.page,
+                  18,
+                  AppSpacing.page,
+                  28,
+                ),
                 children: [
                   Text(
                     '최근 10개 기록을 보여줍니다.',
-                    style: TextStyle(
-                      color: AppColors.darkTextMuted,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textMuted,
                     ),
                   ),
                   const SizedBox(height: 10),
@@ -1652,10 +1626,11 @@ class _ParkingHistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1664,37 +1639,31 @@ class _ParkingHistoryTile extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: AppColors.darkPrimarySoft,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             child: Icon(
               CupertinoIcons.location_solid,
-              color: AppColors.darkPrimary,
+              color: AppColors.primary,
               size: 18,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   record.locationText,
-                  style: TextStyle(
-                    color: AppColors.darkTextPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 5),
                 Text(
                   '${record.createdByNickname} · ${_parkingUpdatedAtLabel(record.parkedAt)}',
-                  style: TextStyle(
-                    color: AppColors.darkTextSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -1711,17 +1680,13 @@ class _ParkingHistoryEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 96),
       child: Center(
         child: Text(
           '아직 주차 기록이 없습니다.',
-          style: TextStyle(
-            color: AppColors.darkTextSecondary,
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.label.copyWith(color: AppColors.textSecondary),
         ),
       ),
     );
@@ -1743,12 +1708,18 @@ class _PresetTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+      padding: const EdgeInsets.fromLTRB(
+        14,
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
@@ -1762,12 +1733,7 @@ class _PresetTile extends StatelessWidget {
               preset.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
-              ),
+              style: AppTypography.label.copyWith(color: AppColors.textPrimary),
             ),
           ),
           if (canManage) ...[
@@ -2085,12 +2051,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       children: [
         Text(
           title,
-          style: TextStyle(
-            color: AppColors.darkTextPrimary,
-            fontSize: 16,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.label.copyWith(color: AppColors.textPrimary),
         ),
         const SizedBox(height: 10),
         Wrap(
@@ -2127,6 +2088,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final canSubmit = _building != null && _floor != null;
 
     return SafeArea(
@@ -2137,7 +2099,12 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
           constraints: BoxConstraints(
             maxHeight: MediaQuery.sizeOf(context).height * 0.78,
           ),
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 14),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            18,
+            AppSpacing.page,
+            14,
+          ),
           color: CupertinoColors.systemBackground.resolveFrom(context),
           child: SingleChildScrollView(
             child: Column(
@@ -2149,11 +2116,8 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                     Expanded(
                       child: Text(
                         '주차 위치 등록',
-                        style: TextStyle(
-                          color: AppColors.darkTextPrimary,
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
+                        style: AppTypography.titleMedium.copyWith(
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -2169,7 +2133,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                   const SizedBox(height: 10),
                   _InlineMessage(message: _message!),
                 ],
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 _buildChoiceSection(
                   title: '건물',
                   presetType: _parkingPresetTypeBuilding,
@@ -2209,11 +2173,8 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                     Expanded(
                       child: Text(
                         '주차 위치 사진 (선택)',
-                        style: TextStyle(
-                          color: AppColors.darkTextPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
@@ -2226,30 +2187,30 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                     else if (_imageBytes == null)
                       CupertinoButton(
                         padding: EdgeInsets.zero,
-                        minimumSize: const Size(40, 40),
+                        minimumSize: const Size(44, 44),
                         onPressed: _pickPhoto,
                         child: Icon(
                           CupertinoIcons.plus,
                           size: 20,
-                          color: AppColors.darkPrimary,
+                          color: AppColors.primary,
                           semanticLabel: '사진 추가',
                         ),
                       )
                     else ...[
                       CupertinoButton(
                         padding: EdgeInsets.zero,
-                        minimumSize: const Size(40, 40),
+                        minimumSize: const Size(44, 44),
                         onPressed: _pickPhoto,
                         child: Icon(
                           CupertinoIcons.pencil,
                           size: 18,
-                          color: AppColors.darkPrimary,
+                          color: AppColors.primary,
                           semanticLabel: '사진 수정',
                         ),
                       ),
                       CupertinoButton(
                         padding: EdgeInsets.zero,
-                        minimumSize: const Size(40, 40),
+                        minimumSize: const Size(44, 44),
                         onPressed: () => setState(() => _imageBytes = null),
                         child: const Icon(
                           CupertinoIcons.trash,
@@ -2262,9 +2223,9 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                   ],
                 ),
                 if (_imageBytes != null) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                     child: Image.memory(
                       _imageBytes!,
                       width: double.infinity,
@@ -2276,18 +2237,17 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                 const SizedBox(height: 6),
                 Text(
                   '새 위치를 등록하면 이전 사진은 삭제돼요.',
-                  style: TextStyle(
-                    color: AppColors.darkTextMuted,
-                    fontSize: 12,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textMuted,
                   ),
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.page),
                 SizedBox(
                   width: double.infinity,
                   height: 50,
                   child: CupertinoButton.filled(
                     padding: EdgeInsets.zero,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppRadius.md),
                     onPressed:
                         canSubmit && !_isCreatingPreset && !_isPickingPhoto
                         ? _submit
@@ -2296,15 +2256,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                         ? const CupertinoActivityIndicator(
                             color: CupertinoColors.white,
                           )
-                        : Text(
-                            '등록',
-                            style: TextStyle(
-                              fontSize: 15,
-                              height: 1,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0,
-                            ),
-                          ),
+                        : Text('등록', style: AppTypography.button),
                   ),
                 ),
               ],
@@ -2329,21 +2281,17 @@ class _LocationChoiceButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoButton(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 9),
       minimumSize: Size.zero,
-      color: isSelected
-          ? CupertinoColors.activeBlue
-          : AppColors.darkSurfaceElevated,
-      borderRadius: BorderRadius.circular(999),
+      color: isSelected ? AppColors.primary : AppColors.surfaceElevated,
+      borderRadius: BorderRadius.circular(AppRadius.pill),
       onPressed: onPressed,
       child: Text(
         label,
-        style: TextStyle(
-          color: isSelected ? CupertinoColors.white : AppColors.darkTextPrimary,
-          fontSize: 14,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0,
+        style: AppTypography.labelSmall.copyWith(
+          color: isSelected ? AppColors.onPrimary : AppColors.textPrimary,
         ),
       ),
     );
@@ -2398,10 +2346,11 @@ class _VehicleDialogState extends State<_VehicleDialog> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoAlertDialog(
       title: Text(widget.vehicle == null ? '차량 등록' : '차량 수정'),
       content: Padding(
-        padding: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.only(top: AppSpacing.md),
         child: Column(
           children: [
             CupertinoTextField(
@@ -2410,7 +2359,7 @@ class _VehicleDialogState extends State<_VehicleDialog> {
               placeholder: '차량 닉네임',
               maxLength: 30,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             CupertinoTextField(
               controller: _plateNumberController,
               placeholder: '차량번호',
@@ -2418,12 +2367,11 @@ class _VehicleDialogState extends State<_VehicleDialog> {
               onSubmitted: (_) => _submit(),
             ),
             if (_message != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 _message!,
-                style: TextStyle(
+                style: AppTypography.bodySmall.copyWith(
                   color: CupertinoColors.destructiveRed,
-                  fontSize: 13,
                 ),
               ),
             ],
@@ -2448,6 +2396,7 @@ class _PresetDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return _TextInputDialog(
       title: preset == null ? '즐겨찾기 추가' : '즐겨찾기 수정',
       placeholder: '즐겨찾기 이름',
@@ -2505,10 +2454,11 @@ class _TextInputDialogState extends State<_TextInputDialog> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoAlertDialog(
       title: Text(widget.title),
       content: Padding(
-        padding: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.only(top: AppSpacing.md),
         child: Column(
           children: [
             CupertinoTextField(
@@ -2519,12 +2469,11 @@ class _TextInputDialogState extends State<_TextInputDialog> {
               onSubmitted: (_) => _submit(),
             ),
             if (_message != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 _message!,
-                style: TextStyle(
+                style: AppTypography.bodySmall.copyWith(
                   color: CupertinoColors.destructiveRed,
-                  fontSize: 13,
                 ),
               ),
             ],
@@ -2557,12 +2506,13 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.page),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
@@ -2575,33 +2525,26 @@ class _EmptyState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+            style: AppTypography.titleSmall.copyWith(
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.darkTextSecondary,
-              fontSize: 14,
-              height: 1.35,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0,
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
           if (onPressed != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             SizedBox(
               height: 50,
               child: CupertinoButton.filled(
                 padding: const EdgeInsets.symmetric(horizontal: 18),
                 minimumSize: const Size.fromHeight(50),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 onPressed: onPressed,
                 child: Center(
                   child: Text(
@@ -2609,12 +2552,7 @@ class _EmptyState extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 15,
-                      height: 1.25,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
-                    ),
+                    style: AppTypography.button,
                   ),
                 ),
               ),
@@ -2633,23 +2571,18 @@ class _InlineMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Text(
           message,
-          style: TextStyle(
-            color: AppColors.darkDanger,
-            fontSize: 14,
-            height: 1.35,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.labelSmall.copyWith(color: AppColors.danger),
         ),
       ),
     );

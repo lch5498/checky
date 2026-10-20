@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 
 import '../design_system/app_colors.dart';
+import '../design_system/app_spacing.dart';
+import '../design_system/app_typography.dart';
 
 enum ScheduleSection { calendar, recurring, anniversary, holiday }
 
@@ -16,26 +18,27 @@ class ScheduleSectionSwitcher extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoSlidingSegmentedControl<ScheduleSection>(
       groupValue: selectedSection,
-      backgroundColor: AppColors.darkSurfaceElevated,
-      thumbColor: AppColors.darkPrimary,
+      backgroundColor: AppColors.surfaceElevated,
+      thumbColor: AppColors.primary,
       padding: const EdgeInsets.all(3),
       children: {
         for (final entry in _labels.entries)
           entry.key: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 7,
+            ),
             child: Text(
               entry.value,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
+              style: AppTypography.labelSmall.copyWith(
                 color: selectedSection == entry.key
-                    ? AppColors.darkBackground
-                    : AppColors.darkTextPrimary,
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+                    ? AppColors.onPrimary
+                    : AppColors.textPrimary,
               ),
             ),
           ),

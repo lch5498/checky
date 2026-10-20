@@ -1,5 +1,4 @@
 import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
@@ -9,6 +8,9 @@ import '../../core/home_widget_service.dart';
 import '../../core/incoming_share_service.dart';
 import '../../core/theme_preference.dart';
 import '../../design_system/app_colors.dart';
+import '../../design_system/app_radius.dart';
+import '../../design_system/app_spacing.dart';
+import '../../design_system/app_typography.dart';
 import '../family/family_screen.dart';
 import '../activity/group_activity_log_screen.dart';
 import '../activity/group_activity_read_state.dart';
@@ -353,7 +355,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       builder: (dialogContext) => CupertinoAlertDialog(
         title: Text('그룹 초대 수락'),
         content: Padding(
-          padding: const EdgeInsets.only(top: 8),
+          padding: const EdgeInsets.only(top: AppSpacing.sm),
           child: Text('이 초대 링크로 그룹에 참여할까요?'),
         ),
         actions: [
@@ -405,7 +407,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         builder: (dialogContext) => CupertinoAlertDialog(
           title: Text('초대 수락 완료'),
           content: Padding(
-            padding: const EdgeInsets.only(top: 8),
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: Text('${detail.family.name} 그룹에 연결되었습니다.'),
           ),
           actions: [
@@ -576,8 +578,8 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     ThemePreferenceScope.of(context);
-    AppColors.useBrightness(Theme.of(context).brightness);
 
     final selectedFamily = _selectedFamily;
 
@@ -587,11 +589,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       return CupertinoTabScaffold(
         controller: _tabController,
         tabBar: CupertinoTabBar(
-          backgroundColor: AppColors.darkSurfaceElevated,
-          activeColor: AppColors.darkPrimary,
-          inactiveColor: AppColors.darkTextMuted,
+          backgroundColor: AppColors.surfaceElevated,
+          activeColor: AppColors.primary,
+          inactiveColor: AppColors.textMuted,
           iconSize: 22,
-          border: Border(top: BorderSide(color: AppColors.darkBorder)),
+          border: Border(top: BorderSide(color: AppColors.border)),
           items: const [
             BottomNavigationBarItem(
               icon: Icon(CupertinoIcons.house),
@@ -717,7 +719,12 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       ),
       child: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            18,
+            AppSpacing.page,
+            AppSpacing.xl,
+          ),
           child: _isLoadingFamilies
               ? const Center(child: CupertinoActivityIndicator())
               : _FamilyRequiredIntro(
@@ -745,6 +752,7 @@ class _HomeTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final family = this.family;
 
     if (family == null) {
@@ -756,13 +764,7 @@ class _HomeTitle extends StatelessWidget {
         family.name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          inherit: false,
-          color: AppColors.darkTextPrimary,
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0,
-        ),
+        style: AppTypography.titleSmall.copyWith(color: AppColors.textPrimary),
       );
     }
 
@@ -778,17 +780,13 @@ class _HomeTitle extends StatelessWidget {
               family.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                inherit: false,
-                color: AppColors.darkTextPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
+              style: AppTypography.titleSmall.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
           ),
           if (canSwitch) ...[
-            const SizedBox(width: 4),
+            const SizedBox(width: AppSpacing.xs),
             const Icon(CupertinoIcons.chevron_down, size: 15),
           ],
         ],
@@ -820,6 +818,7 @@ class _HomeNavigationTrailing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoButton(
       padding: EdgeInsets.zero,
       minimumSize: const Size(32, 32),
@@ -916,6 +915,7 @@ class _HomeNotificationButtonState extends State<_HomeNotificationButton>
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoButton(
       padding: EdgeInsets.zero,
       minimumSize: const Size(32, 32),
@@ -944,15 +944,13 @@ class _HomeNotificationButtonState extends State<_HomeNotificationButton>
                 height: 14,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: AppColors.darkDanger,
+                  color: AppColors.danger,
                   shape: BoxShape.circle,
                 ),
-                child: const Text(
+                child: Text(
                   'N',
-                  style: TextStyle(
-                    color: CupertinoColors.white,
-                    fontSize: 8,
-                    fontWeight: FontWeight.w900,
+                  style: AppTypography.calendar.copyWith(
+                    color: AppColors.onDanger,
                   ),
                 ),
               ),
@@ -1296,6 +1294,7 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab>
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final homeTrips = _homeTravelTrips(_travelDashboard?.trips ?? const []);
 
     return CupertinoPageScaffold(
@@ -1326,7 +1325,12 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab>
       child: SafeArea(
         child: RefreshableScrollView(
           onRefresh: _loadBriefing,
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            18,
+            AppSpacing.page,
+            28,
+          ),
           children: [
             if (widget.message != null) ...[
               _InlineMessage(message: widget.message!),
@@ -1334,20 +1338,17 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab>
             ],
             if (_message != null) ...[
               _InlineMessage(message: _message!),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
               SizedBox(
                 height: 48,
                 child: CupertinoButton(
-                  color: AppColors.darkSurfaceElevated,
-                  borderRadius: BorderRadius.circular(14),
+                  color: AppColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   onPressed: _loadBriefing,
                   child: Text(
                     '브리핑 새로고침',
-                    style: TextStyle(
-                      color: AppColors.darkPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
@@ -1434,6 +1435,7 @@ class _ScheduleBriefingSectionState extends State<_ScheduleBriefingSection> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final orderedSchedules = [...widget.schedules]
       ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
     final memberColors = _homeMemberColors(widget.members);
@@ -1461,7 +1463,7 @@ class _ScheduleBriefingSectionState extends State<_ScheduleBriefingSection> {
         children: [
           if (widget.isLoading)
             const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
               child: Center(child: CupertinoActivityIndicator()),
             )
           else ...[
@@ -1499,19 +1501,15 @@ class _MoreSchedulesLink extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onPressed,
       child: Padding(
-        padding: const EdgeInsets.only(top: 2, bottom: 8),
+        padding: const EdgeInsets.only(top: 2, bottom: AppSpacing.sm),
         child: Text(
           '더보기 +$hiddenCount개',
-          style: TextStyle(
-            color: AppColors.darkPrimary,
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.labelSmall.copyWith(color: AppColors.primary),
         ),
       ),
     );
@@ -1529,6 +1527,7 @@ class _ParkingBriefingSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final parkingDashboard = dashboard;
     final currentLocations = parkingDashboard?.currentLocations ?? const [];
     final vehiclesById = {
@@ -1567,6 +1566,7 @@ class _TravelBriefingSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return _BriefingSection(
       icon: CupertinoIcons.airplane,
       title: '여행',
@@ -1597,10 +1597,11 @@ class _TravelBriefingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final isInProgress = _isTravelInProgress(trip);
 
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1609,15 +1610,13 @@ class _TravelBriefingTile extends StatelessWidget {
             height: 36,
             decoration: BoxDecoration(
               color: isInProgress
-                  ? AppColors.darkWarning.withValues(alpha: 0.18)
-                  : AppColors.darkPrimarySoft,
-              borderRadius: BorderRadius.circular(10),
+                  ? AppColors.warning.withValues(alpha: 0.18)
+                  : AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             child: Icon(
               CupertinoIcons.airplane,
-              color: isInProgress
-                  ? AppColors.darkWarning
-                  : AppColors.darkPrimary,
+              color: isInProgress ? AppColors.warning : AppColors.primary,
               size: 18,
             ),
           ),
@@ -1633,15 +1632,12 @@ class _TravelBriefingTile extends StatelessWidget {
                         trip.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          color: AppColors.darkTextPrimary,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.textPrimary,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     if (isInProgress)
                       Container(
                         padding: const EdgeInsets.symmetric(
@@ -1649,28 +1645,21 @@ class _TravelBriefingTile extends StatelessWidget {
                           vertical: 3,
                         ),
                         decoration: BoxDecoration(
-                          color: AppColors.darkWarning.withValues(alpha: 0.18),
-                          borderRadius: BorderRadius.circular(999),
+                          color: AppColors.warning.withValues(alpha: 0.18),
+                          borderRadius: BorderRadius.circular(AppRadius.pill),
                         ),
                         child: Text(
                           '여행 중',
-                          style: TextStyle(
-                            color: AppColors.darkWarning,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                            height: 1,
-                            letterSpacing: 0,
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.warning,
                           ),
                         ),
                       )
                     else
                       Text(
                         _travelCountdownText(trip.startsOn),
-                        style: TextStyle(
-                          color: AppColors.darkPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.primary,
                         ),
                       ),
                   ],
@@ -1678,54 +1667,45 @@ class _TravelBriefingTile extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   _travelDateText(trip),
-                  style: TextStyle(
-                    color: AppColors.darkTextSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 if (trip.checklistItemCount > 0) ...[
-                  const SizedBox(height: 8),
+                  const SizedBox(height: AppSpacing.sm),
                   Row(
                     children: [
                       Expanded(
                         child: Text(
                           '체크리스트 ${trip.checklistCompletedCount}/${trip.checklistItemCount} 완료',
-                          style: TextStyle(
-                            color: AppColors.darkTextSecondary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0,
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ),
                       Text(
                         '${trip.checklistCompletionPercent}%',
-                        style: TextStyle(
-                          color: AppColors.darkPrimary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 5),
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(999),
+                    borderRadius: BorderRadius.circular(AppRadius.pill),
                     child: SizedBox(
                       height: 4,
                       child: Stack(
                         fit: StackFit.expand,
                         children: [
-                          ColoredBox(color: AppColors.darkBorder),
+                          ColoredBox(color: AppColors.border),
                           FractionallySizedBox(
                             alignment: Alignment.centerLeft,
                             widthFactor:
                                 trip.checklistCompletedCount /
                                 trip.checklistItemCount,
-                            child: ColoredBox(color: AppColors.darkPrimary),
+                            child: ColoredBox(color: AppColors.primary),
                           ),
                         ],
                       ),
@@ -1742,17 +1722,14 @@ class _TravelBriefingTile extends StatelessWidget {
                     children: [
                       Icon(
                         CupertinoIcons.checkmark_alt_circle,
-                        color: AppColors.darkPrimary,
+                        color: AppColors.primary,
                         size: 15,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: AppSpacing.xs),
                       Text(
                         '체크리스트로 가기',
-                        style: TextStyle(
-                          color: AppColors.darkPrimary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
@@ -1780,6 +1757,7 @@ class _ScrapBriefingSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return _BriefingSection(
       icon: CupertinoIcons.bookmark,
       title: '최근 스크랩',
@@ -1807,6 +1785,7 @@ class _ScrapBriefingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final activityLabel = activity.type == ScrapRecentActivityType.post
         ? '글'
         : '댓글';
@@ -1825,14 +1804,14 @@ class _ScrapBriefingTile extends StatelessWidget {
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: AppColors.darkPrimarySoft,
+                color: AppColors.primarySoft,
                 borderRadius: BorderRadius.circular(9),
               ),
               child: Icon(
                 activity.type == ScrapRecentActivityType.post
                     ? CupertinoIcons.doc_text
                     : CupertinoIcons.chat_bubble,
-                color: AppColors.darkPrimary,
+                color: AppColors.primary,
                 size: 16,
               ),
             ),
@@ -1845,11 +1824,8 @@ class _ScrapBriefingTile extends StatelessWidget {
                     previewText,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   const SizedBox(height: 3),
@@ -1858,11 +1834,8 @@ class _ScrapBriefingTile extends StatelessWidget {
                     '${activity.authorNickname} · ${_scrapActivityTimeText(activity.createdAt)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkTextSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -1935,10 +1908,11 @@ class _BriefingSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      padding: const EdgeInsets.fromLTRB(0, 16, 0, 16),
+      padding: const EdgeInsets.fromLTRB(0, AppSpacing.lg, 0, AppSpacing.lg),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1949,29 +1923,23 @@ class _BriefingSection extends StatelessWidget {
             onPressed: onPressed,
             child: Row(
               children: [
-                Icon(icon, color: AppColors.darkPrimary, size: 21),
-                const SizedBox(width: 8),
+                Icon(icon, color: AppColors.primary, size: 21),
+                const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: Text(
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
+                    style: AppTypography.titleSmall.copyWith(
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ),
                 if (trailingActionLabel != null)
                   Text(
                     trailingActionLabel!,
-                    style: TextStyle(
-                      color: AppColors.darkPrimary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.primary,
                     ),
                   )
                 else
@@ -1983,7 +1951,7 @@ class _BriefingSection extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           AnimatedSize(
             duration: const Duration(milliseconds: 220),
             curve: Curves.easeOutCubic,
@@ -1993,14 +1961,11 @@ class _BriefingSection extends StatelessWidget {
               children: [
                 if (isEmpty)
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                     child: Text(
                       emptyText,
-                      style: TextStyle(
-                        color: AppColors.darkTextSecondary,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   )
@@ -2026,6 +1991,7 @@ class _ScheduleBriefingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final timeText =
         '${_briefTimeText(schedule.startsAt)}~${_briefTimeText(schedule.endsAt)}';
     final memberColorStyle = MemberFilterColorStyle.from(memberColor);
@@ -2037,12 +2003,15 @@ class _ScheduleBriefingTile extends StatelessWidget {
         children: [
           Container(
             constraints: const BoxConstraints(minWidth: 100, maxWidth: 116),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: 5,
+            ),
             decoration: BoxDecoration(
-              color: AppColors.darkPrimarySoft,
-              borderRadius: BorderRadius.circular(999),
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
               border: Border.all(
-                color: AppColors.darkPrimary.withValues(alpha: 0.22),
+                color: AppColors.primary.withValues(alpha: 0.22),
               ),
             ),
             child: Center(
@@ -2050,13 +2019,7 @@ class _ScheduleBriefingTile extends StatelessWidget {
                 timeText,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: AppColors.darkPrimary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                  height: 1.1,
-                  letterSpacing: 0,
-                ),
+                style: AppTypography.caption.copyWith(color: AppColors.primary),
               ),
             ),
           ),
@@ -2070,36 +2033,29 @@ class _ScheduleBriefingTile extends StatelessWidget {
                     schedule.title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppSpacing.sm),
                 Container(
                   constraints: const BoxConstraints(maxWidth: 96),
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+                    horizontal: AppSpacing.sm,
+                    vertical: AppSpacing.xs,
                   ),
                   decoration: BoxDecoration(
                     color: memberColorStyle.background,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppRadius.sm),
                     border: Border.all(color: memberColorStyle.border),
                   ),
                   child: Text(
                     schedule.memberNickname,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: AppTypography.caption.copyWith(
                       color: memberColorStyle.foreground,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      height: 1.15,
-                      letterSpacing: 0,
                     ),
                   ),
                 ),
@@ -2120,6 +2076,7 @@ class _ParkingBriefingTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final vehicleTitle = vehicle == null
         ? '차량'
         : '${vehicle!.nickname} · ${vehicle!.plateNumber}';
@@ -2132,12 +2089,12 @@ class _ParkingBriefingTile extends StatelessWidget {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: AppColors.darkPrimarySoft,
-              borderRadius: BorderRadius.circular(10),
+              color: AppColors.primarySoft,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
             ),
             child: Icon(
               CupertinoIcons.location_solid,
-              color: AppColors.darkPrimary,
+              color: AppColors.primary,
               size: 18,
             ),
           ),
@@ -2150,11 +2107,8 @@ class _ParkingBriefingTile extends StatelessWidget {
                   vehicleTitle,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkTextPrimary,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 3),
@@ -2162,11 +2116,8 @@ class _ParkingBriefingTile extends StatelessWidget {
                   record.locationText,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkTextSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -2310,16 +2261,17 @@ class _FamilyRequiredIntro extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return RefreshableScrollView(
       onRefresh: onReloadFamilies,
       children: [
-        const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xl),
         Container(
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            color: AppColors.darkSurface,
-            borderRadius: BorderRadius.circular(16),
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.lg),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x14000000),
@@ -2330,30 +2282,22 @@ class _FamilyRequiredIntro extends StatelessWidget {
           ),
           child: Icon(
             CupertinoIcons.check_mark_circled_solid,
-            color: AppColors.darkPrimary,
+            color: AppColors.primary,
             size: 34,
           ),
         ),
         const SizedBox(height: 22),
         Text(
           '$userNickname님,\n체키를 시작해 볼까요?',
-          style: TextStyle(
-            color: AppColors.darkTextPrimary,
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-            height: 1.16,
-            letterSpacing: 0,
+          style: AppTypography.titleLarge.copyWith(
+            color: AppColors.textPrimary,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         Text(
           '체키는 우리의 하루를 함께 체크하는 작은 비서예요. 우리의 일정과 주차 위치를 예쁘게 챙겨요.',
-          style: TextStyle(
-            color: AppColors.darkTextSecondary,
-            fontSize: 16,
-            height: 1.45,
-            fontWeight: FontWeight.w500,
-            letterSpacing: 0,
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
           ),
         ),
         const SizedBox(height: 18),
@@ -2364,7 +2308,7 @@ class _FamilyRequiredIntro extends StatelessWidget {
                 icon: CupertinoIcons.calendar,
                 title: '반복 일정 관리',
                 description: '반복 일정 시간을 그룹이 함께 확인',
-                color: AppColors.darkPrimary,
+                color: AppColors.primary,
               ),
             ),
             SizedBox(width: 10),
@@ -2378,16 +2322,10 @@ class _FamilyRequiredIntro extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         Text(
           '일정, 차량, 주차 기록은 모두 그룹 단위로 저장됩니다. 그룹을 만들거나 초대 링크를 수락하면 홈에서 바로 사용할 수 있어요.',
-          style: TextStyle(
-            color: AppColors.darkTextMuted,
-            fontSize: 14,
-            height: 1.42,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.labelSmall.copyWith(color: AppColors.textMuted),
         ),
         const SizedBox(height: 22),
         if (message != null) ...[
@@ -2398,39 +2336,25 @@ class _FamilyRequiredIntro extends StatelessWidget {
           height: 54,
           child: CupertinoButton.filled(
             padding: EdgeInsets.zero,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(AppRadius.md),
             onPressed: onOpenFamilyManagement,
             child: const Center(
-              child: Text(
-                '그룹 등록하기',
-                style: TextStyle(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                  letterSpacing: 0,
-                ),
-              ),
+              child: Text('그룹 등록하기', style: AppTypography.button),
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         SizedBox(
           height: 50,
           child: CupertinoButton(
             padding: EdgeInsets.zero,
-            color: AppColors.darkSurfaceElevated,
-            borderRadius: BorderRadius.circular(14),
+            color: AppColors.surfaceElevated,
+            borderRadius: BorderRadius.circular(AppRadius.md),
             onPressed: onReloadFamilies,
             child: Center(
               child: Text(
                 '그룹 목록 새로고침',
-                style: TextStyle(
-                  color: AppColors.darkPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                  height: 1,
-                  letterSpacing: 0,
-                ),
+                style: AppTypography.label.copyWith(color: AppColors.primary),
               ),
             ),
           ),
@@ -2455,14 +2379,15 @@ class _IntroFeaturePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(AppSpacing.md),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -2472,25 +2397,17 @@ class _IntroFeaturePill extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                height: 1.15,
-                letterSpacing: 0,
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               description,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppColors.darkTextSecondary,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                height: 1.3,
-                letterSpacing: 0,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -2507,23 +2424,18 @@ class _InlineMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Text(
           message,
-          style: TextStyle(
-            color: AppColors.darkDanger,
-            fontSize: 14,
-            height: 1.35,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.labelSmall.copyWith(color: AppColors.danger),
         ),
       ),
     );

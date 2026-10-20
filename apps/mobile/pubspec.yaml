@@ -16,7 +16,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.7.0+65
+version: 1.7.0+69
 
 environment:
   sdk: ^3.11.5
@@ -69,6 +69,35 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/branding/checky-icon-source.png
+    - assets/fonts/gowundodum/OFL.txt
+    - assets/fonts/gowunbatang/OFL.txt
+    - assets/fonts/parkdahyun/LICENSE.txt
+    - assets/fonts/poorstory/OFL.txt
+    - assets/fonts/incheonhimchan/LICENSE.txt
+
+  fonts:
+    - family: CheckyGowunDodum
+      fonts:
+        - asset: assets/fonts/gowundodum/GowunDodum-Regular.ttf
+          weight: 400
+    - family: CheckyGowunBatang
+      fonts:
+        - asset: assets/fonts/gowunbatang/GowunBatang-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/gowunbatang/GowunBatang-Bold.ttf
+          weight: 700
+    - family: CheckyParkDahyun
+      fonts:
+        - asset: assets/fonts/parkdahyun/Ownglyph-ParkDaHyun.ttf
+          weight: 400
+    - family: CheckyPoorStory
+      fonts:
+        - asset: assets/fonts/poorstory/PoorStory-Regular.ttf
+          weight: 400
+    - family: CheckyIncheonHimchan
+      fonts:
+        - asset: assets/fonts/incheonhimchan/ICEHimchan-Regular.ttf
+          weight: 400
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

@@ -1,8 +1,104 @@
 import SwiftUI
 import WidgetKit
+import CoreText
+import UIKit
 
 private let appGroupIdentifier = "group.com.family.checky.mobile"
 private let widgetKind = "CheckyHomeWidget"
+
+struct CheckyWidgetPalette {
+  let background: Color
+  let surface: Color
+  let primary: Color
+  let textPrimary: Color
+  let textSecondary: Color
+  let border: Color
+
+  init(_ values: [String: Any]?, dark: Bool) {
+    // Migration fallback before the upgraded app first shares its theme.
+    let fallback: [String: UInt32] = dark
+      ? ["background": 0xFF244A40, "surface": 0xFF182725, "primary": 0xFF75DAC5,
+         "textPrimary": 0xFFF0FCF7, "textSecondary": 0xFFC3D9D0, "border": 0xFF365148]
+      : ["background": 0xFFD5EEE7, "surface": 0xFFF8FFFC, "primary": 0xFF067168,
+         "textPrimary": 0xFF142E29, "textSecondary": 0xFF405F56, "border": 0xFFC8DED5]
+    func color(_ key: String) -> Color {
+      let argb = (values?[key] as? NSNumber)?.uint32Value ?? fallback[key]!
+      return Color(
+        .sRGB,
+        red: Double((argb >> 16) & 0xFF) / 255,
+        green: Double((argb >> 8) & 0xFF) / 255,
+        blue: Double(argb & 0xFF) / 255,
+        opacity: Double((argb >> 24) & 0xFF) / 255
+      )
+    }
+    background = color("background")
+    surface = color("surface")
+    primary = color("primary")
+    textPrimary = color("textPrimary")
+    textSecondary = color("textSecondary")
+    border = color("border")
+  }
+}
+
+struct CheckyWidgetAppearance {
+  let mode: String
+  let font: String
+  let light: CheckyWidgetPalette
+  let dark: CheckyWidgetPalette
+
+  static func load() -> CheckyWidgetAppearance {
+    let defaults = UserDefaults(suiteName: appGroupIdentifier) ?? .standard
+    let json = defaults.string(forKey: "appearance")?.data(using: .utf8)
+    let values = json.flatMap { try? JSONSerialization.jsonObject(with: $0) } as? [String: Any]
+    return CheckyWidgetAppearance(
+      mode: values?["mode"] as? String ?? "system",
+      font: values?["font"] as? String ?? "system",
+      light: CheckyWidgetPalette(values?["light"] as? [String: Any], dark: false),
+      dark: CheckyWidgetPalette(values?["dark"] as? [String: Any], dark: true)
+    )
+  }
+
+  func palette(for scheme: ColorScheme) -> CheckyWidgetPalette {
+    switch mode {
+    case "light": return light
+    case "dark": return dark
+    default: return scheme == .dark ? dark : light
+    }
+  }
+}
+
+enum CheckyWidgetFont {
+  // Original font files are resources of the extension (not a shared-container
+  // download), so WidgetKit's rendering process can also access them.
+  static func resolve(_ value: String, size: CGFloat, weight: Font.Weight = .regular) -> Font {
+    let file: String
+    let name: String
+    switch value {
+    case "gowun-dodum":
+      file = "gowundodum/GowunDodum-Regular.ttf"; name = "GowunDodum-Regular"
+    case "gowun-batang":
+      let bold = weight == .bold || weight == .semibold
+      file = bold ? "gowunbatang/GowunBatang-Bold.ttf" : "gowunbatang/GowunBatang-Regular.ttf"
+      name = bold ? "GowunBatang-Bold" : "GowunBatang-Regular"
+    case "park-dahyun", "ainmom":
+      file = "parkdahyun/Ownglyph-ParkDaHyun.ttf"; name = "Ownglyph_PDH-Rg"
+    case "poor-story":
+      file = "poorstory/PoorStory-Regular.ttf"; name = "PoorStory-Regular"
+    case "incheon-himchan":
+      file = "incheonhimchan/ICEHimchan-Regular.ttf"; name = "iceHimchan-Rg"
+    default:
+      return .system(size: size, weight: weight)
+    }
+    if UIFont(name: name, size: size) == nil,
+       let url = Bundle.main.resourceURL?.appendingPathComponent("fonts/\(file)") {
+      CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+    }
+    guard UIFont(name: name, size: size) != nil else {
+      return .system(size: size, weight: weight)
+    }
+    return .custom(name, fixedSize: size)
+  }
+}
 
 struct CheckyHomeWidgetScheduleItem: Identifiable {
   let id: Int
@@ -29,6 +125,7 @@ struct CheckyHomeWidgetEntry: TimelineEntry {
   let moreCount: Int
   var parkingItems: [CheckyHomeWidgetParkingItem] = []
   var parkingMoreCount: Int = 0
+  var appearance: CheckyWidgetAppearance = .load()
 }
 
 struct CheckyHomeWidgetProvider: TimelineProvider {
@@ -124,8 +221,15 @@ struct CheckyHomeWidgetProvider: TimelineProvider {
 
 struct CheckyHomeWidgetView: View {
   @Environment(\.widgetFamily) private var widgetFamily
+  @Environment(\.colorScheme) private var colorScheme
 
   let entry: CheckyHomeWidgetEntry
+
+  private var palette: CheckyWidgetPalette { entry.appearance.palette(for: colorScheme) }
+
+  private func font(size: CGFloat, weight: Font.Weight = .regular) -> Font {
+    CheckyWidgetFont.resolve(entry.appearance.font, size: size, weight: weight)
+  }
 
   private var isSmall: Bool { widgetFamily == .systemSmall }
   private var displayedItems: [CheckyHomeWidgetScheduleItem] {
@@ -172,25 +276,25 @@ struct CheckyHomeWidgetView: View {
 
       if isSmall {
         Text(timeText(for: item))
-          .font(.system(size: 8, weight: .semibold))
-          .foregroundStyle(Color(red: 0.53, green: 0.38, blue: 0.31))
+          .font(font(size: 8, weight: .semibold))
+          .foregroundStyle(palette.textSecondary)
           .frame(width: 31, alignment: .leading)
           .lineLimit(1)
         Text(item.title)
-          .font(.system(size: 9, weight: .bold))
-          .foregroundStyle(Color(red: 0.29, green: 0.20, blue: 0.16))
+          .font(font(size: 9, weight: .bold))
+          .foregroundStyle(palette.textPrimary)
           .lineLimit(1)
       } else {
         VStack(alignment: .leading, spacing: 1) {
           HStack(spacing: 3) {
             Text(item.title)
-              .font(.system(size: 10, weight: .bold))
-              .foregroundStyle(Color(red: 0.29, green: 0.20, blue: 0.16))
+              .font(font(size: 10, weight: .bold))
+              .foregroundStyle(palette.textPrimary)
               .lineLimit(1)
             Spacer(minLength: 0)
             if !item.memberName.isEmpty {
               Text(item.memberName)
-                .font(.system(size: 8, weight: .bold))
+                .font(font(size: 8, weight: .bold))
                 .foregroundStyle(memberForegroundColor(for: item))
                 .lineLimit(1)
                 .padding(.horizontal, 4)
@@ -200,8 +304,8 @@ struct CheckyHomeWidgetView: View {
             }
           }
           Text(timeText(for: item))
-            .font(.system(size: 9, weight: .regular))
-            .foregroundStyle(Color(red: 0.53, green: 0.38, blue: 0.31))
+            .font(font(size: 9, weight: .regular))
+            .foregroundStyle(palette.textSecondary)
             .lineLimit(1)
         }
       }
@@ -210,7 +314,7 @@ struct CheckyHomeWidgetView: View {
     .padding(.horizontal, isSmall ? 4 : 5)
     .padding(.vertical, isSmall ? 3 : 3)
     .frame(maxWidth: .infinity, alignment: .leading)
-    .background(Color(red: 0.98, green: 0.96, blue: 0.95))
+    .background(palette.surface)
     .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
   }
 
@@ -220,13 +324,13 @@ struct CheckyHomeWidgetView: View {
 
   private func heading(_ title: String, more: Int) -> some View {
     HStack(spacing: 2) {
-      Text(title).font(.system(size: isSmall ? 10 : 12, weight: .bold))
+      Text(title).font(font(size: isSmall ? 10 : 12, weight: .bold))
       Spacer(minLength: 0)
       if more > 0 {
-        Text("+\(more)").font(.system(size: 8, weight: .medium))
+        Text("+\(more)").font(font(size: 8, weight: .medium))
       }
     }
-    .foregroundStyle(Color(red: 0.08, green: 0.38, blue: 0.35))
+    .foregroundStyle(palette.primary)
     .lineLimit(1)
   }
 
@@ -244,31 +348,32 @@ struct CheckyHomeWidgetView: View {
       heading("주차 위치", more: entry.parkingMoreCount + entry.parkingItems.count - displayedParking.count)
       if displayedParking.isEmpty {
         Text("등록된 주차 위치가 없습니다.")
-          .font(.system(size: isSmall ? 8 : 10))
-          .foregroundStyle(.secondary)
+          .font(font(size: isSmall ? 8 : 10))
+          .foregroundStyle(palette.textSecondary)
       }
       ForEach(displayedParking) { item in
         Group {
           if isSmall {
             HStack(spacing: 4) {
-              Text(item.vehicleName).fontWeight(.bold)
+              Text(item.vehicleName).font(font(size: 9, weight: .bold))
                 .frame(maxWidth: 44, alignment: .leading)
               Text(item.location).frame(maxWidth: .infinity, alignment: .leading)
             }
-            .font(.system(size: 9))
+            .font(font(size: 9))
           } else {
             VStack(alignment: .leading, spacing: 2) {
-              Text(item.vehicleName).font(.system(size: 10, weight: .bold))
-              Text(item.location).font(.system(size: 9))
+              Text(item.vehicleName).font(font(size: 10, weight: .bold))
+              Text(item.location).font(font(size: 9))
+                .foregroundStyle(palette.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
           }
         }
         .lineLimit(1)
-        .foregroundStyle(Color(red: 0.12, green: 0.33, blue: 0.30))
+        .foregroundStyle(palette.textPrimary)
         .padding(.horizontal, 5)
         .padding(.vertical, 3)
-        .background(Color(red: 0.95, green: 0.99, blue: 0.97))
+        .background(palette.surface)
         .clipShape(RoundedRectangle(cornerRadius: 6))
       }
       Spacer(minLength: 0)
@@ -280,8 +385,8 @@ struct CheckyHomeWidgetView: View {
   private var eventList: some View {
     if entry.items.isEmpty {
       Text("오늘 등록된 일정이 없습니다.")
-        .font(.system(size: isSmall ? 8 : 10))
-        .foregroundStyle(.secondary)
+        .font(font(size: isSmall ? 8 : 10))
+        .foregroundStyle(palette.textSecondary)
         .frame(maxWidth: .infinity, alignment: .leading)
     } else {
       ForEach(displayedItems) { item in
@@ -300,20 +405,20 @@ struct CheckyHomeWidgetView: View {
       } else if isSmall {
         VStack(alignment: .leading, spacing: 5) {
           scheduleSection
-          Divider()
+          Divider().overlay(palette.border)
           parkingSection
         }
       } else {
         HStack(alignment: .top, spacing: 8) {
           scheduleSection
-          Divider()
+          Divider().overlay(palette.border)
           parkingSection
         }
       }
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     .padding(isSmall ? 0 : 2)
-    .widgetBackground()
+    .widgetBackground(palette.background)
   }
 }
 
@@ -335,8 +440,7 @@ struct CheckyHomeWidget: Widget {
 
 private extension View {
   @ViewBuilder
-  func widgetBackground() -> some View {
-    let color = Color(red: 0.84, green: 0.95, blue: 0.93)
+  func widgetBackground(_ color: Color) -> some View {
     if #available(iOS 17.0, *) {
       containerBackground(for: .widget) { color }
     } else {

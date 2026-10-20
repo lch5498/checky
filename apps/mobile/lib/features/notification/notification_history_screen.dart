@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 
 import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
+import '../../design_system/app_spacing.dart';
+import '../../design_system/app_typography.dart';
 import '../../shared/refreshable_scroll_view.dart';
 
 class NotificationHistoryScreen extends StatefulWidget {
@@ -62,6 +64,7 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(middle: Text('알림')),
       child: SafeArea(
@@ -69,7 +72,12 @@ class _NotificationHistoryScreenState extends State<NotificationHistoryScreen> {
             ? const Center(child: CupertinoActivityIndicator())
             : RefreshableScrollView(
                 onRefresh: _loadNotifications,
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.page,
+                  18,
+                  AppSpacing.page,
+                  28,
+                ),
                 children: [
                   if (_message != null)
                     _NotificationMessage(
@@ -97,12 +105,13 @@ class _NotificationHistoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final familyName = notification.familyName;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 15),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -111,16 +120,16 @@ class _NotificationHistoryTile extends StatelessWidget {
             width: 38,
             height: 38,
             decoration: BoxDecoration(
-              color: AppColors.darkPrimarySoft,
+              color: AppColors.primarySoft,
               borderRadius: BorderRadius.circular(11),
             ),
             child: Icon(
               _notificationIcon(notification.type),
-              color: AppColors.darkPrimary,
+              color: AppColors.primary,
               size: 20,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,23 +138,17 @@ class _NotificationHistoryTile extends StatelessWidget {
                   notification.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkTextPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   notification.body,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkTextSecondary,
-                    fontSize: 14,
-                    height: 1.35,
-                    letterSpacing: 0,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 7),
@@ -154,11 +157,8 @@ class _NotificationHistoryTile extends StatelessWidget {
                     if (familyName != null && familyName.isNotEmpty) familyName,
                     _formatSentAt(notification.sentAt),
                   ].join(' · '),
-                  style: TextStyle(
-                    color: AppColors.darkTextMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textMuted,
                   ),
                 ),
               ],
@@ -175,6 +175,7 @@ class _NotificationEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 112),
       child: Center(
@@ -182,17 +183,14 @@ class _NotificationEmptyState extends StatelessWidget {
           children: [
             Icon(
               CupertinoIcons.bell_slash,
-              color: AppColors.darkTextMuted,
+              color: AppColors.textMuted,
               size: 34,
             ),
             const SizedBox(height: 14),
             Text(
               '받은 알림이 없습니다.',
-              style: TextStyle(
-                color: AppColors.darkTextSecondary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
+              style: AppTypography.label.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -210,28 +208,21 @@ class _NotificationMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Column(
       children: [
         Text(
           message,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            color: AppColors.darkDanger,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.labelSmall.copyWith(color: AppColors.danger),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         CupertinoButton(
-          color: AppColors.darkSurfaceElevated,
+          color: AppColors.surfaceElevated,
           onPressed: onRetry,
           child: Text(
             '다시 시도',
-            style: TextStyle(
-              color: AppColors.darkPrimary,
-              fontWeight: FontWeight.w800,
-            ),
+            style: AppTypography.label.copyWith(color: AppColors.primary),
           ),
         ),
       ],

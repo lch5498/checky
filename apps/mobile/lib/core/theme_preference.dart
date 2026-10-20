@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../design_system/app_theme_preset.dart';
+import '../design_system/app_font_preset.dart';
+import 'home_widget_service.dart';
+
 enum AppThemePreference {
   system('system', '시스템'),
   light('light', '라이트'),
@@ -43,21 +47,34 @@ class ThemePreferenceController extends ChangeNotifier {
   }) : _storage = storage;
 
   static const _storageKey = 'settings.themePreference';
+  static const _presetStorageKey = 'settings.themePreset';
+  static const _fontStorageKey = 'settings.fontPreset';
 
   final FlutterSecureStorage _storage;
 
   AppThemePreference _preference = AppThemePreference.system;
+  AppThemePreset _preset = AppThemePreset.mint;
+  AppFontPreset _font = AppFontPreset.system;
   bool _isLoaded = false;
 
   AppThemePreference get preference => _preference;
+  AppThemePreset get preset => _preset;
+  AppFontPreset get font => _font;
   ThemeMode get themeMode => _preference.themeMode;
   bool get isLoaded => _isLoaded;
 
   Future<void> load() async {
-    final value = await _storage.read(key: _storageKey);
-    _preference = AppThemePreference.fromStorageValue(value);
+    final values = await Future.wait([
+      _storage.read(key: _storageKey),
+      _storage.read(key: _presetStorageKey),
+      _storage.read(key: _fontStorageKey),
+    ]);
+    _preference = AppThemePreference.fromStorageValue(values[0]);
+    _preset = AppThemePreset.fromStorageValue(values[1]);
+    _font = AppFontPreset.fromStorageValue(values[2]);
     _isLoaded = true;
     notifyListeners();
+    await _syncWidgetAppearance();
   }
 
   Future<void> setPreference(AppThemePreference preference) async {
@@ -70,7 +87,32 @@ class ThemePreferenceController extends ChangeNotifier {
     notifyListeners();
 
     await _storage.write(key: _storageKey, value: preference.storageValue);
+    await _syncWidgetAppearance();
   }
+
+  Future<void> setPreset(AppThemePreset preset) async {
+    if (_preset == preset && _isLoaded) return;
+    _preset = preset;
+    _isLoaded = true;
+    notifyListeners();
+    await _storage.write(key: _presetStorageKey, value: preset.storageValue);
+    await _syncWidgetAppearance();
+  }
+
+  Future<void> setFont(AppFontPreset font) async {
+    if (_font == font && _isLoaded) return;
+    _font = font;
+    _isLoaded = true;
+    notifyListeners();
+    await _storage.write(key: _fontStorageKey, value: font.storageValue);
+    await _syncWidgetAppearance();
+  }
+
+  Future<void> _syncWidgetAppearance() => HomeWidgetService.updateAppearance(
+    preset: _preset,
+    mode: _preference.storageValue,
+    font: _font,
+  );
 }
 
 class ThemePreferenceScope

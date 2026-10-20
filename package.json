@@ -13,8 +13,11 @@
     "lint": "npm --workspaces --if-present run lint",
     "test": "npm --workspaces --if-present run test",
     "mobile:analyze": "cd apps/mobile && flutter analyze",
+    "mobile:design:check": "cd apps/mobile && dart tool/check_design.dart",
     "mobile:test": "cd apps/mobile && flutter test",
-    "mobile:build:android": "scripts/build-android.sh"
+    "mobile:build:android": "scripts/build-android.sh",
+    "mobile:release": "scripts/release-mobile.sh",
+    "mobile:release:test": "python3 -m unittest discover -s scripts/tests -p 'test_*.py'"
   },
   "engines": {
     "node": ">=22"

@@ -2,6 +2,8 @@ import 'package:flutter/cupertino.dart';
 
 import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
+import '../../design_system/app_spacing.dart';
+import '../../design_system/app_typography.dart';
 import '../../shared/refreshable_scroll_view.dart';
 import '../education/education_screen.dart';
 import '../schedule/schedule_screen.dart';
@@ -213,29 +215,33 @@ class _GroupActivityLogScreenState extends State<GroupActivityLogScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final activities = _selectedType == GroupActivityType.all
         ? _activities
         : _activities.where((item) => item.type == _selectedType).toList();
 
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: const CupertinoNavigationBar(middle: Text('그룹 활동')),
       child: SafeArea(
         child: _isLoading
             ? const Center(child: CupertinoActivityIndicator())
             : RefreshableScrollView(
                 onRefresh: _loadActivities,
-                padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.page,
+                  18,
+                  AppSpacing.page,
+                  28,
+                ),
                 children: [
                   Text(
                     '${widget.family.name}의 최근 7일 활동',
-                    style: TextStyle(
-                      color: AppColors.darkTextSecondary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   _ActivityFilter(
                     selectedType: _selectedType,
                     onChanged: (type) {
@@ -276,12 +282,13 @@ class _ActivityFilter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       width: double.infinity,
       child: CupertinoSlidingSegmentedControl<GroupActivityType>(
         groupValue: selectedType,
-        backgroundColor: AppColors.darkSurfaceElevated,
-        thumbColor: AppColors.darkPrimary,
+        backgroundColor: AppColors.surfaceElevated,
+        thumbColor: AppColors.primary,
         onValueChanged: (value) {
           if (value != null) {
             onChanged(value);
@@ -290,15 +297,13 @@ class _ActivityFilter extends StatelessWidget {
         children: {
           for (final type in GroupActivityType.values)
             type: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Text(
                 _activityTypeLabel(type),
-                style: TextStyle(
+                style: AppTypography.caption.copyWith(
                   color: selectedType == type
-                      ? AppColors.darkBackground
-                      : AppColors.darkTextPrimary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
+                      ? AppColors.onPrimary
+                      : AppColors.textPrimary,
                 ),
               ),
             ),
@@ -316,12 +321,13 @@ class _ActivityTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final color = _activityColor(activity.type);
 
     final child = Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,7 +341,7 @@ class _ActivityTile extends StatelessWidget {
             ),
             child: Icon(_activityIcon(activity.type), color: color, size: 20),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,40 +350,34 @@ class _ActivityTile extends StatelessWidget {
                   activity.title,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkTextPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.textPrimary,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 Text(
                   '${activity.actorNickname ?? '알 수 없음'} · ${activity.detail}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkTextSecondary,
-                    fontSize: 14,
-                    height: 1.35,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 7),
                 Text(
                   _activityTimeText(activity.createdAt),
-                  style: TextStyle(
-                    color: AppColors.darkTextMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textMuted,
                   ),
                 ),
               ],
             ),
           ),
           if (onPressed != null) ...[
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             Icon(
               CupertinoIcons.chevron_right,
-              color: AppColors.darkTextMuted,
+              color: AppColors.textMuted,
               size: 16,
             ),
           ],
@@ -404,25 +404,20 @@ class _ActivityEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 112),
       child: Center(
         child: Column(
           children: [
-            Icon(
-              CupertinoIcons.clock,
-              color: AppColors.darkTextMuted,
-              size: 34,
-            ),
+            Icon(CupertinoIcons.clock, color: AppColors.textMuted, size: 34),
             const SizedBox(height: 14),
             Text(
               type == GroupActivityType.all
                   ? '최근 활동이 없습니다.'
                   : '${_activityTypeLabel(type)} 활동이 없습니다.',
-              style: TextStyle(
-                color: AppColors.darkTextSecondary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+              style: AppTypography.label.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -440,12 +435,13 @@ class _ActivityMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Column(
       children: [
         Text(
           message,
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.darkDanger, fontSize: 14),
+          style: AppTypography.bodySmall.copyWith(color: AppColors.danger),
         ),
         CupertinoButton(onPressed: onRetry, child: const Text('다시 시도')),
       ],
@@ -475,11 +471,11 @@ IconData _activityIcon(GroupActivityType type) {
 
 Color _activityColor(GroupActivityType type) {
   return switch (type) {
-    GroupActivityType.all => AppColors.darkTextMuted,
+    GroupActivityType.all => AppColors.textMuted,
     GroupActivityType.schedule => CupertinoColors.systemBlue,
     GroupActivityType.parking => CupertinoColors.systemOrange,
     GroupActivityType.scrap => CupertinoColors.systemPurple,
-    GroupActivityType.travel => AppColors.darkPrimary,
+    GroupActivityType.travel => AppColors.primary,
   };
 }
 

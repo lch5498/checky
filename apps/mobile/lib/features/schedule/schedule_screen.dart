@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import '../../core/api_client.dart';
 import '../../core/group_refresh.dart';
 import '../../design_system/app_colors.dart';
+import '../../design_system/app_radius.dart';
+import '../../design_system/app_spacing.dart';
+import '../../design_system/app_typography.dart';
 import '../../shared/alert_offset_picker.dart';
 import '../../shared/member_filter.dart';
 import '../../shared/schedule_section_switcher.dart';
@@ -681,8 +684,8 @@ class _ScheduleScreenState extends State<ScheduleScreen>
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final brightness = CupertinoTheme.brightnessOf(context);
-    AppColors.useBrightness(brightness);
     final dashboard = _dashboard;
     final memberColors = _memberFilterColors(dashboard?.members ?? const []);
     final schedulesInRange = (dashboard?.schedules ?? const <AppSchedule>[])
@@ -706,7 +709,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     final calendarKey = ValueKey('schedule-calendar-${brightness.name}');
 
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: _FeatureFamilyTitle(
           family: _family,
@@ -733,23 +736,27 @@ class _ScheduleScreenState extends State<ScheduleScreen>
             SliverFillRemaining(
               hasScrollBody: true,
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(0, 18, 0, 32),
+                padding: const EdgeInsets.fromLTRB(0, 18, 0, AppSpacing.xxl),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (widget.selectedScheduleSection != null &&
                         widget.onScheduleSectionChanged != null) ...[
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.page,
+                        ),
                         child: ScheduleSectionSwitcher(
                           selectedSection: widget.selectedScheduleSection!,
                           onSectionChanged: widget.onScheduleSectionChanged!,
                         ),
                       ),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: AppSpacing.lg),
                     ],
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.page,
+                      ),
                       child: _ScheduleHeader(
                         mode: _mode,
                         rangeLabel: _rangeLabel(_rangeStart, _rangeEnd, _mode),
@@ -772,7 +779,9 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     if (_message != null) ...[
                       const SizedBox(height: 14),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.page,
+                        ),
                         child: _InlineMessage(message: _message!),
                       ),
                     ],
@@ -784,7 +793,9 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     else if (dashboard == null)
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.page,
+                          ),
                           child: _EmptyState(
                             icon: CupertinoIcons.calendar,
                             title: '일정을 불러오지 못했습니다.',
@@ -797,7 +808,9 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     else if (dashboard.members.isEmpty)
                       Expanded(
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.page,
+                          ),
                           child: _EmptyState(
                             icon: CupertinoIcons.person_2,
                             title: '그룹 구성원이 없습니다.',
@@ -863,6 +876,7 @@ class _FeatureFamilyTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final title = '${family.name} $featureName';
 
     if (!canSwitch) {
@@ -870,13 +884,7 @@ class _FeatureFamilyTitle extends StatelessWidget {
         title,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          inherit: false,
-          color: AppColors.darkTextPrimary,
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0,
-        ),
+        style: AppTypography.titleSmall.copyWith(color: AppColors.textPrimary),
       );
     }
 
@@ -892,16 +900,12 @@ class _FeatureFamilyTitle extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                inherit: false,
-                color: AppColors.darkTextPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
+              style: AppTypography.titleSmall.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.xs),
           const Icon(CupertinoIcons.chevron_down, size: 15),
         ],
       ),
@@ -948,10 +952,11 @@ class _ScheduleHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      padding: const EdgeInsets.fromLTRB(0, 0, 0, 16),
+      padding: const EdgeInsets.fromLTRB(0, 0, 0, AppSpacing.lg),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -978,7 +983,7 @@ class _ScheduleHeader extends StatelessWidget {
               ],
             ),
           ],
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           Row(
             children: [
               CupertinoButton(
@@ -991,15 +996,12 @@ class _ScheduleHeader extends StatelessWidget {
                 child: Text(
                   rangeLabel,
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppColors.darkTextPrimary,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                  style: AppTypography.titleSmall.copyWith(
+                    color: AppColors.textPrimary,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               _CalendarModeSegment(mode: mode, onModeChanged: onModeChanged),
               const SizedBox(width: 2),
               CupertinoButton(
@@ -1014,11 +1016,8 @@ class _ScheduleHeader extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               '구성원 권한은 조회만 가능합니다.',
-              style: TextStyle(
-                color: AppColors.darkTextSecondary,
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                letterSpacing: 0,
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -1039,14 +1038,13 @@ class _AnniversaryFilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       height: 28,
       child: CupertinoButton(
         padding: const EdgeInsets.symmetric(horizontal: 6),
-        color: isActive
-            ? CupertinoColors.systemPurple
-            : AppColors.darkBackground,
-        borderRadius: BorderRadius.circular(8),
+        color: isActive ? CupertinoColors.systemPurple : AppColors.background,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         onPressed: onPressed,
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1055,19 +1053,16 @@ class _AnniversaryFilterButton extends StatelessWidget {
               isActive
                   ? CupertinoIcons.check_mark_circled_solid
                   : CupertinoIcons.circle,
-              color: isActive ? CupertinoColors.white : AppColors.darkTextMuted,
+              color: isActive ? CupertinoColors.white : AppColors.textMuted,
               size: 13,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: AppSpacing.xs),
             Text(
               '기념일',
-              style: TextStyle(
+              style: AppTypography.caption.copyWith(
                 color: isActive
                     ? CupertinoColors.white
-                    : AppColors.darkTextSecondary,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+                    : AppColors.textSecondary,
               ),
             ),
           ],
@@ -1085,12 +1080,13 @@ class _TravelFilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       height: 28,
       child: CupertinoButton(
         padding: const EdgeInsets.symmetric(horizontal: 6),
-        color: isActive ? CupertinoColors.systemTeal : AppColors.darkBackground,
-        borderRadius: BorderRadius.circular(8),
+        color: isActive ? AppColors.primary : AppColors.background,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
         onPressed: onPressed,
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -1099,19 +1095,16 @@ class _TravelFilterButton extends StatelessWidget {
               isActive
                   ? CupertinoIcons.check_mark_circled_solid
                   : CupertinoIcons.circle,
-              color: isActive ? CupertinoColors.white : AppColors.darkTextMuted,
+              color: isActive ? CupertinoColors.white : AppColors.textMuted,
               size: 13,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: AppSpacing.xs),
             Text(
               '여행',
-              style: TextStyle(
+              style: AppTypography.caption.copyWith(
                 color: isActive
                     ? CupertinoColors.white
-                    : AppColors.darkTextSecondary,
-                fontSize: 11,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+                    : AppColors.textSecondary,
               ),
             ),
           ],
@@ -1129,20 +1122,30 @@ class _CalendarModeSegment extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoSlidingSegmentedControl<_CalendarMode>(
       groupValue: mode,
       padding: const EdgeInsets.all(2),
       children: const {
         _CalendarMode.month: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
+          ),
           child: Text('월'),
         ),
         _CalendarMode.week: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
+          ),
           child: Text('주'),
         ),
         _CalendarMode.day: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          padding: EdgeInsets.symmetric(
+            horizontal: AppSpacing.sm,
+            vertical: AppSpacing.xs,
+          ),
           child: Text('일'),
         ),
       },
@@ -1185,6 +1188,7 @@ class _PagedCalendarBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return PageView.builder(
       controller: controller,
       itemCount: 3,
@@ -1253,6 +1257,7 @@ class _CalendarBoard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     switch (mode) {
       case _CalendarMode.day:
         return _DayCalendar(
@@ -1359,19 +1364,20 @@ class _DayCalendarState extends State<_DayCalendar> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       decoration: _calendarDecoration,
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           ColoredBox(
-            color: AppColors.darkSurfaceElevated,
+            color: AppColors.surfaceElevated,
             child: _CalendarTitleBar(
               title: _dayLabel(widget.date),
               holidayName: widget.holiday?.name,
             ),
           ),
-          Container(height: 1, color: AppColors.darkBorder),
+          Container(height: 1, color: AppColors.border),
           Expanded(
             child: SingleChildScrollView(
               controller: _scrollController,
@@ -1467,6 +1473,7 @@ class _WeekCalendarState extends State<_WeekCalendar> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final days = List.generate(7, (index) {
       return widget.weekStart.add(Duration(days: index));
     });
@@ -1477,16 +1484,14 @@ class _WeekCalendarState extends State<_WeekCalendar> {
       child: Column(
         children: [
           ColoredBox(
-            color: AppColors.darkSurfaceElevated,
+            color: AppColors.surfaceElevated,
             child: Row(
               children: [
                 Container(
                   width: _weekTimeColumnWidth,
                   height: 70,
                   decoration: BoxDecoration(
-                    border: Border(
-                      right: BorderSide(color: AppColors.darkBorder),
-                    ),
+                    border: Border(right: BorderSide(color: AppColors.border)),
                   ),
                 ),
                 ...days.map(
@@ -1500,7 +1505,7 @@ class _WeekCalendarState extends State<_WeekCalendar> {
               ],
             ),
           ),
-          Container(height: 1, color: AppColors.darkBorder),
+          Container(height: 1, color: AppColors.border),
           Expanded(
             child: SingleChildScrollView(
               controller: _scrollController,
@@ -1540,6 +1545,7 @@ class _TimeAxis extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       width: width,
       height: _calendarGridHeight,
@@ -1552,21 +1558,21 @@ class _TimeAxis extends StatelessWidget {
               right: 0,
               height: _calendarHourRowHeight,
               child: Container(
-                padding: const EdgeInsets.only(top: 8, right: 4),
+                padding: const EdgeInsets.only(
+                  top: AppSpacing.sm,
+                  right: AppSpacing.xs,
+                ),
                 alignment: Alignment.topRight,
                 decoration: BoxDecoration(
                   border: Border(
-                    top: BorderSide(color: AppColors.darkBorder),
-                    right: BorderSide(color: AppColors.darkBorder),
+                    top: BorderSide(color: AppColors.border),
+                    right: BorderSide(color: AppColors.border),
                   ),
                 ),
                 child: Text(
                   _hourLabel(hour),
-                  style: TextStyle(
-                    color: AppColors.darkTextMuted,
-                    fontSize: 8,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
+                  style: AppTypography.calendar.copyWith(
+                    color: AppColors.textMuted,
                   ),
                 ),
               ),
@@ -1598,6 +1604,7 @@ class _TimedDayColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final layouts = _buildTimedScheduleLayouts(schedules, date);
 
     return LayoutBuilder(
@@ -1623,10 +1630,10 @@ class _TimedDayColumn extends StatelessWidget {
                   child: Container(
                     decoration: BoxDecoration(
                       border: Border(
-                        top: BorderSide(color: AppColors.darkBorder),
-                        right: BorderSide(color: AppColors.darkBorder),
+                        top: BorderSide(color: AppColors.border),
+                        right: BorderSide(color: AppColors.border),
                         left: showLeftBorder
-                            ? BorderSide(color: AppColors.darkBorder)
+                            ? BorderSide(color: AppColors.border)
                             : BorderSide.none,
                       ),
                     ),
@@ -1674,6 +1681,7 @@ class _TimedScheduleBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final style = MemberFilterColorStyle.from(color);
 
     return CupertinoButton(
@@ -1683,7 +1691,10 @@ class _TimedScheduleBlock extends StatelessWidget {
       child: Container(
         width: double.infinity,
         height: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.xs,
+          vertical: AppSpacing.xs,
+        ),
         decoration: BoxDecoration(
           color: style.background,
           borderRadius: BorderRadius.circular(7),
@@ -1716,12 +1727,8 @@ class _TimedScheduleBlock extends StatelessWidget {
                     maxLines: titleLines,
                     overflow: TextOverflow.ellipsis,
                     softWrap: true,
-                    style: TextStyle(
+                    style: AppTypography.calendar.copyWith(
                       color: style.foreground,
-                      fontSize: 9,
-                      height: 1.08,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
                     ),
                   ),
                 ),
@@ -1731,12 +1738,8 @@ class _TimedScheduleBlock extends StatelessWidget {
                     schedule.memberNickname,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: AppTypography.calendar.copyWith(
                       color: style.foreground,
-                      fontSize: 8,
-                      height: 1.1,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
                     ),
                   ),
                 ],
@@ -1907,6 +1910,7 @@ class _MonthCalendar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final gridStart = monthStart.subtract(
       Duration(days: monthStart.weekday % 7),
     );
@@ -1923,7 +1927,7 @@ class _MonthCalendar extends StatelessWidget {
       child: Column(
         children: [
           ColoredBox(
-            color: AppColors.darkSurfaceElevated,
+            color: AppColors.surfaceElevated,
             child: Row(
               children: List.generate(
                 7,
@@ -1936,7 +1940,7 @@ class _MonthCalendar extends StatelessWidget {
               ),
             ),
           ),
-          Container(height: 1, color: AppColors.darkBorder),
+          Container(height: 1, color: AppColors.border),
           ...weeks.map(
             (week) => _MonthWeekRow(
               week: week,
@@ -1957,7 +1961,7 @@ class _MonthCalendar extends StatelessWidget {
 
 const double _monthBaseCellHeight = 92.0;
 const double _monthCellHeaderHeight = 40.0;
-const double _monthScheduleSlotHeight = 17.0;
+const double _monthScheduleSlotHeight = 20.0;
 
 double _monthWeekRowHeight(int maxScheduleCount) {
   return (_monthCellHeaderHeight + maxScheduleCount * _monthScheduleSlotHeight)
@@ -1973,18 +1977,15 @@ class _CalendarTitleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final isHoliday = holidayName != null;
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      padding: const EdgeInsets.fromLTRB(14, AppSpacing.md, 14, AppSpacing.md),
       child: Row(
         children: [
-          const Icon(
-            CupertinoIcons.calendar,
-            color: CupertinoColors.systemTeal,
-            size: 18,
-          ),
-          const SizedBox(width: 8),
+          Icon(CupertinoIcons.calendar, color: AppColors.primary, size: 18),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text.rich(
               TextSpan(
@@ -1994,18 +1995,17 @@ class _CalendarTitleBar extends StatelessWidget {
                     const TextSpan(text: ' - '),
                     TextSpan(
                       text: holidayName,
-                      style: const TextStyle(color: CupertinoColors.systemRed),
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: CupertinoColors.systemRed,
+                      ),
                     ),
                   ],
                 ],
               ),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+              style: AppTypography.titleSmall.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
           ),
@@ -2023,14 +2023,18 @@ class _WeekDayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final isToday = _dateOnly(date) == _dateOnly(DateTime.now());
     final isSpecialDay = _isWeekend(date) || holiday != null;
 
     return Container(
       height: 70,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.xs,
+        vertical: 6,
+      ),
       decoration: BoxDecoration(
-        border: Border(right: BorderSide(color: AppColors.darkBorder)),
+        border: Border(right: BorderSide(color: AppColors.border)),
       ),
       child: Column(
         children: [
@@ -2038,41 +2042,31 @@ class _WeekDayHeader extends StatelessWidget {
             _weekdayLabel(date.weekday),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
+            style: AppTypography.caption.copyWith(
               color: isToday && !isSpecialDay
-                  ? CupertinoColors.systemTeal
+                  ? AppColors.primary
                   : isSpecialDay
                   ? CupertinoColors.systemRed
-                  : AppColors.darkTextSecondary,
-              fontSize: 12,
-              height: 1.1,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+                  : AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           Container(
             width: 26,
             height: 24,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              color: isToday && !isSpecialDay
-                  ? CupertinoColors.systemTeal
-                  : null,
-              borderRadius: BorderRadius.circular(12),
+              color: isToday && !isSpecialDay ? AppColors.primary : null,
+              borderRadius: BorderRadius.circular(AppRadius.md),
             ),
             child: Text(
               '${date.day}',
-              style: TextStyle(
+              style: AppTypography.labelSmall.copyWith(
                 color: isToday && !isSpecialDay
-                    ? CupertinoColors.white
+                    ? AppColors.onPrimary
                     : isSpecialDay
                     ? CupertinoColors.systemRed
-                    : AppColors.darkTextPrimary,
-                fontSize: 14,
-                height: 1.1,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+                    : AppColors.textPrimary,
               ),
             ),
           ),
@@ -2082,11 +2076,8 @@ class _WeekDayHeader extends StatelessWidget {
               holiday!.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: AppTypography.calendar.copyWith(
                 color: CupertinoColors.systemRed,
-                fontSize: 8,
-                height: 1.1,
-                fontWeight: FontWeight.w700,
               ),
             ),
           ],
@@ -2104,18 +2095,16 @@ class _MonthWeekdayHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       height: 36,
       child: Center(
         child: Text(
           label,
-          style: TextStyle(
+          style: AppTypography.caption.copyWith(
             color: isWeekend
                 ? CupertinoColors.systemRed
-                : AppColors.darkTextSecondary,
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
+                : AppColors.textSecondary,
           ),
         ),
       ),
@@ -2146,6 +2135,7 @@ class _MonthWeekRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final segments = _monthScheduleSegmentsForWeek(schedules, week.first);
     final laneCount = segments.fold<int>(
       0,
@@ -2218,6 +2208,7 @@ class _DateCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final isToday = _dateOnly(date) == _dateOnly(DateTime.now());
     final isSpecialDay = _isWeekend(date) || holiday != null;
 
@@ -2229,12 +2220,12 @@ class _DateCell extends StatelessWidget {
         padding: const EdgeInsets.fromLTRB(5, 5, 5, 5),
         decoration: BoxDecoration(
           border: Border(
-            right: BorderSide(color: AppColors.darkBorder),
-            bottom: BorderSide(color: AppColors.darkBorder),
+            right: BorderSide(color: AppColors.border),
+            bottom: BorderSide(color: AppColors.border),
           ),
           color: isInCurrentMonth
-              ? AppColors.darkSurface
-              : AppColors.darkSurfaceElevated.withValues(alpha: 0.42),
+              ? AppColors.surface
+              : AppColors.surfaceElevated.withValues(alpha: 0.42),
         ),
         child: Align(
           alignment: Alignment.topLeft,
@@ -2247,24 +2238,19 @@ class _DateCell extends StatelessWidget {
                 height: 20,
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
-                  color: isToday && !isSpecialDay
-                      ? CupertinoColors.systemTeal
-                      : null,
+                  color: isToday && !isSpecialDay ? AppColors.primary : null,
                   borderRadius: BorderRadius.circular(11),
                 ),
                 child: Text(
                   '${date.day}',
-                  style: TextStyle(
+                  style: AppTypography.caption.copyWith(
                     color: isToday && !isSpecialDay
-                        ? CupertinoColors.white
+                        ? AppColors.onPrimary
                         : isSpecialDay
                         ? CupertinoColors.systemRed
                         : isInCurrentMonth
-                        ? AppColors.darkTextPrimary
-                        : AppColors.darkTextMuted,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                        ? AppColors.textPrimary
+                        : AppColors.textMuted,
                   ),
                 ),
               ),
@@ -2275,11 +2261,8 @@ class _DateCell extends StatelessWidget {
                     holiday!.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: AppTypography.calendar.copyWith(
                       color: CupertinoColors.systemRed,
-                      fontSize: 8,
-                      height: 1.1,
-                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -2306,6 +2289,7 @@ class _MonthScheduleBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final style = MemberFilterColorStyle.from(color);
 
     return CupertinoButton(
@@ -2330,13 +2314,7 @@ class _MonthScheduleBar extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           softWrap: false,
-          style: TextStyle(
-            color: style.foreground,
-            fontSize: 8,
-            height: 1.15,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.calendar.copyWith(color: style.foreground),
         ),
       ),
     );
@@ -2414,6 +2392,7 @@ class _ScheduleDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final isAnniversarySchedule = schedule.anniversaryId != null;
     final canModifySchedule = canManage && !isAnniversarySchedule;
     final allDayEndsOn = _dateOnly(
@@ -2423,7 +2402,7 @@ class _ScheduleDetailScreen extends StatelessWidget {
         schedule.isAllDay && allDayEndsOn.isAfter(_dateOnly(schedule.startsAt));
 
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: Text('일정 상세'),
         trailing: canModifySchedule
@@ -2436,14 +2415,19 @@ class _ScheduleDetailScreen extends StatelessWidget {
       ),
       child: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            18,
+            AppSpacing.page,
+            AppSpacing.xxl,
+          ),
           children: [
             Container(
               padding: const EdgeInsets.all(18),
               decoration: BoxDecoration(
-                color: AppColors.darkSurface,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: AppColors.darkBorder),
+                color: AppColors.surface,
+                borderRadius: BorderRadius.circular(AppRadius.lg),
+                border: Border.all(color: AppColors.border),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -2453,35 +2437,24 @@ class _ScheduleDetailScreen extends StatelessWidget {
                       schedule.memberNickname,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: CupertinoColors.systemTeal,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.primary,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: AppSpacing.sm),
                   ],
                   Text(
                     schedule.title,
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w800,
-                      height: 1.12,
-                      letterSpacing: 0,
+                    style: AppTypography.titleLarge.copyWith(
+                      color: AppColors.textPrimary,
                     ),
                   ),
                   if (!isAnniversarySchedule && schedule.content != null) ...[
                     const SizedBox(height: 14),
                     Text(
                       schedule.content!,
-                      style: TextStyle(
-                        color: AppColors.darkTextSecondary,
-                        fontSize: 16,
-                        height: 1.45,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
@@ -2602,19 +2575,15 @@ class _ScheduleDetailScreen extends StatelessWidget {
               SizedBox(
                 height: 56,
                 child: CupertinoButton(
-                  color: AppColors.darkSurfaceElevated,
-                  borderRadius: BorderRadius.circular(14),
+                  color: AppColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(AppRadius.md),
                   minimumSize: const Size.fromHeight(56),
                   padding: EdgeInsets.zero,
                   onPressed: () => _confirmDelete(context),
                   child: Text(
                     '일정 삭제',
-                    style: TextStyle(
+                    style: AppTypography.label.copyWith(
                       color: CupertinoColors.destructiveRed,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w800,
-                      height: 1.2,
-                      letterSpacing: 0,
                     ),
                   ),
                 ),
@@ -2634,12 +2603,16 @@ class _DetailSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(children: children),
     );
@@ -2659,22 +2632,20 @@ class _DetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 11),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: CupertinoColors.systemTeal, size: 19),
+          Icon(icon, color: AppColors.primary, size: 19),
           const SizedBox(width: 10),
           SizedBox(
             width: 86,
             child: Text(
               label,
-              style: TextStyle(
-                color: AppColors.darkTextSecondary,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
           ),
@@ -2682,13 +2653,7 @@ class _DetailRow extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 15,
-                height: 1.35,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-              ),
+              style: AppTypography.label.copyWith(color: AppColors.textPrimary),
             ),
           ),
         ],
@@ -2705,13 +2670,14 @@ class _DetailSwitchRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
       child: Row(
         children: [
-          const Icon(
+          Icon(
             CupertinoIcons.checkmark_circle,
-            color: CupertinoColors.systemTeal,
+            color: AppColors.primary,
             size: 19,
           ),
           const SizedBox(width: 10),
@@ -2719,10 +2685,8 @@ class _DetailSwitchRow extends StatelessWidget {
             width: 86,
             child: Text(
               label,
-              style: TextStyle(
-                color: AppColors.darkTextSecondary,
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
           ),
@@ -2742,6 +2706,7 @@ class _PhoneDetailRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoButton(
       padding: EdgeInsets.zero,
       minimumSize: Size.zero,
@@ -2751,11 +2716,7 @@ class _PhoneDetailRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(
-              CupertinoIcons.phone_fill,
-              color: CupertinoColors.systemTeal,
-              size: 19,
-            ),
+            Icon(CupertinoIcons.phone_fill, color: AppColors.primary, size: 19),
             const SizedBox(width: 10),
             SizedBox(
               width: 86,
@@ -2763,11 +2724,8 @@ class _PhoneDetailRow extends StatelessWidget {
                 contact.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: AppColors.darkTextSecondary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textSecondary,
                 ),
               ),
             ),
@@ -2777,19 +2735,13 @@ class _PhoneDetailRow extends StatelessWidget {
                 textAlign: TextAlign.right,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: CupertinoColors.systemTeal,
-                  fontSize: 15,
-                  height: 1.35,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0,
-                ),
+                style: AppTypography.label.copyWith(color: AppColors.primary),
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             Icon(
               CupertinoIcons.phone_arrow_up_right,
-              color: CupertinoColors.systemTeal,
+              color: AppColors.primary,
               size: 16,
             ),
           ],
@@ -2802,7 +2754,8 @@ class _PhoneDetailRow extends StatelessWidget {
 class _DetailDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(height: 1, color: AppColors.darkBorder);
+    AppColors.of(context);
+    return Container(height: 1, color: AppColors.border);
   }
 }
 
@@ -3120,6 +3073,7 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final selectedMember = widget.members.firstWhere(
       (member) => member.id == _familyMemberId,
       orElse: () => widget.members.first,
@@ -3135,7 +3089,7 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
     }
 
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: Text(widget.schedule == null ? '일정 등록' : '일정 수정'),
         leading: CupertinoButton(
@@ -3151,7 +3105,12 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
       ),
       child: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            18,
+            AppSpacing.page,
+            AppSpacing.xxl,
+          ),
           children: [
             _FormSection(
               children: [
@@ -3173,7 +3132,7 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
                   controller: _titleController,
                   placeholder: '제목',
                   maxLength: 80,
-                  style: TextStyle(fontSize: 17, letterSpacing: 0),
+                  style: AppTypography.bodyLarge,
                 ),
                 _FormDivider(),
                 CupertinoTextField.borderless(
@@ -3181,7 +3140,7 @@ class _ScheduleFormScreenState extends State<_ScheduleFormScreen> {
                   placeholder: '내용',
                   maxLines: 4,
                   maxLength: 1000,
-                  style: TextStyle(fontSize: 16, letterSpacing: 0),
+                  style: AppTypography.bodyMedium,
                 ),
               ],
             ),
@@ -3259,12 +3218,16 @@ class _FormSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(
+        horizontal: 14,
+        vertical: AppSpacing.sm,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(children: children),
     );
@@ -3274,7 +3237,8 @@ class _FormSection extends StatelessWidget {
 class _FormDivider extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Container(height: 1, color: AppColors.darkBorder);
+    AppColors.of(context);
+    return Container(height: 1, color: AppColors.border);
   }
 }
 
@@ -3291,6 +3255,7 @@ class _PickerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoButton(
       padding: EdgeInsets.zero,
       onPressed: onPressed,
@@ -3302,11 +3267,8 @@ class _PickerRow extends StatelessWidget {
               width: 82,
               child: Text(
                 label,
-                style: TextStyle(
-                  color: AppColors.darkTextPrimary,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
+                style: AppTypography.label.copyWith(
+                  color: AppColors.textPrimary,
                 ),
               ),
             ),
@@ -3316,13 +3278,10 @@ class _PickerRow extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 textAlign: TextAlign.right,
-                style: TextStyle(
+                style: AppTypography.label.copyWith(
                   color: onPressed == null
-                      ? AppColors.darkTextSecondary
+                      ? AppColors.textSecondary
                       : CupertinoColors.systemBlue,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
                 ),
               ),
             ),
@@ -3341,17 +3300,14 @@ class _ScheduleAllDayRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       height: 48,
       child: Row(
         children: [
           Text(
             '종일',
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-            ),
+            style: AppTypography.label.copyWith(color: AppColors.textPrimary),
           ),
           const Spacer(),
           CupertinoSwitch(value: value, onChanged: onChanged),
@@ -3376,6 +3332,7 @@ class _OptionalTimeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       height: 50,
       child: Row(
@@ -3392,26 +3349,20 @@ class _OptionalTimeRow extends StatelessWidget {
                       label,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: AppColors.darkTextPrimary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.textPrimary,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
                       value == null ? '선택 안 함' : _dateTimeLabel(value!),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       textAlign: TextAlign.right,
-                      style: TextStyle(
-                        color: AppColors.darkTextSecondary,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0,
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ),
@@ -3539,8 +3490,9 @@ class _DateTimeInputSheetState extends State<_DateTimeInputSheet> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      color: AppColors.darkSurface,
+      color: AppColors.surface,
       child: SafeArea(
         top: false,
         child: Padding(
@@ -3581,7 +3533,7 @@ class _DateTimeInputSheetState extends State<_DateTimeInputSheet> {
                       maxLength: 4,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: _NumberInputField(
                       controller: _monthController,
@@ -3590,7 +3542,7 @@ class _DateTimeInputSheetState extends State<_DateTimeInputSheet> {
                       maxLength: 2,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: _NumberInputField(
                       controller: _dayController,
@@ -3609,11 +3561,15 @@ class _DateTimeInputSheetState extends State<_DateTimeInputSheet> {
                       groupValue: _isPm,
                       children: const {
                         false: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
                           child: Text('오전'),
                         ),
                         true: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 12),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
                           child: Text('오후'),
                         ),
                       },
@@ -3625,7 +3581,7 @@ class _DateTimeInputSheetState extends State<_DateTimeInputSheet> {
                         }
                       },
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: _NumberInputField(
                         controller: _hourController,
@@ -3634,7 +3590,7 @@ class _DateTimeInputSheetState extends State<_DateTimeInputSheet> {
                         maxLength: 2,
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: _NumberInputField(
                         controller: _minuteController,
@@ -3647,14 +3603,11 @@ class _DateTimeInputSheetState extends State<_DateTimeInputSheet> {
                 ),
               ],
               if (_message != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   _message!,
-                  style: TextStyle(
-                    color: AppColors.darkDanger,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.danger,
                   ),
                 ),
               ],
@@ -3681,6 +3634,7 @@ class _NumberInputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Row(
       children: [
         Expanded(
@@ -3691,28 +3645,25 @@ class _NumberInputField extends StatelessWidget {
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.md,
+            ),
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textPrimary,
             ),
             decoration: BoxDecoration(
-              color: AppColors.darkBackground,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.darkBorder),
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(color: AppColors.border),
             ),
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: AppSpacing.xs),
         Text(
           suffix,
-          style: TextStyle(
-            color: AppColors.darkTextSecondary,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
+          style: AppTypography.labelSmall.copyWith(
+            color: AppColors.textSecondary,
           ),
         ),
       ],
@@ -3737,12 +3688,13 @@ class _EmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.page),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
@@ -3751,40 +3703,26 @@ class _EmptyState extends StatelessWidget {
           Text(
             title,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+            style: AppTypography.titleSmall.copyWith(
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             subtitle,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.darkTextSecondary,
-              fontSize: 14,
-              height: 1.35,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0,
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
           if (onPressed != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             SizedBox(
               height: 46,
               child: CupertinoButton.filled(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppRadius.md),
                 onPressed: onPressed,
-                child: Text(
-                  actionLabel,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                  ),
-                ),
+                child: Text(actionLabel, style: AppTypography.button),
               ),
             ),
           ],
@@ -3801,23 +3739,18 @@ class _InlineMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Text(
           message,
-          style: TextStyle(
-            color: AppColors.darkDanger,
-            fontSize: 14,
-            height: 1.35,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.labelSmall.copyWith(color: AppColors.danger),
         ),
       ),
     );
@@ -3915,10 +3848,10 @@ DateTime _defaultStartAt(DateTime initialDate) {
 }
 
 BoxDecoration get _calendarDecoration => BoxDecoration(
-  color: AppColors.darkSurface,
+  color: AppColors.surface,
   border: Border(
-    top: BorderSide(color: AppColors.darkBorder),
-    bottom: BorderSide(color: AppColors.darkBorder),
+    top: BorderSide(color: AppColors.border),
+    bottom: BorderSide(color: AppColors.border),
   ),
 );
 

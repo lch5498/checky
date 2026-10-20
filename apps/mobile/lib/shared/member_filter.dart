@@ -1,6 +1,9 @@
 import 'package:flutter/cupertino.dart';
 
 import '../design_system/app_colors.dart';
+import '../design_system/app_radius.dart';
+import '../design_system/app_spacing.dart';
+import '../design_system/app_typography.dart';
 
 import '../core/api_client.dart';
 
@@ -63,6 +66,7 @@ class MemberFilterBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     if (members.isEmpty && trailingChildren.isEmpty) {
       return const SizedBox.shrink();
     }
@@ -105,6 +109,7 @@ class _MemberFilterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final style = MemberFilterColorStyle.from(color);
 
     return ConstrainedBox(
@@ -113,8 +118,8 @@ class _MemberFilterButton extends StatelessWidget {
         height: 28,
         child: CupertinoButton(
           padding: const EdgeInsets.symmetric(horizontal: 6),
-          color: isActive ? style.background : AppColors.darkBackground,
-          borderRadius: BorderRadius.circular(8),
+          color: isActive ? style.background : AppColors.background,
+          borderRadius: BorderRadius.circular(AppRadius.sm),
           onPressed: onPressed,
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -126,19 +131,16 @@ class _MemberFilterButton extends StatelessWidget {
                 color: isActive ? style.foreground : CupertinoColors.systemGrey,
                 size: 13,
               ),
-              const SizedBox(width: 4),
+              const SizedBox(width: AppSpacing.xs),
               Flexible(
                 child: Text(
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
+                  style: AppTypography.caption.copyWith(
                     color: isActive
                         ? style.foreground
-                        : AppColors.darkTextSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                        : AppColors.textSecondary,
                   ),
                 ),
               ),

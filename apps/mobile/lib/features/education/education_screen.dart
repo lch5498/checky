@@ -4,6 +4,9 @@ import 'package:flutter/services.dart';
 import '../../core/api_client.dart';
 import '../../core/group_refresh.dart';
 import '../../design_system/app_colors.dart';
+import '../../design_system/app_radius.dart';
+import '../../design_system/app_spacing.dart';
+import '../../design_system/app_typography.dart';
 import '../../shared/alert_offset_picker.dart';
 import '../../shared/member_filter.dart';
 import '../../shared/refreshable_scroll_view.dart';
@@ -369,6 +372,7 @@ class _EducationScreenState extends State<EducationScreen>
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final dashboard = _dashboard;
     final programs = _filteredPrograms;
     final memberColors = _memberFilterColors(dashboard?.members ?? const []);
@@ -394,12 +398,19 @@ class _EducationScreenState extends State<EducationScreen>
           SafeArea(
             child: RefreshableScrollView(
               onRefresh: _loadPrograms,
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 28),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                14,
+                AppSpacing.lg,
+                28,
+              ),
               children: [
                 if (widget.selectedScheduleSection != null &&
                     widget.onScheduleSectionChanged != null) ...[
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xs,
+                    ),
                     child: ScheduleSectionSwitcher(
                       selectedSection: widget.selectedScheduleSection!,
                       onSectionChanged: widget.onScheduleSectionChanged!,
@@ -409,7 +420,7 @@ class _EducationScreenState extends State<EducationScreen>
                 ],
                 if (_message != null) ...[
                   _InlineMessage(message: _message!),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                 ],
                 if (_isLoading && dashboard == null)
                   Padding(
@@ -423,7 +434,7 @@ class _EducationScreenState extends State<EducationScreen>
                     memberColors: memberColors,
                     onToggleMember: _toggleMemberFilter,
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                 ],
                 if (_isLoading && dashboard == null)
                   const SizedBox.shrink()
@@ -459,6 +470,7 @@ class _FullScreenProgressOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Positioned.fill(
       child: AbsorbPointer(
         child: DecoratedBox(
@@ -470,12 +482,15 @@ class _FullScreenProgressOverlay extends StatelessWidget {
           child: Center(
             child: Container(
               width: 210,
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 22),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.page,
+                vertical: 22,
+              ),
               decoration: BoxDecoration(
                 color: CupertinoColors.secondarySystemBackground.resolveFrom(
                   context,
                 ),
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppRadius.lg),
                 border: Border.all(
                   color: CupertinoColors.separator.resolveFrom(context),
                 ),
@@ -484,15 +499,12 @@ class _FullScreenProgressOverlay extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const CupertinoActivityIndicator(radius: 15),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: AppSpacing.md),
                   Text(
                     message,
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ],
@@ -522,12 +534,13 @@ class _EducationProgramCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final scheduleSummaries = _educationScheduleSummaries(program);
 
     final content = Container(
-      padding: const EdgeInsets.fromLTRB(0, 14, 0, 16),
+      padding: const EdgeInsets.fromLTRB(0, 14, 0, AppSpacing.lg),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -536,7 +549,7 @@ class _EducationProgramCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _MemberNameIcon(name: program.memberNickname, color: memberColor),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 7),
@@ -544,19 +557,15 @@ class _EducationProgramCard extends StatelessWidget {
                     program.name,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 18,
-                      height: 1.15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
+                    style: AppTypography.titleSmall.copyWith(
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: AppSpacing.md),
           _EducationScheduleGroup(
             dateText:
                 '${_dateText(program.startsOn)} - ${_dateText(program.endsOn)}',
@@ -593,15 +602,16 @@ class _MemberNameIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final style = MemberFilterColorStyle.from(color);
 
     return Container(
       width: 42,
       height: 42,
-      padding: const EdgeInsets.all(4),
+      padding: const EdgeInsets.all(AppSpacing.xs),
       decoration: BoxDecoration(
         color: style.background,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppRadius.md),
         border: Border.all(color: style.border),
       ),
       child: Center(
@@ -610,13 +620,7 @@ class _MemberNameIcon extends StatelessWidget {
           textAlign: TextAlign.center,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: style.foreground,
-            fontSize: 10,
-            height: 1.05,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.caption.copyWith(color: style.foreground),
         ),
       ),
     );
@@ -634,13 +638,14 @@ class _EducationScheduleGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(AppSpacing.md),
       decoration: BoxDecoration(
-        color: AppColors.darkSurfaceElevated,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -650,12 +655,8 @@ class _EducationScheduleGroup extends StatelessWidget {
             textAlign: TextAlign.left,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 13,
-              height: 1.15,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textPrimary,
             ),
           ),
           const SizedBox(height: 10),
@@ -680,15 +681,16 @@ class _EducationScheduleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final vehicleText = summary.vehicleText;
 
     return Container(
       constraints: const BoxConstraints(minHeight: 34),
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -696,24 +698,16 @@ class _EducationScheduleChip extends StatelessWidget {
         children: [
           Text(
             summary.title,
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 13,
-              height: 1.15,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textPrimary,
             ),
           ),
           if (vehicleText != null) ...[
-            const SizedBox(height: 4),
+            const SizedBox(height: AppSpacing.xs),
             Text(
               vehicleText,
-              style: TextStyle(
-                color: AppColors.darkTextSecondary,
-                fontSize: 12,
-                height: 1.15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -734,6 +728,7 @@ class _EducationPhoneContactWrap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Wrap(
       spacing: 7,
       runSpacing: 7,
@@ -746,9 +741,9 @@ class _EducationPhoneContactWrap extends StatelessWidget {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
               decoration: BoxDecoration(
-                color: AppColors.darkSurfaceElevated,
-                borderRadius: BorderRadius.circular(999),
-                border: Border.all(color: AppColors.darkBorder),
+                color: AppColors.surfaceElevated,
+                borderRadius: BorderRadius.circular(AppRadius.pill),
+                border: Border.all(color: AppColors.border),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -756,16 +751,13 @@ class _EducationPhoneContactWrap extends StatelessWidget {
                   Icon(
                     CupertinoIcons.phone_fill,
                     size: 13,
-                    color: AppColors.darkPrimary,
+                    color: AppColors.primary,
                   ),
                   const SizedBox(width: 5),
                   Text(
                     '${contact.label} ${contact.phoneNumber}',
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ],
@@ -792,10 +784,11 @@ class _EducationFilterCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       padding: const EdgeInsets.fromLTRB(0, 0, 0, 14),
       decoration: BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.darkBorder)),
+        border: Border(bottom: BorderSide(color: AppColors.border)),
       ),
       child: MemberFilterBar(
         members: members,
@@ -1052,7 +1045,7 @@ class _EducationProgramFormScreenState
                           : CupertinoIcons.circle,
                       size: 18,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: AppSpacing.sm),
                     Flexible(
                       child: Text(
                         member.nickname,
@@ -1928,6 +1921,7 @@ class _EducationProgramFormScreenState
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final selectedMember = widget.members.firstWhere(
       (member) => member.id == _familyMemberId,
       orElse: () => widget.members.first,
@@ -1954,11 +1948,16 @@ class _EducationProgramFormScreenState
       ),
       child: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 18, 16, 28),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            18,
+            AppSpacing.lg,
+            28,
+          ),
           children: [
             if (_message != null) ...[
               _InlineMessage(message: _message!),
-              const SizedBox(height: 12),
+              const SizedBox(height: AppSpacing.md),
             ],
             _FormSection(
               children: [
@@ -2131,20 +2130,18 @@ class _DeleteProgramButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       height: 48,
       child: CupertinoButton(
         padding: EdgeInsets.zero,
-        color: AppColors.darkSurfaceElevated,
-        borderRadius: BorderRadius.circular(12),
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppRadius.md),
         onPressed: onPressed,
         child: Text(
           '반복 일정 삭제',
-          style: TextStyle(
+          style: AppTypography.label.copyWith(
             color: CupertinoColors.destructiveRed,
-            fontSize: 15,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
           ),
         ),
       ),
@@ -2229,8 +2226,9 @@ class _DateInputSheetState extends State<_DateInputSheet> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      color: AppColors.darkSurface,
+      color: AppColors.surface,
       child: SafeArea(
         top: false,
         child: Padding(
@@ -2271,7 +2269,7 @@ class _DateInputSheetState extends State<_DateInputSheet> {
                       maxLength: 4,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: _NumberInputField(
                       controller: _monthController,
@@ -2280,7 +2278,7 @@ class _DateInputSheetState extends State<_DateInputSheet> {
                       maxLength: 2,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: _NumberInputField(
                       controller: _dayController,
@@ -2292,14 +2290,11 @@ class _DateInputSheetState extends State<_DateInputSheet> {
                 ],
               ),
               if (_message != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   _message!,
-                  style: TextStyle(
-                    color: AppColors.darkDanger,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.danger,
                   ),
                 ),
               ],
@@ -2380,8 +2375,9 @@ class _TimeInputSheetState extends State<_TimeInputSheet> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      color: AppColors.darkSurface,
+      color: AppColors.surface,
       child: SafeArea(
         top: false,
         child: Padding(
@@ -2417,11 +2413,15 @@ class _TimeInputSheetState extends State<_TimeInputSheet> {
                     groupValue: _isPm,
                     children: const {
                       false: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                        ),
                         child: Text('오전'),
                       ),
                       true: Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 12),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                        ),
                         child: Text('오후'),
                       ),
                     },
@@ -2433,7 +2433,7 @@ class _TimeInputSheetState extends State<_TimeInputSheet> {
                       }
                     },
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: _NumberInputField(
                       controller: _hourController,
@@ -2442,7 +2442,7 @@ class _TimeInputSheetState extends State<_TimeInputSheet> {
                       maxLength: 2,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: _NumberInputField(
                       controller: _minuteController,
@@ -2454,14 +2454,11 @@ class _TimeInputSheetState extends State<_TimeInputSheet> {
                 ],
               ),
               if (_message != null) ...[
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Text(
                   _message!,
-                  style: TextStyle(
-                    color: AppColors.darkDanger,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.danger,
                   ),
                 ),
               ],
@@ -2488,6 +2485,7 @@ class _NumberInputField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Row(
       children: [
         Expanded(
@@ -2498,28 +2496,25 @@ class _NumberInputField extends StatelessWidget {
             keyboardType: TextInputType.number,
             textAlign: TextAlign.center,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.sm,
+              vertical: AppSpacing.md,
+            ),
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textPrimary,
             ),
             decoration: BoxDecoration(
-              color: AppColors.darkBackground,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.darkBorder),
+              color: AppColors.background,
+              borderRadius: BorderRadius.circular(AppRadius.sm),
+              border: Border.all(color: AppColors.border),
             ),
           ),
         ),
-        const SizedBox(width: 4),
+        const SizedBox(width: AppSpacing.xs),
         Text(
           suffix,
-          style: TextStyle(
-            color: AppColors.darkTextSecondary,
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
+          style: AppTypography.labelSmall.copyWith(
+            color: AppColors.textSecondary,
           ),
         ),
       ],
@@ -2534,11 +2529,12 @@ class _FormSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.darkSurfaceElevated,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(children: children),
     );
@@ -2558,20 +2554,16 @@ class _TextFieldRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 14, 8),
+      padding: const EdgeInsets.fromLTRB(14, AppSpacing.sm, 14, AppSpacing.sm),
       child: Row(
         children: [
           SizedBox(
             width: 82,
             child: Text(
               label,
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-              ),
+              style: AppTypography.label.copyWith(color: AppColors.textPrimary),
             ),
           ),
           Expanded(
@@ -2580,7 +2572,7 @@ class _TextFieldRow extends StatelessWidget {
               placeholder: placeholder,
               padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 10),
               decoration: BoxDecoration(),
-              style: TextStyle(fontSize: 16, letterSpacing: 0),
+              style: AppTypography.bodyMedium,
             ),
           ),
         ],
@@ -2604,6 +2596,7 @@ class _PickerRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoButton(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       onPressed: onPressed,
@@ -2613,12 +2606,7 @@ class _PickerRow extends StatelessWidget {
             width: 82,
             child: Text(
               label,
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-              ),
+              style: AppTypography.label.copyWith(color: AppColors.textPrimary),
             ),
           ),
           Expanded(
@@ -2629,11 +2617,8 @@ class _PickerRow extends StatelessWidget {
               overflow: valueMaxLines == null
                   ? TextOverflow.visible
                   : TextOverflow.ellipsis,
-              style: TextStyle(
+              style: AppTypography.label.copyWith(
                 color: CupertinoColors.systemBlue,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
               ),
             ),
           ),
@@ -2650,6 +2635,7 @@ class _PhoneContactsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 10, 10),
       child: Row(
@@ -2657,36 +2643,24 @@ class _PhoneContactsHeader extends StatelessWidget {
           Expanded(
             child: Text(
               '전화번호',
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
-              ),
+              style: AppTypography.label.copyWith(color: AppColors.textPrimary),
             ),
           ),
           CupertinoButton(
             padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
             minimumSize: Size.zero,
-            color: AppColors.darkPrimarySoft,
-            borderRadius: BorderRadius.circular(999),
+            color: AppColors.primarySoft,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
             onPressed: onAdd,
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  CupertinoIcons.plus,
-                  size: 13,
-                  color: AppColors.darkPrimary,
-                ),
-                const SizedBox(width: 4),
+                Icon(CupertinoIcons.plus, size: 13, color: AppColors.primary),
+                const SizedBox(width: AppSpacing.xs),
                 Text(
                   '전화번호 추가',
-                  style: TextStyle(
-                    color: AppColors.darkPrimary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.primary,
                   ),
                 ),
               ],
@@ -2705,24 +2679,25 @@ class _AddMonthlyDayRuleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Align(
       alignment: Alignment.centerLeft,
       child: CupertinoButton(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: AppSpacing.sm,
+        ),
         minimumSize: const Size(44, 36),
         onPressed: onPressed,
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(CupertinoIcons.add, size: 16, color: AppColors.darkPrimary),
-            const SizedBox(width: 4),
+            Icon(CupertinoIcons.add, size: 16, color: AppColors.primary),
+            const SizedBox(width: AppSpacing.xs),
             Text(
               '특정일 추가',
-              style: TextStyle(
-                color: AppColors.darkPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.primary,
               ),
             ),
           ],
@@ -2745,8 +2720,9 @@ class _PhoneContactInputRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 0, 10, 12),
+      padding: const EdgeInsets.fromLTRB(14, 0, 10, AppSpacing.md),
       child: Column(
         children: [
           Row(
@@ -2763,7 +2739,7 @@ class _PhoneContactInputRow extends StatelessWidget {
                         onPressed: onPickLabel,
                       ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: _PhoneNumberTextField(
                   controller: contact.phoneController,
@@ -2777,7 +2753,7 @@ class _PhoneContactInputRow extends StatelessWidget {
                 child: Icon(
                   CupertinoIcons.minus_circle_fill,
                   size: 20,
-                  color: AppColors.darkDanger,
+                  color: AppColors.danger,
                 ),
               ),
             ],
@@ -2799,11 +2775,12 @@ class _PhoneContactLabelButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoButton(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       minimumSize: Size.zero,
-      color: AppColors.darkBackground,
-      borderRadius: BorderRadius.circular(10),
+      color: AppColors.background,
+      borderRadius: BorderRadius.circular(AppRadius.sm),
       onPressed: onPressed,
       child: Row(
         children: [
@@ -2812,18 +2789,15 @@ class _PhoneContactLabelButton extends StatelessWidget {
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 14,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
           ),
           Icon(
             CupertinoIcons.chevron_down,
             size: 13,
-            color: AppColors.darkTextSecondary,
+            color: AppColors.textSecondary,
           ),
         ],
       ),
@@ -2842,16 +2816,12 @@ class _PhoneContactCustomLabelField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoTextField(
       controller: controller,
       placeholder: '구분',
       padding: const EdgeInsets.fromLTRB(10, 10, 6, 10),
-      style: TextStyle(
-        color: AppColors.darkTextPrimary,
-        fontSize: 14,
-        fontWeight: FontWeight.w800,
-        letterSpacing: 0,
-      ),
+      style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
       suffix: CupertinoButton(
         padding: EdgeInsets.zero,
         minimumSize: const Size(26, 26),
@@ -2859,13 +2829,13 @@ class _PhoneContactCustomLabelField extends StatelessWidget {
         child: Icon(
           CupertinoIcons.chevron_down,
           size: 13,
-          color: AppColors.darkTextSecondary,
+          color: AppColors.textSecondary,
         ),
       ),
       decoration: BoxDecoration(
-        color: AppColors.darkBackground,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.darkPrimary),
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.primary),
       ),
     );
   }
@@ -2878,21 +2848,17 @@ class _PhoneNumberTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoTextField(
       controller: controller,
       placeholder: '전화번호',
       keyboardType: TextInputType.phone,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-      style: TextStyle(
-        color: AppColors.darkTextPrimary,
-        fontSize: 15,
-        fontWeight: FontWeight.w700,
-        letterSpacing: 0,
-      ),
+      style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
       decoration: BoxDecoration(
-        color: AppColors.darkBackground,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.background,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.border),
       ),
     );
   }
@@ -2913,6 +2879,7 @@ class _DateRangeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: Row(
@@ -2921,12 +2888,7 @@ class _DateRangeRow extends StatelessWidget {
             width: 82,
             child: Text(
               '기간',
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-              ),
+              style: AppTypography.label.copyWith(color: AppColors.textPrimary),
             ),
           ),
           Expanded(
@@ -2942,11 +2904,8 @@ class _DateRangeRow extends StatelessWidget {
                   padding: EdgeInsets.symmetric(horizontal: 6),
                   child: Text(
                     '~',
-                    style: TextStyle(
-                      color: AppColors.darkTextSecondary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ),
@@ -2973,6 +2932,7 @@ class _RecurrenceTypeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: Row(
@@ -2981,12 +2941,7 @@ class _RecurrenceTypeRow extends StatelessWidget {
             width: 82,
             child: Text(
               '반복',
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-              ),
+              style: AppTypography.label.copyWith(color: AppColors.textPrimary),
             ),
           ),
           Expanded(
@@ -3023,6 +2978,7 @@ class _MonthlyRuleModeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
       child: Row(
@@ -3031,12 +2987,7 @@ class _MonthlyRuleModeRow extends StatelessWidget {
             width: 82,
             child: Text(
               '월 반복 기준',
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-              ),
+              style: AppTypography.label.copyWith(color: AppColors.textPrimary),
             ),
           ),
           Expanded(
@@ -3096,6 +3047,7 @@ class _WeekdayRuleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final canCopy = rule.enabled && copyLabel != null;
 
     return Padding(
@@ -3198,6 +3150,7 @@ class _MonthlyRuleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final isDayOfMonth = mode == _MonthlyRuleMode.dayOfMonth;
     final selectorWidth = isDayOfMonth ? 64.0 : 48.0;
 
@@ -3286,6 +3239,7 @@ class _RuleLeadingColumn extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       width: 42,
       child: Column(
@@ -3295,14 +3249,11 @@ class _RuleLeadingColumn extends StatelessWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 14,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 0,
+            style: AppTypography.labelSmall.copyWith(
+              color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           SizedBox(
             width: 34,
             height: 22,
@@ -3330,18 +3281,15 @@ class _RuleAllDayToggle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       height: 30,
       child: Row(
         children: [
           Text(
             '종일',
-            style: TextStyle(
-              color: enabled
-                  ? AppColors.darkTextSecondary
-                  : AppColors.darkTextMuted,
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
+            style: AppTypography.labelSmall.copyWith(
+              color: enabled ? AppColors.textSecondary : AppColors.textMuted,
             ),
           ),
           const Spacer(),
@@ -3377,25 +3325,23 @@ class _SmallWeekdayButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       width: width,
       height: 32,
       child: CupertinoButton(
         padding: EdgeInsets.zero,
-        color: AppColors.darkSurfaceElevated,
+        color: AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(9),
         onPressed: enabled ? onPressed : null,
         child: Text(
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
+          style: AppTypography.caption.copyWith(
             color: enabled
                 ? CupertinoColors.systemBlue
                 : CupertinoColors.systemGrey,
-            fontSize: 11,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
           ),
         ),
       ),
@@ -3416,6 +3362,7 @@ class _CopyPreviousRuleButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final color = enabled
         ? CupertinoColors.systemBlue
         : CupertinoColors.systemGrey;
@@ -3428,9 +3375,7 @@ class _CopyPreviousRuleButton extends StatelessWidget {
         height: 32,
         child: CupertinoButton(
           padding: EdgeInsets.zero,
-          color: enabled
-              ? AppColors.darkPrimarySoft
-              : AppColors.darkSurfaceElevated,
+          color: enabled ? AppColors.primarySoft : AppColors.surfaceElevated,
           borderRadius: BorderRadius.circular(9),
           onPressed: enabled ? onPressed : null,
           child: Icon(CupertinoIcons.arrow_down_doc, size: 14, color: color),
@@ -3463,17 +3408,15 @@ class _AlignedRuleTimeLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Row(
       children: [
         SizedBox(
           width: 34,
           child: Text(
             label,
-            style: TextStyle(
-              color: AppColors.darkTextSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
         ),
@@ -3485,11 +3428,8 @@ class _AlignedRuleTimeLine extends StatelessWidget {
           padding: EdgeInsets.symmetric(horizontal: 3),
           child: Text(
             '~',
-            style: TextStyle(
-              color: AppColors.darkTextSecondary,
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
         ),
@@ -3497,7 +3437,10 @@ class _AlignedRuleTimeLine extends StatelessWidget {
           child: _CompactValueButton(value: endValue, onPressed: onPickEnd),
         ),
         _ClearTimeSlot(onPressed: onClearEnd),
-        if (trailing != null) ...[const SizedBox(width: 4), trailing!],
+        if (trailing != null) ...[
+          const SizedBox(width: AppSpacing.xs),
+          trailing!,
+        ],
       ],
     );
   }
@@ -3510,6 +3453,7 @@ class _ClearTimeSlot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       width: 24,
       child: onPressed == null
@@ -3527,24 +3471,22 @@ class _CompactValueButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       height: 34,
       child: CupertinoButton(
         padding: const EdgeInsets.symmetric(horizontal: 6),
-        color: AppColors.darkSurfaceElevated,
+        color: AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(9),
         onPressed: onPressed,
         child: Text(
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: TextStyle(
+          style: AppTypography.caption.copyWith(
             color: onPressed == null
                 ? CupertinoColors.systemGrey
                 : CupertinoColors.systemBlue,
-            fontSize: 12,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
           ),
         ),
       ),
@@ -3559,6 +3501,7 @@ class _ClearTimeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoButton(
       padding: EdgeInsets.zero,
       minimumSize: const Size(28, 28),
@@ -3689,18 +3632,13 @@ class _FeatureFamilyTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     if (!canSwitch) {
       return Text(
         family.name,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(
-          inherit: false,
-          color: AppColors.darkTextPrimary,
-          fontSize: 17,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0,
-        ),
+        style: AppTypography.titleSmall.copyWith(color: AppColors.textPrimary),
       );
     }
 
@@ -3716,16 +3654,12 @@ class _FeatureFamilyTitle extends StatelessWidget {
               family.name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                inherit: false,
-                color: AppColors.darkTextPrimary,
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
+              style: AppTypography.titleSmall.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.xs),
           const Icon(CupertinoIcons.chevron_down, size: 15),
         ],
       ),
@@ -3740,22 +3674,17 @@ class _EmptyPrograms extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.darkSurfaceElevated,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
       ),
       child: Text(
         canManage ? '등록된 반복 일정이 없습니다. + 버튼으로 추가해 주세요.' : '등록된 반복 일정이 없습니다.',
-        style: TextStyle(
-          color: AppColors.darkTextSecondary,
-          fontSize: 15,
-          height: 1.35,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0,
-        ),
+        style: AppTypography.label.copyWith(color: AppColors.textSecondary),
       ),
     );
   }
@@ -3766,22 +3695,17 @@ class _EmptyFilteredPrograms extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
       ),
       child: Text(
         '선택한 구성원의 반복 일정이 없습니다.',
-        style: TextStyle(
-          color: AppColors.darkTextSecondary,
-          fontSize: 15,
-          height: 1.35,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0,
-        ),
+        style: AppTypography.label.copyWith(color: AppColors.textSecondary),
       ),
     );
   }
@@ -3794,22 +3718,17 @@ class _InlineMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.border),
       ),
       child: Text(
         message,
-        style: TextStyle(
-          color: AppColors.darkDanger,
-          fontSize: 14,
-          height: 1.35,
-          fontWeight: FontWeight.w600,
-          letterSpacing: 0,
-        ),
+        style: AppTypography.labelSmall.copyWith(color: AppColors.danger),
       ),
     );
   }

@@ -6,6 +6,8 @@ import 'package:flutter/services.dart';
 import '../../core/home_widget_background_refresh.dart';
 import '../../core/widget_refresh_diagnostics.dart';
 import '../../design_system/app_colors.dart';
+import '../../design_system/app_spacing.dart';
+import '../../design_system/app_typography.dart';
 
 class WidgetSettingsScreen extends StatefulWidget {
   const WidgetSettingsScreen({super.key});
@@ -77,12 +79,16 @@ class _WidgetSettingsScreenState extends State<WidgetSettingsScreen> {
       children: [
         Text(
           label,
-          style: TextStyle(fontSize: 13, color: AppColors.darkTextSecondary),
+          style: AppTypography.bodySmall.copyWith(
+            color: AppColors.textSecondary,
+          ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppSpacing.xs),
         Text(
           value,
-          style: TextStyle(fontSize: 15, color: AppColors.darkTextPrimary),
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textPrimary,
+          ),
         ),
       ],
     ),
@@ -90,9 +96,10 @@ class _WidgetSettingsScreenState extends State<WidgetSettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final periodic = _records['periodic'] ?? {};
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: const Text('위젯 갱신'),
         trailing: CupertinoButton(
@@ -103,17 +110,15 @@ class _WidgetSettingsScreenState extends State<WidgetSettingsScreen> {
       ),
       child: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(AppSpacing.page),
           children: [
             Text(
               '자동 갱신은 15분 이후 실행을 요청하며, 실제 시각은 기기에서 결정해요.',
-              style: TextStyle(
-                fontSize: 14,
-                height: 1.5,
-                color: AppColors.darkTextSecondary,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             CupertinoButton.filled(
               onPressed: _busy ? null : _refreshNow,
               child: _busy
@@ -162,13 +167,11 @@ class _WidgetSettingsScreenState extends State<WidgetSettingsScreen> {
               '푸시 갱신',
               '${_time(_records['push']?['at'])}\n${widgetRefreshStageLabel(_records['push']?['stage'] as String?)}',
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             Text(
               '지금 갱신은 서버 조회와 위젯 전달을 바로 실행해요. 성공하면 위젯 표시가 갱신되기까지 잠시 걸릴 수 있어요.',
-              style: TextStyle(
-                fontSize: 13,
-                height: 1.5,
-                color: AppColors.darkTextSecondary,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
             CupertinoButton(

@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 
 import '../design_system/app_colors.dart';
+import '../design_system/app_spacing.dart';
 
 class CupertinoPickerSheet extends StatelessWidget {
   const CupertinoPickerSheet({
@@ -20,8 +21,9 @@ class CupertinoPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      color: AppColors.darkSurface,
+      color: AppColors.surface,
       padding: EdgeInsets.only(
         bottom: MediaQuery.viewPaddingOf(context).bottom,
       ),
@@ -35,13 +37,17 @@ class CupertinoPickerSheet extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   CupertinoButton(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                    ),
                     minimumSize: const Size(44, 48),
                     onPressed: onCancel,
                     child: const Text('취소'),
                   ),
                   CupertinoButton(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                    ),
                     minimumSize: const Size(44, 48),
                     onPressed: onDone,
                     child: Text(doneLabel),

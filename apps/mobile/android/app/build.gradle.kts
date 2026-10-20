@@ -45,6 +45,7 @@ android {
 
     defaultConfig {
         applicationId = "com.family.checky.mobile"
+        testInstrumentationRunner = "com.family.checky.mobile.WidgetFontInstrumentation"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

@@ -1,7 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter/services.dart';
 import 'package:home_widget/home_widget.dart';
+
+import '../design_system/app_theme_preset.dart';
+import '../design_system/app_font_preset.dart';
 
 class HomeWidgetPageData {
   const HomeWidgetPageData({
@@ -85,6 +90,7 @@ class HomeWidgetService {
       'com.family.checky.mobile.CheckyHomeWidgetProvider';
   static const iosWidgetKind = 'CheckyHomeWidget';
   static const _familyIdKey = 'homeWidget.familyId';
+  static Future<void>? _appearanceWrites;
   static const _storage = FlutterSecureStorage(
     iOptions: IOSOptions(
       accessibility: KeychainAccessibility.first_unlock_this_device,
@@ -95,6 +101,63 @@ class HomeWidgetService {
       !kIsWeb &&
       (defaultTargetPlatform == TargetPlatform.android ||
           defaultTargetPlatform == TargetPlatform.iOS);
+
+  /// Keep appearance separate from schedule snapshots so headless refreshes
+  /// cannot reset the selected theme. Publish both modes for native OS changes.
+  static Future<void> updateAppearance({
+    required AppThemePreset preset,
+    required String mode,
+    AppFontPreset font = AppFontPreset.system,
+  }) {
+    if (!_isSupported) return Future<void>.value();
+    Map<String, int> palette(Brightness brightness) {
+      final colors = preset.colors(brightness);
+      return {
+        'background': colors.primarySoft.toARGB32(),
+        'surface': colors.surface.toARGB32(),
+        'primary': colors.primary.toARGB32(),
+        'textPrimary': colors.textPrimary.toARGB32(),
+        'textSecondary': colors.textSecondary.toARGB32(),
+        'border': colors.border.toARGB32(),
+      };
+    }
+
+    final appearance = jsonEncode({
+      'preset': preset.storageValue,
+      'mode': mode,
+      'font': font.storageValue,
+      'light': palette(Brightness.light),
+      'dark': palette(Brightness.dark),
+    });
+    // A slow native write for an earlier tap must not overwrite a newer choice.
+    Future<void> publish() async {
+      try {
+        await HomeWidget.setAppGroupId(appGroupId);
+        final saved = await HomeWidget.saveWidgetData<String>(
+          'appearance',
+          appearance,
+        );
+        if (saved != true) return;
+        await HomeWidget.updateWidget(
+          qualifiedAndroidName: androidProvider,
+          iOSName: iosWidgetKind,
+        );
+      } on MissingPluginException {
+        // Settings also work on platforms without native widgets.
+      } on PlatformException catch (error) {
+        debugPrint('Home widget theme update failed: ${error.code}');
+      }
+    }
+
+    final previous = _appearanceWrites;
+    final write = previous == null
+        ? publish()
+        : previous.then((_) => publish());
+    _appearanceWrites = write;
+    return write.whenComplete(() {
+      if (identical(_appearanceWrites, write)) _appearanceWrites = null;
+    });
+  }
 
   static Future<bool> update({
     required HomeWidgetPageData schedule,

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		D7F020013101000100000001 /* fonts in Resources */ = {isa = PBXBuildFile; fileRef = D7F020013101000100000002 /* fonts */; };
 		5A1D91022E0A000100000001 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 5A1D91012E0A000100000001 /* GoogleService-Info.plist */; };
 		05C36648E5ECD3CDA4740C16 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = F8339280533B4AA540AD1D6A /* Pods_Runner.framework */; };
 		1498D2341E8E89220040F4C2 /* GeneratedPluginRegistrant.m in Sources */ = {isa = PBXBuildFile; fileRef = 1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */; };
@@ -61,6 +62,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		D7F020013101000100000002 /* fonts */ = {isa = PBXFileReference; lastKnownFileType = folder; name = fonts; path = ../assets/fonts; sourceTree = SOURCE_ROOT; };
 		5A1D91012E0A000100000001 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = GoogleService-Info.plist; sourceTree = "<group>"; };
 		1498D2321E8E86230040F4C2 /* GeneratedPluginRegistrant.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = GeneratedPluginRegistrant.h; sourceTree = "<group>"; };
 		1498D2331E8E89220040F4C2 /* GeneratedPluginRegistrant.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = GeneratedPluginRegistrant.m; sourceTree = "<group>"; };
@@ -157,6 +159,7 @@
 		9A7D0C3A3101000100000008 /* CheckyHomeWidget */ = {
 			isa = PBXGroup;
 			children = (
+				D7F020013101000100000002 /* fonts */,
 				9A7D0C3A3101000100000002 /* CheckyHomeWidget.swift */,
 				9A7D0C3A3101000100000003 /* Info.plist */,
 				9A7D0C3A3101000100000004 /* CheckyHomeWidget.entitlements */,
@@ -293,6 +296,7 @@
 			buildPhases = (
 				9A7D0C3A310100010000000B /* Sources */,
 				9A7D0C3A310100010000000C /* Frameworks */,
+				D7F020013101000100000003 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -370,6 +374,14 @@
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		D7F020013101000100000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D7F020013101000100000001 /* fonts in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		331C807F294A63A400263BE5 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;

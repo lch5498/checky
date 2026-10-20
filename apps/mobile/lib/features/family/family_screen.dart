@@ -3,6 +3,9 @@ import 'package:flutter/services.dart';
 
 import '../../core/api_client.dart';
 import '../../design_system/app_colors.dart';
+import '../../design_system/app_radius.dart';
+import '../../design_system/app_spacing.dart';
+import '../../design_system/app_typography.dart';
 import '../../shared/member_filter.dart';
 import '../../shared/refreshable_scroll_view.dart';
 
@@ -137,8 +140,9 @@ class _FamilyScreenState extends State<FamilyScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: Text('그룹 관리'),
         trailing: CupertinoButton(
@@ -151,62 +155,52 @@ class _FamilyScreenState extends State<FamilyScreen> {
       child: SafeArea(
         child: RefreshableScrollView(
           onRefresh: _loadFamilies,
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            AppSpacing.page,
+            AppSpacing.page,
+            AppSpacing.xxl,
+          ),
           children: [
             Text(
               '그룹을 만들고 구성원을 초대하세요.',
-              style: TextStyle(
-                color: AppColors.darkTextPrimary,
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-                height: 1.18,
-                letterSpacing: 0,
+              style: AppTypography.titleLarge.copyWith(
+                color: AppColors.textPrimary,
               ),
             ),
             const SizedBox(height: 10),
             Text(
               '대표는 그룹 내 추가, 수정, 삭제를 할 수 있고 구성원은 조회만 할 수 있습니다.',
-              style: TextStyle(
-                color: AppColors.darkTextSecondary,
-                fontSize: 16,
-                height: 1.4,
-                fontWeight: FontWeight.w500,
-                letterSpacing: 0,
+              style: AppTypography.bodyMedium.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.page),
             SizedBox(
               height: 48,
               child: CupertinoButton(
-                color: AppColors.darkSurfaceElevated,
-                borderRadius: BorderRadius.circular(12),
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                color: AppColors.surfaceElevated,
+                borderRadius: BorderRadius.circular(AppRadius.md),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 onPressed: _isLoading ? null : _acceptInvitation,
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(CupertinoIcons.link, size: 20),
-                    SizedBox(width: 8),
-                    Text(
-                      '초대 링크 수락',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0,
-                      ),
-                    ),
+                    SizedBox(width: AppSpacing.sm),
+                    Text('초대 링크 수락', style: AppTypography.label),
                   ],
                 ),
               ),
             ),
             if (_message != null) ...[
-              const SizedBox(height: 16),
+              const SizedBox(height: AppSpacing.lg),
               _InlineMessage(message: _message!),
             ],
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.page),
             if (_isLoading)
               Padding(
-                padding: EdgeInsets.only(top: 48),
+                padding: EdgeInsets.only(top: AppSpacing.xxxl),
                 child: Center(child: CupertinoActivityIndicator()),
               )
             else if (_families.isEmpty)
@@ -214,7 +208,7 @@ class _FamilyScreenState extends State<FamilyScreen> {
             else
               ..._families.map(
                 (summary) => Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(bottom: AppSpacing.md),
                   child: _FamilyTile(
                     summary: summary,
                     onPressed: () async {
@@ -564,10 +558,11 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final detail = _detail;
 
     return CupertinoPageScaffold(
-      backgroundColor: AppColors.darkBackground,
+      backgroundColor: AppColors.background,
       navigationBar: CupertinoNavigationBar(
         middle: Text(detail?.family.name ?? '그룹'),
         trailing: detail?.canManage == true
@@ -582,7 +577,12 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
       child: SafeArea(
         child: RefreshableScrollView(
           onRefresh: _loadFamily,
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.page,
+            AppSpacing.page,
+            AppSpacing.page,
+            AppSpacing.xxl,
+          ),
           children: [
             if (_isLoading && detail == null)
               Padding(
@@ -592,11 +592,11 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
             else if (detail != null) ...[
               _FamilyDetailHeader(detail: detail),
               if (_message != null) ...[
-                const SizedBox(height: 16),
+                const SizedBox(height: AppSpacing.lg),
                 _InlineMessage(message: _message!),
               ],
               if (detail.canManage) ...[
-                const SizedBox(height: 20),
+                const SizedBox(height: AppSpacing.page),
                 _ActionRow(
                   children: [
                     _ActionButton(
@@ -613,7 +613,7 @@ class _FamilyDetailScreenState extends State<FamilyDetailScreen> {
                   ],
                 ),
               ],
-              const SizedBox(height: 24),
+              const SizedBox(height: AppSpacing.xl),
               const _SectionTitle(title: '구성원'),
               const SizedBox(height: 10),
               ...detail.members.asMap().entries.map(
@@ -649,16 +649,17 @@ class _FamilyTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoButton(
       padding: EdgeInsets.zero,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppRadius.md),
       onPressed: onPressed,
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
-          color: AppColors.darkSurface,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppColors.darkBorder),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(AppRadius.md),
+          border: Border.all(color: AppColors.border),
         ),
         child: Row(
           children: [
@@ -666,8 +667,8 @@ class _FamilyTile extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: AppColors.darkPrimarySoft,
-                borderRadius: BorderRadius.circular(12),
+                color: AppColors.primarySoft,
+                borderRadius: BorderRadius.circular(AppRadius.md),
               ),
               child: const Icon(
                 CupertinoIcons.person_2_fill,
@@ -683,21 +684,15 @@ class _FamilyTile extends StatelessWidget {
                     summary.family.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: AppColors.darkTextPrimary,
-                      fontSize: 17,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0,
+                    style: AppTypography.titleSmall.copyWith(
+                      color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: AppSpacing.xs),
                   Text(
                     roleLabel(summary.role),
-                    style: TextStyle(
-                      color: AppColors.darkTextSecondary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textSecondary,
                     ),
                   ),
                 ],
@@ -722,35 +717,27 @@ class _FamilyDetailHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             detail.family.name,
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 26,
-              fontWeight: FontWeight.w800,
-              height: 1.12,
-              letterSpacing: 0,
+            style: AppTypography.titleLarge.copyWith(
+              color: AppColors.textPrimary,
             ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           Text(
             '${roleLabel(detail.myRole)} 권한 · 구성원 ${detail.members.length}명',
-            style: TextStyle(
-              color: AppColors.darkTextSecondary,
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0,
-            ),
+            style: AppTypography.label.copyWith(color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -785,6 +772,7 @@ class _MemberTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final memberColor =
         MemberFilterColor.fromValue(member.color) ??
         MemberFilterColor.selectable[index %
@@ -818,11 +806,16 @@ class _MemberTile extends StatelessWidget {
     ];
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+      padding: const EdgeInsets.fromLTRB(
+        14,
+        AppSpacing.md,
+        AppSpacing.sm,
+        AppSpacing.md,
+      ),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
@@ -831,7 +824,7 @@ class _MemberTile extends StatelessWidget {
             height: 38,
             decoration: BoxDecoration(
               color: colorStyle.background,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: colorStyle.border),
             ),
             child: Icon(
@@ -840,7 +833,7 @@ class _MemberTile extends StatelessWidget {
               size: 20,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -849,21 +842,15 @@ class _MemberTile extends StatelessWidget {
                   member.nickname,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: AppColors.darkTextPrimary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 3),
                 Text(
                   '${roleLabel(member.role)} · ${member.isLinked ? '계정 연결됨' : '계정 미연결'}',
-                  style: TextStyle(
-                    color: AppColors.darkTextSecondary,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
@@ -889,13 +876,14 @@ class _MemberActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return SizedBox(
       width: 38,
       height: 40,
       child: Center(
         child: CupertinoButton(
           padding: EdgeInsets.zero,
-          minimumSize: const Size(40, 40),
+          minimumSize: const Size(44, 44),
           onPressed: onPressed,
           child: Center(child: child),
         ),
@@ -911,13 +899,14 @@ class _ColorSwatchAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: AppColors.darkSurfaceElevated,
+        color: AppColors.surfaceElevated,
         borderRadius: BorderRadius.circular(11),
-        border: Border.all(color: AppColors.darkBorder),
+        border: Border.all(color: AppColors.border),
       ),
       child: Stack(
         clipBehavior: Clip.hardEdge,
@@ -947,9 +936,9 @@ class _ColorSwatchAction extends StatelessWidget {
               width: 14,
               height: 14,
               decoration: BoxDecoration(
-                color: AppColors.darkBackground,
+                color: AppColors.background,
                 shape: BoxShape.circle,
-                border: Border.all(color: AppColors.darkSurfaceElevated),
+                border: Border.all(color: AppColors.surfaceElevated),
               ),
               child: Icon(
                 CupertinoIcons.chevron_down,
@@ -969,17 +958,18 @@ class _InviteActionIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: AppColors.darkPrimarySoft,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.primarySoft,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.border),
       ),
       child: Icon(
         CupertinoIcons.person_badge_plus,
-        color: AppColors.darkPrimary,
+        color: AppColors.primary,
         size: 18,
       ),
     );
@@ -993,6 +983,7 @@ class _MemberColorDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final selectedColor = MemberFilterColor.fromValue(member.color);
 
     return CupertinoAlertDialog(
@@ -1036,6 +1027,7 @@ class _MemberColorOption extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final style = MemberFilterColorStyle.from(color);
 
     return CupertinoButton(
@@ -1049,7 +1041,7 @@ class _MemberColorOption extends StatelessWidget {
           color: style.background,
           shape: BoxShape.circle,
           border: Border.all(
-            color: isSelected ? AppColors.darkTextPrimary : style.border,
+            color: isSelected ? AppColors.textPrimary : style.border,
             width: isSelected ? 3 : 1,
           ),
         ),
@@ -1068,6 +1060,7 @@ class _ActionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Row(
       children: [
         for (final child in children) ...[
@@ -1094,6 +1087,7 @@ class _ActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     final color = destructive
         ? CupertinoColors.destructiveRed
         : CupertinoColors.systemTeal;
@@ -1101,25 +1095,17 @@ class _ActionButton extends StatelessWidget {
     return SizedBox(
       height: 48,
       child: CupertinoButton(
-        color: AppColors.darkSurfaceElevated,
-        disabledColor: AppColors.darkSurfaceElevated,
-        borderRadius: BorderRadius.circular(12),
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        color: AppColors.surfaceElevated,
+        disabledColor: AppColors.surfaceElevated,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
         onPressed: onPressed,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(icon, color: color, size: 19),
             const SizedBox(width: 6),
-            Text(
-              title,
-              style: TextStyle(
-                color: color,
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
-              ),
-            ),
+            Text(title, style: AppTypography.label.copyWith(color: color)),
           ],
         ),
       ),
@@ -1175,10 +1161,11 @@ class _FamilyNameDialogState extends State<_FamilyNameDialog> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoAlertDialog(
       title: Text(widget.title),
       content: Padding(
-        padding: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.only(top: AppSpacing.md),
         child: Column(
           children: [
             CupertinoTextField(
@@ -1189,12 +1176,11 @@ class _FamilyNameDialogState extends State<_FamilyNameDialog> {
               onSubmitted: (_) => _submit(),
             ),
             if (_message != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 _message!,
-                style: TextStyle(
+                style: AppTypography.bodySmall.copyWith(
                   color: CupertinoColors.destructiveRed,
-                  fontSize: 13,
                 ),
               ),
             ],
@@ -1244,10 +1230,11 @@ class _InviteAcceptDialogState extends State<_InviteAcceptDialog> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoAlertDialog(
       title: Text('초대 수락'),
       content: Padding(
-        padding: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.only(top: AppSpacing.md),
         child: Column(
           children: [
             CupertinoTextField(
@@ -1257,12 +1244,11 @@ class _InviteAcceptDialogState extends State<_InviteAcceptDialog> {
               onSubmitted: (_) => _submit(),
             ),
             if (_message != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 _message!,
-                style: TextStyle(
+                style: AppTypography.bodySmall.copyWith(
                   color: CupertinoColors.destructiveRed,
-                  fontSize: 13,
                 ),
               ),
             ],
@@ -1334,10 +1320,11 @@ class _MemberNameDialogState extends State<_MemberNameDialog> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoAlertDialog(
       title: Text('구성원 이름 수정'),
       content: Padding(
-        padding: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.only(top: AppSpacing.md),
         child: Column(
           children: [
             CupertinoTextField(
@@ -1348,12 +1335,11 @@ class _MemberNameDialogState extends State<_MemberNameDialog> {
               onSubmitted: (_) => _submit(),
             ),
             if (_message != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 _message!,
-                style: TextStyle(
+                style: AppTypography.bodySmall.copyWith(
                   color: CupertinoColors.destructiveRed,
-                  fontSize: 13,
                 ),
               ),
             ],
@@ -1404,10 +1390,11 @@ class _MemberDialogState extends State<_MemberDialog> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoAlertDialog(
       title: Text('구성원 추가'),
       content: Padding(
-        padding: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.only(top: AppSpacing.md),
         child: Column(
           children: [
             CupertinoTextField(
@@ -1439,12 +1426,11 @@ class _MemberDialogState extends State<_MemberDialog> {
               },
             ),
             if (_message != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 _message!,
-                style: TextStyle(
+                style: AppTypography.bodySmall.copyWith(
                   color: CupertinoColors.destructiveRed,
-                  fontSize: 13,
                 ),
               ),
             ],
@@ -1525,26 +1511,24 @@ class _InviteResultDialogState extends State<_InviteResultDialog> {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return CupertinoAlertDialog(
       title: Text('초대 링크 생성 완료'),
       content: Padding(
-        padding: const EdgeInsets.only(top: 12),
+        padding: const EdgeInsets.only(top: AppSpacing.md),
         child: Column(
           children: [
             Text(
               '${widget.invitation.memberNickname}님을 ${roleLabel(widget.invitation.role)} 권한으로 연결합니다.',
             ),
             const SizedBox(height: 10),
-            Text(widget.invitation.inviteUrl, style: TextStyle(fontSize: 13)),
+            Text(widget.invitation.inviteUrl, style: AppTypography.bodySmall),
             if (_message != null) ...[
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               Text(
                 _message!,
-                style: TextStyle(
-                  color: AppColors.darkTextSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textSecondary,
                 ),
               ),
             ],
@@ -1580,12 +1564,13 @@ class _EmptyFamilies extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(AppSpacing.page),
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         children: [
@@ -1597,23 +1582,16 @@ class _EmptyFamilies extends StatelessWidget {
           SizedBox(height: 10),
           Text(
             '아직 등록된 그룹이 없습니다.',
-            style: TextStyle(
-              color: AppColors.darkTextPrimary,
-              fontSize: 17,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 0,
+            style: AppTypography.titleSmall.copyWith(
+              color: AppColors.textPrimary,
             ),
           ),
           SizedBox(height: 6),
           Text(
             '오른쪽 위 + 버튼으로 그룹을 먼저 만들어 주세요.',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: AppColors.darkTextSecondary,
-              fontSize: 14,
-              height: 1.35,
-              fontWeight: FontWeight.w500,
-              letterSpacing: 0,
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
             ),
           ),
         ],
@@ -1629,14 +1607,10 @@ class _SectionTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return Text(
       title,
-      style: TextStyle(
-        color: AppColors.darkTextPrimary,
-        fontSize: 18,
-        fontWeight: FontWeight.w800,
-        letterSpacing: 0,
-      ),
+      style: AppTypography.titleSmall.copyWith(color: AppColors.textPrimary),
     );
   }
 }
@@ -1648,23 +1622,18 @@ class _InlineMessage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    AppColors.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.darkBorder),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        border: Border.all(color: AppColors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(14),
         child: Text(
           message,
-          style: TextStyle(
-            color: AppColors.darkDanger,
-            fontSize: 14,
-            height: 1.35,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
-          ),
+          style: AppTypography.labelSmall.copyWith(color: AppColors.danger),
         ),
       ),
     );
