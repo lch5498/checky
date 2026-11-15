@@ -79,6 +79,14 @@ class Coupon {
 String couponDate(DateTime date) =>
     '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
+List<Coupon> expiringCoupons(List<Coupon> coupons, DateTime now) =>
+    visibleCoupons(
+      coupons,
+      CouponFilter.available,
+      CouponSort.expiry,
+      now,
+    ).where((coupon) => coupon.isExpiringSoon(now)).toList();
+
 List<Coupon> visibleCoupons(
   List<Coupon> coupons,
   CouponFilter filter,

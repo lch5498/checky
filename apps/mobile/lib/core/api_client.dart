@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'api_config.dart';
 import 'coupon.dart';
+import 'search.dart';
 
 class ApiClient {
   ApiClient({String? baseUrl, Duration timeout = const Duration(seconds: 8)})
@@ -137,6 +138,27 @@ class ApiClient {
 
   Future<Map<String, Object?>> getHealth() {
     return _requestJson('GET', '/api/health');
+  }
+
+  /// [scheduleAnchor] is the end of the caller's today; schedules up to one
+  /// month after it come first (newest first), then farther ones nearest first.
+  Future<SearchResults> searchFamily(
+    String sessionToken, {
+    required String familyId,
+    required String query,
+    DateTime? scheduleAnchor,
+  }) async {
+    final path = Uri(
+      path: '/api/mobile/families/$familyId/search',
+      queryParameters: {
+        'q': query,
+        if (scheduleAnchor != null)
+          'anchor': scheduleAnchor.toUtc().toIso8601String(),
+      },
+    ).toString();
+    return SearchResults.fromJson(
+      await _requestJson('GET', path, bearerToken: sessionToken),
+    );
   }
 
   Future<AuthResponse> loginWithKakaoAccessToken(

@@ -25,7 +25,7 @@ function present(coupon: Coupon, userId: string, role: string, usedByName: strin
     can_manage: role === 'owner' || coupon.created_by_user_id === userId };
 }
 
-async function presentWithCompletionNames(coupons: Coupon[], familyId: string, userId: string, role: string) {
+export async function presentWithCompletionNames(coupons: Coupon[], familyId: string, userId: string, role: string) {
   const ids = [...new Set(coupons.filter(c => c.used_at && c.used_by_user_id).map(c => c.used_by_user_id!))];
   const names = new Map<string, string>();
   if (ids.length > 0) {

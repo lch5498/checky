@@ -17,10 +17,12 @@ import '../activity/group_activity_read_state.dart';
 import '../parking/parking_screen.dart';
 import '../schedule/schedule_hub_screen.dart';
 import '../scrap/scrap_screen.dart';
+import '../search/search_screen.dart';
 import '../settings/settings_screen.dart';
 import '../travel/travel_screen.dart';
 import '../../shared/member_filter.dart';
 import '../../shared/refreshable_scroll_view.dart';
+import 'expiring_coupons_section.dart';
 
 const _preferencesChannel = MethodChannel('checky/preferences');
 const _deepLinkChannel = MethodChannel('checky/deep_links');
@@ -843,6 +845,40 @@ class _HomeNavigationTrailing extends StatelessWidget {
   }
 }
 
+class _HomeSearchButton extends StatelessWidget {
+  const _HomeSearchButton({
+    required this.family,
+    required this.sessionToken,
+    required this.onOpenParkingTab,
+  });
+
+  final AppFamily family;
+  final String sessionToken;
+  final VoidCallback onOpenParkingTab;
+
+  @override
+  Widget build(BuildContext context) {
+    AppColors.of(context);
+    return CupertinoButton(
+      key: const ValueKey('home-search-button'),
+      padding: EdgeInsets.zero,
+      minimumSize: const Size(32, 32),
+      onPressed: () {
+        Navigator.of(context, rootNavigator: true).push(
+          CupertinoPageRoute<void>(
+            builder: (_) => SearchScreen(
+              family: family,
+              sessionToken: sessionToken,
+              onOpenParkingTab: onOpenParkingTab,
+            ),
+          ),
+        );
+      },
+      child: const Icon(CupertinoIcons.search),
+    );
+  }
+}
+
 class _HomeNotificationButton extends StatefulWidget {
   const _HomeNotificationButton({
     required this.sessionToken,
@@ -1024,6 +1060,7 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab>
   bool _isLoading = true;
   bool _isScheduleLoading = false;
   int _briefingLoadToken = 0;
+  int _couponRefreshToken = 0;
   late DateTime _scheduleDate;
 
   @override
@@ -1129,6 +1166,11 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab>
         });
       }
     }
+  }
+
+  Future<void> _refreshBriefing() async {
+    setState(() => _couponRefreshToken += 1);
+    await _loadBriefing();
   }
 
   Future<void> _loadHomeSecondaryBriefing() async {
@@ -1311,20 +1353,31 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab>
           canSwitch: widget.families.length > 1,
           onPressed: widget.onSwitchFamily,
         ),
-        trailing: _HomeNavigationTrailing(
-          user: widget.user,
-          sessionToken: widget.sessionToken,
-          familyCount: widget.families.length,
-          currentUserId: widget.user.id,
-          onGroupsChanged: widget.onGroupsChanged,
-          onUpdateProfile: _updateProfile,
-          onDeleteAccount: widget.onDeleteAccount,
-          onLogout: widget.onLogout,
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _HomeSearchButton(
+              family: widget.family,
+              sessionToken: widget.sessionToken,
+              onOpenParkingTab: widget.onOpenParking,
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            _HomeNavigationTrailing(
+              user: widget.user,
+              sessionToken: widget.sessionToken,
+              familyCount: widget.families.length,
+              currentUserId: widget.user.id,
+              onGroupsChanged: widget.onGroupsChanged,
+              onUpdateProfile: _updateProfile,
+              onDeleteAccount: widget.onDeleteAccount,
+              onLogout: widget.onLogout,
+            ),
+          ],
         ),
       ),
       child: SafeArea(
         child: RefreshableScrollView(
-          onRefresh: _loadBriefing,
+          onRefresh: _refreshBriefing,
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.page,
             18,
@@ -1344,7 +1397,7 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab>
                 child: CupertinoButton(
                   color: AppColors.surfaceElevated,
                   borderRadius: BorderRadius.circular(AppRadius.md),
-                  onPressed: _loadBriefing,
+                  onPressed: _refreshBriefing,
                   child: Text(
                     '브리핑 새로고침',
                     style: AppTypography.label.copyWith(
@@ -1375,6 +1428,11 @@ class _HomeDashboardTabState extends State<_HomeDashboardTab>
               _ParkingBriefingSection(
                 dashboard: _parkingDashboard,
                 onPressed: widget.onOpenParking,
+              ),
+              ExpiringCouponsSection(
+                family: widget.family,
+                sessionToken: widget.sessionToken,
+                refreshToken: _couponRefreshToken,
               ),
               if (homeTrips.isNotEmpty)
                 _TravelBriefingSection(
