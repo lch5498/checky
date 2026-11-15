@@ -23,6 +23,7 @@ IPA_PATH=""
 AAB_PATH=""
 EXPORT_OPTIONS=""
 ANDROID_STATUS="completed"
+KEEP_PUBSPEC=0
 LOCKED=0
 BUILD_MARKER=""
 IOS_RESULT="not requested"
@@ -48,6 +49,7 @@ Android publishes to INTERNAL TESTING only. No production rollout or App Store r
   --aab <file>                        AAB for --upload-only
   --android-status <completed|draft>   Internal testing release status; default: completed
   --export-options-plist <file>        Optional iOS export options (signing)
+  --keep-pubspec                      Do not write the released version to pubspec.yaml
   --mode <debug|profile|release>       Android build-only; default: release
   --format <apk|appbundle|aab>         Android build-only; default: appbundle
   --api-base-url <url>                Default: https://favis.vercel.app
@@ -60,8 +62,10 @@ Credentials (export in your shell; see docs/mobile-release.md):
   GOOGLE_PLAY_JSON_KEY (service account JSON)
 
 If --build-number is omitted, reserves max(pubspec number, local last number)+1.
-pubspec.yaml is NOT edited. Store version codes are not queried; for another
-machine/manual uploads, supply a number higher than all previous uploads.
+After both builds succeed and before uploading, pubspec.yaml's version is set to
+<build-name>+<build-number> (skipped with --build-only, --upload-only, --dry-run or
+--keep-pubspec); commit it after the release. Store version codes are not queried;
+for another machine/manual uploads, supply a number higher than all previous uploads.
 USAGE
 }
 
@@ -76,6 +80,16 @@ valid_number() { [[ "$1" =~ ^[1-9][0-9]*$ && ${#1} -le 10 && "$1" -le 2100000000
 fresh_artifact() {
   # macOS /bin/bash 3.2's -nt comparison can truncate sub-second timestamps.
   [[ -s "$1" && -n "$(find "$1" -newer "$BUILD_MARKER" -print)" ]]
+}
+# Keeps pubspec.yaml in step with what was built for release. Only the version line changes.
+update_pubspec() {
+  local pubspec="$MOBILE_DIR/pubspec.yaml" target="version: $BUILD_NAME+$BUILD_NUMBER"
+  if grep -q "^$target\$" "$pubspec"; then return 0; fi
+  awk -v target="$target" '
+    /^version:[[:space:]]/ && !done { print target; done = 1; next }
+    { print }
+  ' "$pubspec" > "$pubspec.tmp" && mv "$pubspec.tmp" "$pubspec"
+  echo "==> pubspec.yaml: $target (commit this after the release)"
 }
 run() {
   printf '==>'
@@ -120,6 +134,7 @@ while [[ $# -gt 0 ]]; do
     --build-only) BUILD_ONLY=1; shift ;;
     --upload-only) UPLOAD_ONLY=1; shift ;;
     --no-increment) AUTO_INCREMENT=0; shift ;;
+    --keep-pubspec) KEEP_PUBSPEC=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     -h|--help) usage; exit 0 ;;
     *) fail "Unknown option: $1 (see --help)" ;;
@@ -281,6 +296,7 @@ fi
 [[ -z "$IPA_PATH" ]] || echo "==> IPA: $IPA_PATH"
 [[ -z "$AAB_PATH" ]] || echo "==> Android artifact: $AAB_PATH"
 if [[ "$BUILD_ONLY" -eq 1 ]]; then exit 0; fi
+if [[ "$UPLOAD_ONLY" -eq 0 && "$DRY_RUN" -eq 0 && "$KEEP_PUBSPEC" -eq 0 ]]; then update_pubspec; fi
 
 export FASTLANE_SKIP_UPDATE_CHECK=1 FASTLANE_OPT_OUT_USAGE=1 FASTLANE_HIDE_CHANGELOG=1
 cd "$ROOT_DIR/scripts"

@@ -80,7 +80,7 @@ cd /Users/changhwanlee/Documents/project/checky
 ./scripts/release-mobile.sh --platform android --build-name 1.7.0 --build-number 70
 ```
 
-옵션 없이 실행하면 버전 이름은 `pubspec.yaml`에서 읽고 빌드 번호는 `max(pubspec 번호, 로컬 마지막 예약 번호)+1`로 지정한다. `pubspec.yaml`은 편집하지 않는다. `.release-state/build-number`에 예약 번호를 보관하며 실패해도 번호를 소비한다. `--clean`으로 지워지지 않는다. **스토어의 최신 번호는 조회하지 않으므로**, 다른 맥/수동 업로드가 있었다면 첫 실행에 더 높은 `--build-number`를 지정한다. 같은 버전을 양쪽에 따로 올릴 때는 같은 번호를 명시한다. `--no-increment`는 pubspec 번호를 그대로 쓰는 옵션이다.
+옵션 없이 실행하면 버전 이름은 `pubspec.yaml`에서 읽고 빌드 번호는 `max(pubspec 번호, 로컬 마지막 예약 번호)+1`로 지정한다. 양쪽 빌드가 성공하면 업로드 직전에 `pubspec.yaml`의 `version:`을 `빌드이름+빌드번호`로 바꿔 쓴다. 릴리스 후 이 변경을 커밋한다. `--build-only`, `--upload-only`, `--dry-run`, `--keep-pubspec`에서는 바꾸지 않는다. `.release-state/build-number`에 예약 번호를 보관하며 실패해도 번호를 소비한다. `--clean`으로 지워지지 않는다. **스토어의 최신 번호는 조회하지 않으므로**, 다른 맥/수동 업로드가 있었다면 첫 실행에 더 높은 `--build-number`를 지정한다. 같은 버전을 양쪽에 따로 올릴 때는 같은 번호를 명시한다. `--no-increment`는 pubspec 번호를 그대로 쓰는 옵션이다.
 
 기본 API 주소·카카오 Native 키는 기존 Android 스크립트와 같다. 바꾸려면 `--api-base-url`, `--kakao-native-app-key` 또는 `API_BASE_URL`, `KAKAO_NATIVE_APP_KEY` 환경변수를 사용한다. iOS 카카오 복귀 Scheme의 xcconfig 값은 별도이므로 키를 변경했다면 함께 맞춘다.
 

@@ -99,6 +99,18 @@ class MobileReleaseTest(unittest.TestCase):
         self.assertIn('no review submitted', result.stdout)
         self.assertIn('internal testing (completed)', result.stdout)
 
+    def test_release_writes_built_version_to_pubspec_unless_kept(self):
+        self.pubspec.write_text('name: test\n# comment\nversion: 1.7.0+69\nenvironment:\n  sdk: ^3.0.0\n')
+        self.run_script('--build-name', '1.9.0', '--build-number', '72', '--no-analyze', '--no-test')
+        self.assertEqual(self.pubspec.read_text(),
+                         'name: test\n# comment\nversion: 1.9.0+72\nenvironment:\n  sdk: ^3.0.0\n')
+        self.run_script('--build-name', '1.9.1', '--build-number', '73', '--no-analyze', '--no-test', '--keep-pubspec')
+        self.assertIn('version: 1.9.0+72\n', self.pubspec.read_text())
+        # A failed build must not advance pubspec past what was actually built.
+        self.env['MOCK_BUILD_FAILURE'] = 'appbundle'
+        self.run_script('--build-name', '1.9.2', '--build-number', '74', '--no-analyze', '--no-test', ok=False)
+        self.assertIn('version: 1.9.0+72\n', self.pubspec.read_text())
+
     def test_dry_run_does_not_run_tools_or_write_state(self):
         result = self.run_script('--dry-run')
         self.assertIn('Version: 1.7.0 (70)', result.stdout)
