@@ -64,9 +64,10 @@ void main() {
       expect(find.text('내 정보 관리'), findsOneWidget);
       expect(find.text('그룹 관리'), findsOneWidget);
       expect(find.text('화면 설정'), findsOneWidget);
+      expect(find.text('아침 브리핑'), findsOneWidget);
       expect(find.text('위젯 갱신'), findsNothing);
       expect(find.text('갱신 상태 확인과 지금 갱신'), findsNothing);
-      expect(find.byType(CupertinoButton), findsNWidgets(3));
+      expect(find.byType(CupertinoButton), findsNWidgets(4));
       await tester.tap(find.text('화면 설정'));
       await tester.pumpAndSettle();
       expect(find.byType(ThemeSettingsScreen), findsOneWidget);

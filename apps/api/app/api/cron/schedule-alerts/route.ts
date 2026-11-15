@@ -1,5 +1,6 @@
 import { timingSafeEqual } from 'node:crypto';
 
+import { dispatchDueBriefings } from '../../../../src/briefings';
 import { HttpError, jsonFromError } from '../../../../src/http';
 import { dispatchDueCouponExpiryAlerts } from '../../../../src/coupon-expiry-alerts';
 import { dispatchDueScheduleAlerts } from '../../../../src/schedule-alerts';
@@ -12,12 +13,31 @@ export async function GET(request: Request) {
     assertCronAuthorized(request);
     const result = await dispatchDueScheduleAlerts();
     const coupons = await dispatchDueCouponExpiryAlerts();
+    const briefings = await dispatchBriefingsSafely();
 
-    return Response.json({ ...result, coupons }, {
-      status: result.failureCount + coupons.failureCount === 0 ? 200 : 207,
+    return Response.json({ ...result, coupons, briefings }, {
+      status:
+        result.failureCount + coupons.failureCount + briefings.failureCount === 0
+          ? 200
+          : 207,
     });
   } catch (error) {
     return jsonFromError(error, 'schedule_alerts_dispatch_failed');
+  }
+}
+
+// A briefing problem (for example the migration not yet applied) must not block
+// schedule and coupon alerts, which run in the same cron tick.
+async function dispatchBriefingsSafely() {
+  try {
+    return await dispatchDueBriefings();
+  } catch (error) {
+    console.error('briefing dispatch failed', error);
+    return {
+      ok: false,
+      failureCount: 1,
+      error: error instanceof Error ? error.message : 'briefing_dispatch_failed',
+    };
   }
 }
 

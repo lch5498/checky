@@ -10,6 +10,7 @@ import '../../design_system/app_theme_preset.dart';
 import '../../design_system/app_typography.dart';
 import '../family/family_screen.dart';
 import '../profile/profile_screen.dart';
+import 'briefing_settings_screen.dart';
 import 'font_settings_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -60,6 +61,14 @@ class SettingsScreen extends StatelessWidget {
     await onGroupsChanged?.call();
   }
 
+  void _openBriefing(BuildContext context) {
+    Navigator.of(context, rootNavigator: true).push(
+      CupertinoPageRoute<void>(
+        builder: (_) => BriefingSettingsScreen(sessionToken: sessionToken),
+      ),
+    );
+  }
+
   void _openTheme(BuildContext context) {
     Navigator.of(context, rootNavigator: true).push(
       CupertinoPageRoute<void>(builder: (_) => const ThemeSettingsScreen()),
@@ -92,6 +101,12 @@ class SettingsScreen extends StatelessWidget {
               title: '그룹 관리',
               subtitle: '그룹과 그룹 구성원을 관리해요',
               onPressed: () => _openGroups(context),
+            ),
+            _SettingsMenuRow(
+              icon: CupertinoIcons.bell,
+              title: '아침 브리핑',
+              subtitle: '매일 아침 오늘 일정·주차·쿠폰·여행을 푸시로 받아요',
+              onPressed: () => _openBriefing(context),
             ),
             _SettingsMenuRow(
               icon: CupertinoIcons.sun_max,

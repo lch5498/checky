@@ -1050,6 +1050,14 @@ curl https://favis.vercel.app/api/health
 - 사용 가능/사용 완료/만료/전체 필터. 기본 정렬은 만료일 오름차순(미지정 마지막, 동일 날짜는 최신 등록순), 최신 등록순 선택도 가능합니다. 만료일은 기기 현지 날짜 기준 당일까지 유효합니다.
 - 쿠폰 목록에는 사용 가능한 쿠폰의 만료일까지 남은 날짜를 `D-1`, `D-2`처럼 표시합니다. 당일은 `D-Day`로 표시하고 7일 이내는 날짜·아이콘·테두리와 배지를 강조합니다. 사용 완료·만료 쿠폰에는 남은 날짜를 표시하지 않습니다.
 - 만료일이 있는 미사용 쿠폰은 한국시간 만료 7일 전과 1일 전 오전 9시대에 그룹의 푸시 등록 기기로 알립니다. 기존 `/api/cron/schedule-alerts`가 같이 처리하므로 새 Cron job은 필요 없습니다. 쿠폰·만료일·알림 단계별 발송 기록으로 중복을 막고 성공한 푸시는 수신 이력에도 남깁니다. 발송 전에 `supabase/migrations/202610170001_add_coupon_expiry_deliveries.sql`을 적용해야 합니다.
+
+## 아침 브리핑 푸시
+
+- 설정 > 아침 브리핑에서 사용자가 켜면 매일 선택한 시각(한국 시간, 기본 오전 8:00)에 푸시 한 통을 받습니다. 내용은 사용자가 속한 모든 그룹의 오늘 일정(최대 3건 + 외 N건), 차량별 현재 주차 위치, 7일 안에 만료되는 미사용 쿠폰, 가장 가까운 여행의 D-N/진행 일차입니다. 그룹이 둘 이상이면 그룹 이름으로 구분합니다.
+- 주간 미리보기 토글을 켜면 일요일 저녁 8시(한국 시간)에 다음 주 월~일의 요일별 일정 수, 일정 3건, 겹치는 여행, 만료 쿠폰 수를 받습니다.
+- 생성형 AI 없이 템플릿으로만 만듭니다. 같은 데이터면 항상 같은 문장이며 `apps/api/test/briefings.test.cjs`로 고정합니다.
+- 기존 `/api/cron/schedule-alerts`가 매분 실행 중 최근 5분 창에 발송 시각이 든 사용자를 찾아 보냅니다. `briefing_deliveries`의 `(user_id, briefing_kind, briefing_date)` unique로 하루 한 번만 보내고, 성공한 푸시는 수신 이력에 `briefing_daily`/`briefing_weekly`로 남깁니다. 브리핑 처리 오류는 일정·쿠폰 알림에 영향을 주지 않습니다.
+- API는 `GET`/`PUT /api/mobile/briefing-settings`이며 `{ settings: { enabled, sendTime, weeklyPreviewEnabled } }` 형식입니다. 발송 전에 `supabase/migrations/202611150001_add_briefing_settings.sql`을 적용해야 합니다.
 - `supabase/migrations/202610070001_add_group_coupons.sql`을 먼저 적용하고 API를 배포하세요. `coupons` 테이블(RLS 활성화)과 **비공개** `coupons` Storage 버킷을 생성합니다. 기존 `SUPABASE_URL`, `SUPABASE_SECRET_KEY`만 사용하며 앱에 별도 Storage 키는 넣지 않습니다.
 - 이후 `supabase/migrations/202610080001_limit_group_coupon_images.sql`을 **API 배포 전** 적용해야 동시 등록 제한이 보장됩니다. 기존 그룹에 100장 넘게 있으면 migration이 중단되며 기존 데이터를 자동 삭제하지 않습니다. 초과 쿠폰을 정리한 후 재적용하세요. 한도 초과 API 응답은 `409 coupon_limit_reached`입니다.
 - 쿠폰 번호 기능은 `supabase/migrations/202610080002_add_coupon_number.sql`을 적용한 뒤 API를 배포하세요. 기존 쿠폰의 번호는 빈칸이며, 번호는 최대 128자 문자열로 저장해 앞의 0을 보존합니다.

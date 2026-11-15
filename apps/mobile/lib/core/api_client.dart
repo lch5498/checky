@@ -5,6 +5,7 @@ import 'dart:typed_data';
 
 import 'api_config.dart';
 import 'coupon.dart';
+import 'briefing_settings.dart';
 import 'search.dart';
 
 class ApiClient {
@@ -158,6 +159,32 @@ class ApiClient {
     ).toString();
     return SearchResults.fromJson(
       await _requestJson('GET', path, bearerToken: sessionToken),
+    );
+  }
+
+  Future<BriefingSettings> getBriefingSettings(String sessionToken) async {
+    final json = await _requestJson(
+      'GET',
+      '/api/mobile/briefing-settings',
+      bearerToken: sessionToken,
+    );
+    return BriefingSettings.fromJson(
+      json['settings'] as Map<String, Object?>? ?? const {},
+    );
+  }
+
+  Future<BriefingSettings> updateBriefingSettings(
+    String sessionToken,
+    BriefingSettings settings,
+  ) async {
+    final json = await _requestJson(
+      'PUT',
+      '/api/mobile/briefing-settings',
+      bearerToken: sessionToken,
+      body: settings.toJson(),
+    );
+    return BriefingSettings.fromJson(
+      json['settings'] as Map<String, Object?>? ?? const {},
     );
   }
 

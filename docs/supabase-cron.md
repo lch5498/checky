@@ -23,7 +23,7 @@ CRON_SECRET=충분히_긴_랜덤_문자열
 KASI_SERVICE_KEY=공공데이터포털_서비스키
 ```
 
-`/api/cron/schedule-alerts`는 일정 알림과 쿠폰 만료 7일 전·1일 전 알림을 처리합니다. 쿠폰은 한국시간 오전 9시대에 처리하며, 먼저 `202610170001_add_coupon_expiry_deliveries.sql` migration이 적용되어 있어야 합니다. `CRON_SECRET`이 설정되어 있으면 아래 헤더가 맞을 때만 실행됩니다.
+`/api/cron/schedule-alerts`는 일정 알림, 쿠폰 만료 7일 전·1일 전 알림, 아침 브리핑과 주간 미리보기 푸시를 처리합니다. 쿠폰은 한국시간 오전 9시대에 처리하며, 먼저 `202610170001_add_coupon_expiry_deliveries.sql` migration이 적용되어 있어야 합니다. 브리핑은 사용자가 설정한 한국시간 시각(주간 미리보기는 일요일 20:00)에 같은 5분 lookback으로 발송하며 `202611150001_add_briefing_settings.sql`이 필요합니다. 브리핑 처리 오류는 응답의 `briefings.error`로만 보고되고 일정·쿠폰 알림은 계속 발송됩니다. `CRON_SECRET`이 설정되어 있으면 아래 헤더가 맞을 때만 실행됩니다.
 
 ```text
 Authorization: Bearer {CRON_SECRET}
@@ -137,7 +137,8 @@ curl -X GET https://favis.vercel.app/api/cron/schedule-alerts \
   "successCount": 0,
   "failureCount": 0,
   "schedules": [],
-  "coupons": {"dueCouponCount": 0, "sentCouponCount": 0, "failureCount": 0}
+  "coupons": {"dueCouponCount": 0, "sentCouponCount": 0, "failureCount": 0},
+  "briefings": {"ok": true, "dueCount": 0, "sentCount": 0, "skippedCount": 0, "failureCount": 0, "briefings": []}
 }
 ```
 
